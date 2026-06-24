@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>十格阵</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: #e3f2fd;
+            min-height: 95vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .title {
+            background: #7c4dff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 30px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .grids-container {
+            display: flex;
+            gap: 60px;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            flex-wrap: wrap;
+            position: relative;
+            min-height: 300px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 0;
+            border: 2px solid #333;
+            padding: 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            width: min(600px, 45vw);
+            max-width: 800px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            border: 1px solid #333;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-width: min(40px, 4vw);
+            min-height: min(40px, 4vw);
+        }
+
+        .circle {
+            width: 80%;
+            height: 80%;
+            max-width: min(80px, 8vw);
+            max-height: min(80px, 8vw);
+            min-width: min(30px, 3vw);
+            min-height: min(30px, 3vw);
+            border-radius: 50%;
+            cursor: grab;
+            position: absolute;
+            z-index: 10;
+            transition: transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .circle:hover {
+            transform: scale(1.1);
+        }
+
+        .circle:active {
+            cursor: grabbing;
+            transform: scale(1.2);
+        }
+
+        .blue-circle {
+            background: #5c6bc0;
+        }
+
+        .red-circle {
+            background: #ef5350;
+        }
+
+        .green-circle {
+            background: #4caf50;
+        }
+
+        .light-green-circle {
+            background: #81c784;
+        }
+
+        .equation-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: min(40px, 4vw);
+            font-size: min(80px, 10vw);
+            font-weight: bold;
+            color: #333;
+            margin: 4rem 0 1rem;
+        }
+
+        .number-box {
+            border:3px solid #333;
+            background: #fff;
+            border-radius: 12px;
+            padding: min(20px, 2vw);
+            min-width: min(60px, 8vw);
+            text-align: center;
+            aspect-ratio: 1;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .number-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .number-box:active {
+            transform: scale(0.95);
+        }
+        #num1{color: #5c6bc0;}
+        #num2{color: #ef5350;}
+        .number-box,.operator,.equals {
+            font-size: min(60px, 8vw);
+            color: #333;
+        }
+
+        .result-box {
+            background: white;
+            border: 3px solid #ccc;
+            border-radius: 15px;
+            padding: min(20px, 2vw);
+            min-width: min(80px, 10vw);
+            text-align: center;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            aspect-ratio: 1;
+            font-size: min(70px, 9vw);
+        }
+
+        .result-box:hover {
+            border-color: #4caf50;
+            transform: scale(1.05);
+        }
+
+        .result-box.hidden::after {
+            content: '?';
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        .result-box.show-answer {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+
+
+
+        
+        @media (max-width: 1200px) {
+            .grids-container {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .grid {
+                width: min(500px, 85vw);
+                max-width: 600px;
+            }
+        }
+
+        @media (max-width: 600px) {            
+            .grid {
+                width: min(350px, 90vw);
+                padding: 10px;
+            }
+            .number-box{border: 2px solid #333;}
+            .equation-container {
+                font-size: min(40px, 10vw);
+                gap: min(15px, 2vw);
+                margin: 4rem 0 0;
+            }
+            
+            .operator, .equals {
+                font-size: min(50px, 12vw);
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .grid {
+                width: min(700px, 40vw);
+                max-width: 800px;
+            }
+            
+            .equation-container {
+                gap: 50px;
+            }
+            
+            .number-box {
+                padding: 25px;
+                min-width: 90px;
+                font-size: 90px;
+            }
+            
+            .result-box {
+                padding: 25px;
+                min-width: 120px;
+                font-size: 110px;
+            }
+            
+            .operator, .equals {
+                font-size: 100px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .grid {
+                width: min(800px, 35vw);
+                max-width: 900px;
+            }
+            
+            .grids-container {
+                gap: 100px;
+            }
+            
+            .equation-container {
+                font-size: 120px;
+                gap: 60px;
+                margin: 60px 0;
+            }
+            
+            .number-box {
+                padding: 30px;
+                min-width: 100px;
+            }
+            
+            .result-box {
+                padding: 30px;
+                min-width: 120px;
+                font-size: 110px;
+            }
+            
+            .operator, .equals {
+                font-size: 130px;
+            }
+        }
+    </style>
+</head>
+<body>        
+    <div class="container">
+
+        
+        <div class="equation-container">
+            <div class="number-box" id="num1">9</div>
+            <div class="operator">+</div>
+            <div class="number-box" id="num2">5</div>
+            <div class="equals">=</div>
+            <div class="result-box" id="result"></div>
+        </div>
+
+        <div class="grids-container">
+            <div class="grid" id="grid1">
+                <div class="cell" data-grid="1" data-index="0"></div>
+                <div class="cell" data-grid="1" data-index="1"></div>
+                <div class="cell" data-grid="1" data-index="2"></div>
+                <div class="cell" data-grid="1" data-index="3"></div>
+                <div class="cell" data-grid="1" data-index="4"></div>
+                <div class="cell" data-grid="1" data-index="5"></div>
+                <div class="cell" data-grid="1" data-index="6"></div>
+                <div class="cell" data-grid="1" data-index="7"></div>
+                <div class="cell" data-grid="1" data-index="8"></div>
+                <div class="cell" data-grid="1" data-index="9"></div>
+            </div>
+            
+            <div class="grid" id="grid2">
+                <div class="cell" data-grid="2" data-index="0"></div>
+                <div class="cell" data-grid="2" data-index="1"></div>
+                <div class="cell" data-grid="2" data-index="2"></div>
+                <div class="cell" data-grid="2" data-index="3"></div>
+                <div class="cell" data-grid="2" data-index="4"></div>
+                <div class="cell" data-grid="2" data-index="5"></div>
+                <div class="cell" data-grid="2" data-index="6"></div>
+                <div class="cell" data-grid="2" data-index="7"></div>
+                <div class="cell" data-grid="2" data-index="8"></div>
+                <div class="cell" data-grid="2" data-index="9"></div>
+            </div>
+        </div>
+    
+
+    </div>
+
+    <script>
+var JSConfetti=function(){"use strict";function t(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function e(t,e){for(var i=0;i<e.length;i++){var n=e[i];n.enumerable=n.enumerable||!1,n.configurable=!0,"value"in n&&(n.writable=!0),Object.defineProperty(t,n.key,n)}}function i(t,i,n){return i&&e(t.prototype,i),n&&e(t,n),t}function n(t){return+t.replace(/px/,"")}function s(t,e){var i=arguments.length>2&&void 0!==arguments[2]?arguments[2]:0,n=Math.random()*(e-t)+t;return Math.floor(n*Math.pow(10,i))/Math.pow(10,i)}function o(t){return t[s(0,t.length)]}var a=["#fcf403","#62fc03","#f4fc03","#03e7fc","#03fca5","#a503fc","#fc03ad","#fc03c2"];function r(t){return Math.log(t)/Math.log(1920)}var h=function(){function e(i){t(this,e);var n=i.initialPosition,a=i.direction,h=i.confettiRadius,c=i.confettiColors,u=i.emojis,l=i.emojiSize,d=i.canvasWidth,f=s(.9,1.7,3)*r(d);this.confettiSpeed={x:f,y:f},this.finalConfettiSpeedX=s(.2,.6,3),this.rotationSpeed=u.length?.01:s(.03,.07,3)*r(d),this.dragForceCoefficient=s(5e-4,9e-4,6),this.radius={x:h,y:h},this.initialRadius=h,this.rotationAngle="left"===a?s(0,.2,3):s(-.2,0,3),this.emojiSize=l,this.emojiRotationAngle=s(0,2*Math.PI),this.radiusYUpdateDirection="down";var m="left"===a?s(82,15)*Math.PI/180:s(-15,-82)*Math.PI/180;this.absCos=Math.abs(Math.cos(m)),this.absSin=Math.abs(Math.sin(m));var v=s(-150,0),p={x:n.x+("left"===a?-v:v)*this.absCos,y:n.y-v*this.absSin};this.currentPosition=Object.assign({},p),this.initialPosition=Object.assign({},p),this.color=u.length?null:o(c),this.emoji=u.length?o(u):null,this.createdAt=(new Date).getTime(),this.direction=a}return i(e,[{key:"draw",value:function(t){var e=this.currentPosition,i=this.radius,n=this.color,s=this.emoji,o=this.rotationAngle,a=this.emojiRotationAngle,r=this.emojiSize,h=window.devicePixelRatio;n?(t.fillStyle=n,t.beginPath(),t.ellipse(e.x*h,e.y*h,i.x*h,i.y*h,o,0,2*Math.PI),t.fill()):s&&(t.font="".concat(r,"px serif"),t.save(),t.translate(h*e.x,h*e.y),t.rotate(a),t.textAlign="center",t.fillText(s,0,0),t.restore())}},{key:"updatePosition",value:function(t,e){var i=this.confettiSpeed,n=this.dragForceCoefficient,s=this.finalConfettiSpeedX,o=this.radiusYUpdateDirection,a=this.rotationSpeed,r=this.createdAt,h=this.direction,c=e-r;i.x>s&&(this.confettiSpeed.x-=n*t),this.currentPosition.x+=i.x*("left"===h?-this.absCos:this.absCos)*t,this.currentPosition.y=this.initialPosition.y-i.y*this.absSin*c+.00125*Math.pow(c,2)/2,this.rotationSpeed-=this.emoji?1e-4:1e-5*t,this.rotationSpeed<0&&(this.rotationSpeed=0),this.emoji?this.emojiRotationAngle+=this.rotationSpeed*t%(2*Math.PI):"down"===o?(this.radius.y-=t*a,this.radius.y<=0&&(this.radius.y=0,this.radiusYUpdateDirection="up")):(this.radius.y+=t*a,this.radius.y>=this.initialRadius&&(this.radius.y=this.initialRadius,this.radiusYUpdateDirection="down"))}},{key:"getIsVisibleOnCanvas",value:function(t){return this.currentPosition.y<t+100}}]),e}();function c(){var t=document.createElement("canvas");return t.style.position="fixed",t.style.width="100%",t.style.height="100%",t.style.top="0",t.style.left="0",t.style.zIndex="1000",t.style.pointerEvents="none",document.body.appendChild(t),t}function u(t){var e=t.confettiRadius,i=void 0===e?6:e,n=t.confettiNumber,s=void 0===n?t.confettiesNumber||(t.emojis?40:250):n,o=t.confettiColors,r=void 0===o?a:o,h=t.emojis,c=void 0===h?t.emojies||[]:h,u=t.emojiSize,l=void 0===u?80:u;return t.emojies&&console.error("emojies argument is deprecated, please use emojis instead"),t.confettiesNumber&&console.error("confettiesNumber argument is deprecated, please use confettiNumber instead"),{confettiRadius:i,confettiNumber:s,confettiColors:r,emojis:c,emojiSize:l}}var l=function(){function e(i){var n=this;t(this,e),this.canvasContext=i,this.shapes=[],this.promise=new Promise((function(t){return n.resolvePromise=t}))}return i(e,[{key:"getBatchCompletePromise",value:function(){return this.promise}},{key:"addShapes",value:function(){var t;(t=this.shapes).push.apply(t,arguments)}},{key:"complete",value:function(){var t;return!this.shapes.length&&(null===(t=this.resolvePromise)||void 0===t||t.call(this),!0)}},{key:"processShapes",value:function(t,e,i){var n=this,s=t.timeDelta,o=t.currentTime;this.shapes=this.shapes.filter((function(t){return t.updatePosition(s,o),t.draw(n.canvasContext),!i||t.getIsVisibleOnCanvas(e)}))}}]),e}();return function(){function e(){var i=arguments.length>0&&void 0!==arguments[0]?arguments[0]:{};t(this,e),this.activeConfettiBatches=[],this.canvas=i.canvas||c(),this.canvasContext=this.canvas.getContext("2d"),this.requestAnimationFrameRequested=!1,this.lastUpdated=(new Date).getTime(),this.iterationIndex=0,this.loop=this.loop.bind(this),requestAnimationFrame(this.loop)}return i(e,[{key:"loop",value:function(){var t,e,i,s,o;this.requestAnimationFrameRequested=!1,t=this.canvas,e=window.devicePixelRatio,i=getComputedStyle(t),s=n(i.getPropertyValue("width")),o=n(i.getPropertyValue("height")),t.setAttribute("width",(s*e).toString()),t.setAttribute("height",(o*e).toString());var a=(new Date).getTime(),r=a-this.lastUpdated,h=this.canvas.offsetHeight,c=this.iterationIndex%10==0;this.activeConfettiBatches=this.activeConfettiBatches.filter((function(t){return t.processShapes({timeDelta:r,currentTime:a},h,c),!c||!t.complete()})),this.iterationIndex++,this.queueAnimationFrameIfNeeded(a)}},{key:"queueAnimationFrameIfNeeded",value:function(t){this.requestAnimationFrameRequested||this.activeConfettiBatches.length<1||(this.requestAnimationFrameRequested=!0,this.lastUpdated=t||(new Date).getTime(),requestAnimationFrame(this.loop))}},{key:"addConfetti",value:function(){for(var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:{},e=u(t),i=e.confettiRadius,n=e.confettiNumber,s=e.confettiColors,o=e.emojis,a=e.emojiSize,r=this.canvas.getBoundingClientRect(),c=r.width,d=r.height,f=5*d/7,m={x:0,y:f},v={x:c,y:f},p=new l(this.canvasContext),y=0;y<n/2;y++){var g=new h({initialPosition:m,direction:"right",confettiRadius:i,confettiColors:s,confettiNumber:n,emojis:o,emojiSize:a,canvasWidth:c}),C=new h({initialPosition:v,direction:"left",confettiRadius:i,confettiColors:s,confettiNumber:n,emojis:o,emojiSize:a,canvasWidth:c});p.addShapes(g,C)}return this.activeConfettiBatches.push(p),this.queueAnimationFrameIfNeeded(),p.getBatchCompletePromise()}},{key:"clearCanvas",value:function(){this.activeConfettiBatches=[]}},{key:"destroyCanvas",value:function(){this.canvas.remove()}}]),e}()}();
+        const confetti = new JSConfetti();
+        function showConfetti() {
+            confetti.addConfetti({
+                confettiNumber: 500
+            })
+        }
+const _0x482a=['target','add','grid2','show-answer','absolute','circle','red-circle','zIndex','dragging','top','addEventListener','num2','textContent','elementFromPoint','.grids-container','removeChild','left','position','hidden','result','.cell','getElementById','touches','style','contains','height','getBoundingClientRect','className','circle\x20','cell','light-green-circle','parentNode','remove','min','length','num1','preventDefault','createElement','random','appendChild','#grid1','div','click','clientY','onclick','.circle','grid1','classList','offsetHeight','width','querySelector','green-circle','blue-circle','forEach','closest','querySelectorAll','clientX','display','none','offsetWidth','draggable','pointerEvents','highlight','touchstart'];const _0x5aac=function(_0x482ac8,_0x5aac19){_0x482ac8=_0x482ac8-0x0;let _0x417882=_0x482a[_0x482ac8];return _0x417882;};let draggedElement=null;let currentNum1=0x9;let currentNum2=0x5;let hiddenNumbers={'num1':![],'num2':![]};let hiddenMode=![];function init(){generateNewProblem();setupDragAndDrop();setupNumberClick();}function setupNumberClick(){document['getElementById']('num1')['addEventListener']('click',function(){toggleNumber(_0x5aac('0x23'));});document['getElementById'](_0x5aac('0xb'))['addEventListener'](_0x5aac('0x2a'),function(){toggleNumber(_0x5aac('0xb'));});}function toggleNumber(_0x2d72df){const _0x1ece33=document['getElementById'](_0x2d72df);const _0x6a5067=document['getElementById'](_0x5aac('0x13'));const _0xc920c4=_0x2d72df===_0x5aac('0x23')?currentNum1:currentNum2;if(hiddenNumbers[_0x2d72df]){_0x1ece33['textContent']=_0xc920c4;hiddenNumbers[_0x2d72df]=![];showConfetti();}else{if(hiddenMode&&_0x6a5067['classList']['contains'](_0x5aac('0x3'))){generateNewProblem();}else{_0x1ece33[_0x5aac('0xc')]='?';hiddenNumbers[_0x2d72df]=!![];hiddenMode=!![];redistributeCirclesForAnswer();_0x6a5067[_0x5aac('0xc')]=currentNum1+currentNum2;_0x6a5067['classList'][_0x5aac('0x20')]('hidden');_0x6a5067[_0x5aac('0x2f')]['add'](_0x5aac('0x3'));}}}function redistributeCirclesForAnswer(){document['querySelectorAll'](_0x5aac('0x2d'))['forEach'](_0x5a6565=>_0x5a6565[_0x5aac('0x20')]());const _0x5640fa=currentNum1+currentNum2;const _0x3a7790=Math[_0x5aac('0x21')](_0x5640fa,0xa);const _0x354bb5=Math['min'](_0x5640fa-_0x3a7790,0xa);const _0x26218c=_0x5640fa-_0x3a7790-_0x354bb5;placeCircles(_0x5aac('0x2e'),_0x3a7790,'green-circle');placeCircles('grid2',_0x354bb5,_0x5aac('0x33'));if(_0x26218c>0x0){placeCirclesOutsideGrid(_0x26218c);}}function restoreOriginalCircles(){document['querySelectorAll']('.circle')['forEach'](_0x3119a2=>_0x3119a2['remove']());placeCircles('grid1',currentNum1,_0x5aac('0x34'));placeCircles(_0x5aac('0x2'),currentNum2,_0x5aac('0x6'));}function placeCirclesOutsideGrid(_0x3a722d){const _0x5597c5=document['querySelector'](_0x5aac('0xe'));for(let _0x55e460=0x0;_0x55e460<_0x3a722d;_0x55e460++){const _0x110a21=document['createElement'](_0x5aac('0x29'));_0x110a21[_0x5aac('0x1b')]='circle\x20green-circle';_0x110a21[_0x5aac('0x3c')]=!![];_0x110a21[_0x5aac('0x17')][_0x5aac('0x11')]='absolute';_0x110a21['style'][_0x5aac('0x10')]=Math['random']()*0xc8+'px';_0x110a21[_0x5aac('0x17')][_0x5aac('0x9')]=Math['random']()*0x64+'px';_0x110a21['style']['zIndex']='20';_0x5597c5[_0x5aac('0x27')](_0x110a21);}}function hideGridCircles(_0x1688e7){const _0x52ebee=document[_0x5aac('0x15')](_0x1688e7);const _0x29fe82=_0x52ebee['querySelectorAll']('.circle');_0x29fe82['forEach'](_0x5af5b9=>{_0x5af5b9[_0x5aac('0x17')][_0x5aac('0x39')]=_0x5aac('0x3a');});}function showGridCircles(_0x23d853){const _0x58d06f=document['getElementById'](_0x23d853);const _0x3023ac=_0x58d06f['querySelectorAll']('.circle');_0x3023ac['forEach'](_0xa00b4d=>{_0xa00b4d['style']['display']='';});}function generateNewProblem(){document['querySelectorAll']('.circle')[_0x5aac('0x35')](_0x27b89c=>_0x27b89c[_0x5aac('0x20')]());currentNum1=Math['floor'](Math['random']()*0x9)+0x1;currentNum2=Math['floor'](Math[_0x5aac('0x26')]()*0x9)+0x1;hiddenNumbers={'num1':![],'num2':![]};document['getElementById'](_0x5aac('0x23'))['textContent']=currentNum1;document[_0x5aac('0x15')](_0x5aac('0xb'))[_0x5aac('0xc')]=currentNum2;const _0x457c41=document['getElementById']('result');_0x457c41['textContent']='';_0x457c41[_0x5aac('0x2f')][_0x5aac('0x20')](_0x5aac('0x3'));_0x457c41[_0x5aac('0x2f')]['add'](_0x5aac('0x12'));if(hiddenMode){const _0x3193f6=Math['random']()<0.5?_0x5aac('0x23'):_0x5aac('0xb');toggleNumber(_0x3193f6);}else{placeCircles(_0x5aac('0x2e'),currentNum1,_0x5aac('0x34'));placeCircles(_0x5aac('0x2'),currentNum2,'red-circle');checkAnswer();}}function placeCircles(_0x3e530a,_0x570d7e,_0x55670d){const _0x424e3d=document['getElementById'](_0x3e530a);const _0xf6cc39=_0x424e3d['querySelectorAll']('.cell');for(let _0x4d8b47=0x0;_0x4d8b47<_0x570d7e&&_0x4d8b47<0xa;_0x4d8b47++){const _0x356e0b=document[_0x5aac('0x25')](_0x5aac('0x29'));_0x356e0b['className']=_0x5aac('0x1c')+_0x55670d;_0x356e0b[_0x5aac('0x3c')]=!![];_0xf6cc39[_0x4d8b47][_0x5aac('0x27')](_0x356e0b);}}function setupDragAndDrop(){document['addEventListener']('dragstart',handleDragStart);document['addEventListener']('dragover',handleDragOver);document['addEventListener']('drop',handleDrop);document[_0x5aac('0xa')]('dragend',handleDragEnd);document[_0x5aac('0xa')](_0x5aac('0x3f'),handleTouchStart,{'passive':![]});document['addEventListener']('touchmove',handleTouchMove,{'passive':![]});document['addEventListener']('touchend',handleTouchEnd,{'passive':![]});}function handleDragStart(_0x2c561a){if(_0x2c561a['target'][_0x5aac('0x2f')]['contains'](_0x5aac('0x5'))){draggedElement=_0x2c561a['target'];_0x2c561a[_0x5aac('0x0')]['classList'][_0x5aac('0x1')]('dragging');}}function handleDragOver(_0x46078f){_0x46078f[_0x5aac('0x24')]();if(_0x46078f[_0x5aac('0x0')][_0x5aac('0x2f')][_0x5aac('0x18')]('cell')){_0x46078f[_0x5aac('0x0')]['classList'][_0x5aac('0x1')](_0x5aac('0x3e'));}}function handleDrop(_0x4203ab){_0x4203ab['preventDefault']();if(draggedElement){const _0x23f1cc=draggedElement[_0x5aac('0x1f')];const _0xcd2b1a=_0x23f1cc&&_0x23f1cc[_0x5aac('0x36')]('#grid1');if(_0x4203ab[_0x5aac('0x0')][_0x5aac('0x2f')]['contains']('cell')){const _0x31628=_0x4203ab['target'][_0x5aac('0x32')](_0x5aac('0x2d'));if(_0x31628&&_0x31628!==draggedElement){_0x23f1cc[_0x5aac('0x27')](_0x31628);}draggedElement[_0x5aac('0x17')]['position']='absolute';draggedElement[_0x5aac('0x17')][_0x5aac('0x10')]='';draggedElement['style']['top']='';draggedElement[_0x5aac('0x17')]['zIndex']='10';if(hiddenMode&&draggedElement['classList'][_0x5aac('0x18')](_0x5aac('0x1e'))){draggedElement['classList']['remove']('light-green-circle');draggedElement['classList']['add'](_0x5aac('0x33'));}_0x4203ab[_0x5aac('0x0')]['appendChild'](draggedElement);}else{const _0xf0fb76=document['querySelector']('.grids-container');const _0x3a777e=_0xf0fb76['getBoundingClientRect']();draggedElement['style']['position']=_0x5aac('0x4');draggedElement['style'][_0x5aac('0x10')]=_0x4203ab['clientX']-_0x3a777e[_0x5aac('0x10')]-draggedElement[_0x5aac('0x3b')]/0x2+'px';draggedElement[_0x5aac('0x17')][_0x5aac('0x9')]=_0x4203ab[_0x5aac('0x2b')]-_0x3a777e['top']-draggedElement['offsetHeight']/0x2+'px';draggedElement['style'][_0x5aac('0x7')]='20';if(_0x23f1cc&&_0x23f1cc[_0x5aac('0x2f')]['contains'](_0x5aac('0x1d'))){_0x23f1cc['removeChild'](draggedElement);}if(hiddenMode){draggedElement[_0x5aac('0x2f')]['remove'](_0x5aac('0x33'),'blue-circle',_0x5aac('0x6'));draggedElement['classList']['add']('light-green-circle');}_0xf0fb76[_0x5aac('0x27')](draggedElement);}checkAnswer();}document['querySelectorAll']('.cell')['forEach'](_0x20ca29=>{_0x20ca29['classList'][_0x5aac('0x20')]('highlight');});}function handleDragEnd(_0x27935c){if(_0x27935c['target'][_0x5aac('0x2f')]['contains'](_0x5aac('0x5'))){_0x27935c['target']['classList'][_0x5aac('0x20')](_0x5aac('0x8'));}draggedElement=null;}function checkAnswer(){const _0x2e2a30=document['getElementById'](_0x5aac('0x13'));if(hiddenNumbers[_0x5aac('0x23')]||hiddenNumbers[_0x5aac('0xb')]){return;}const _0x4340a5=document[_0x5aac('0x37')]('.circle')[_0x5aac('0x22')];const _0x366acb=_0x4340a5;_0x2e2a30['classList'][_0x5aac('0x20')]('show-answer');_0x2e2a30['classList']['add']('hidden');_0x2e2a30[_0x5aac('0xc')]='';if(_0x366acb===currentNum1+currentNum2){_0x2e2a30['onclick']=function(){if(_0x2e2a30['classList'][_0x5aac('0x18')](_0x5aac('0x12'))){_0x2e2a30[_0x5aac('0xc')]=currentNum1+currentNum2;_0x2e2a30[_0x5aac('0x2f')][_0x5aac('0x20')](_0x5aac('0x12'));_0x2e2a30[_0x5aac('0x2f')]['add']('show-answer');showConfetti();}else{hiddenMode=![];generateNewProblem();}};}else{_0x2e2a30[_0x5aac('0x2c')]=null;}}let touchedElement=null;let touchOffset={'x':0x0,'y':0x0};let currentTouchTarget=null;function handleTouchStart(_0x2e1f23){if(_0x2e1f23['target'][_0x5aac('0x2f')][_0x5aac('0x18')](_0x5aac('0x5'))){_0x2e1f23['preventDefault']();touchedElement=_0x2e1f23[_0x5aac('0x0')];const _0x82e5a5=_0x2e1f23[_0x5aac('0x16')][0x0];const _0x4ea91a=touchedElement['getBoundingClientRect']();touchOffset['x']=_0x82e5a5[_0x5aac('0x38')]-_0x4ea91a[_0x5aac('0x10')]-_0x4ea91a[_0x5aac('0x31')]/0x2;touchOffset['y']=_0x82e5a5['clientY']-_0x4ea91a['top']-_0x4ea91a[_0x5aac('0x19')]/0x2;touchedElement['classList']['add'](_0x5aac('0x8'));touchedElement[_0x5aac('0x17')][_0x5aac('0x3d')]='none';}}function handleTouchMove(_0x535207){if(touchedElement){_0x535207['preventDefault']();const _0x18aa8b=_0x535207[_0x5aac('0x16')][0x0];touchedElement['style']['position']='fixed';touchedElement['style']['left']=_0x18aa8b['clientX']-touchOffset['x']-touchedElement['offsetWidth']/0x2+'px';touchedElement['style'][_0x5aac('0x9')]=_0x18aa8b['clientY']-touchOffset['y']-touchedElement[_0x5aac('0x30')]/0x2+'px';const _0x2ee961=document[_0x5aac('0xd')](_0x18aa8b['clientX'],_0x18aa8b[_0x5aac('0x2b')]);const _0x14c606=_0x2ee961?_0x2ee961[_0x5aac('0x36')]('.cell'):null;document[_0x5aac('0x37')](_0x5aac('0x14'))['forEach'](_0x34f753=>{_0x34f753[_0x5aac('0x2f')]['remove']('highlight');});if(_0x14c606){currentTouchTarget=_0x14c606;_0x14c606[_0x5aac('0x2f')]['add'](_0x5aac('0x3e'));}else{currentTouchTarget=null;}}}function handleTouchEnd(_0x523842){if(touchedElement){_0x523842['preventDefault']();const _0x49d038=_0x523842['changedTouches'][0x0];const _0x53c92e=touchedElement['parentNode'];const _0x475ff3=_0x53c92e&&_0x53c92e[_0x5aac('0x36')](_0x5aac('0x28'));if(currentTouchTarget&&currentTouchTarget['classList'][_0x5aac('0x18')](_0x5aac('0x1d'))){const _0x325a09=currentTouchTarget['querySelector'](_0x5aac('0x2d'));if(_0x325a09&&_0x325a09!==touchedElement){_0x53c92e['appendChild'](_0x325a09);}touchedElement[_0x5aac('0x17')]['position']=_0x5aac('0x4');touchedElement[_0x5aac('0x17')][_0x5aac('0x10')]='';touchedElement['style']['top']='';touchedElement[_0x5aac('0x17')][_0x5aac('0x7')]='10';if(hiddenMode&&touchedElement[_0x5aac('0x2f')][_0x5aac('0x18')](_0x5aac('0x1e'))){touchedElement[_0x5aac('0x2f')]['remove'](_0x5aac('0x1e'));touchedElement['classList'][_0x5aac('0x1')]('green-circle');}currentTouchTarget[_0x5aac('0x27')](touchedElement);checkAnswer();}else{const _0x3c862a=document[_0x5aac('0x32')](_0x5aac('0xe'));const _0x374d20=_0x3c862a[_0x5aac('0x1a')]();touchedElement[_0x5aac('0x17')]['position']='absolute';touchedElement['style'][_0x5aac('0x10')]=_0x49d038[_0x5aac('0x38')]-_0x374d20['left']-touchedElement[_0x5aac('0x3b')]/0x2+'px';touchedElement[_0x5aac('0x17')]['top']=_0x49d038['clientY']-_0x374d20[_0x5aac('0x9')]-touchedElement['offsetHeight']/0x2+'px';touchedElement[_0x5aac('0x17')]['zIndex']='20';if(_0x53c92e&&_0x53c92e['classList']['contains'](_0x5aac('0x1d'))){_0x53c92e[_0x5aac('0xf')](touchedElement);}if(hiddenMode){touchedElement[_0x5aac('0x2f')]['remove'](_0x5aac('0x33'),'blue-circle',_0x5aac('0x6'));touchedElement[_0x5aac('0x2f')][_0x5aac('0x1')](_0x5aac('0x1e'));}_0x3c862a['appendChild'](touchedElement);checkAnswer();}touchedElement['classList']['remove'](_0x5aac('0x8'));touchedElement[_0x5aac('0x17')][_0x5aac('0x3d')]='';document['querySelectorAll']('.cell')['forEach'](_0x27ad0c=>{_0x27ad0c[_0x5aac('0x2f')]['remove'](_0x5aac('0x3e'));});touchedElement=null;currentTouchTarget=null;}}document[_0x5aac('0xa')]('DOMContentLoaded',init);
+    </script>
+</body>
+</html>

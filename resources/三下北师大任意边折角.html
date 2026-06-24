@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>任意边折角</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --paper-color: #ffffff;
+            --line-color: #333;
+            --fold-back: rgb(255 137 65 / 0.9);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(to top, #dfe9f3 0%, white 100%);
+            background-blend-mode: screen;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 场景容器 — 宽高由 JS 控制 */
+        .scene {
+            margin-top: -5rem;
+            perspective: 2000px;
+            position: relative;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scene.no-anim {
+            transition: none !important;
+        }
+
+        /* 外边框覆盖层 — 始终匹配 scene 矩形，无需 SVG 计算 */
+        .scene-border {
+            position: absolute;
+            inset: 0;
+            border: 2px solid var(--line-color);
+            pointer-events: none;
+            z-index: 50;
+            box-sizing: border-box;
+        }
+
+        .layer-paper {
+            position: absolute;
+            inset: 0;
+            background-color: var(--paper-color);
+            z-index: 2;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
+        }
+
+        .layer-svg {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 3;
+            /* overflow defaults to hidden for SVG — prevents lines escaping scene */
+        }
+
+        .stroke-line {
+            fill: none;
+            stroke: var(--line-color);
+            stroke-width: 4;
+            vector-effect: non-scaling-stroke;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+
+        .stroke-dashed {
+            stroke-dasharray: 10;
+            stroke-width: 3;
+        }
+
+        .stroke-ghost {
+            stroke: #888;
+            stroke-dasharray: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .fold-wrapper {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            transform-style: preserve-3d;
+        }
+
+        .fold-triangle {
+            position: absolute;
+            inset: 0;
+            background-color: rgb(59 130 246 / 0.8);
+            cursor: grab;
+            pointer-events: auto;
+        }
+
+        /* ::before 已移除，折叠区轮廓改用 SVG foldOutline 绘制 */
+        .fold-triangle:active {
+            cursor: grabbing;
+        }
+
+        .curl-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            mix-blend-mode: overlay;
+            z-index: 2;
+        }
+
+        /* 折痕端点拖拽圆点 */
+        .handle {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: transparent;
+            z-index: 20;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+
+        .handle::after {
+            content: '';
+            position: absolute;
+            inset: 14px;
+            background-color: var(--bg-color);
+            border: 2px solid var(--line-color);
+            border-radius: 50%;
+            opacity: 0;
+            transition: transform 0.2s, background-color 0.2s, opacity 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .handle:hover::after,
+        .handle:active::after {
+            opacity: 1;
+        }
+
+        .scene.is-folding .handle {
+            pointer-events: none;
+        }
+
+        .scene.is-folding .handle::after {
+            opacity: 0 !important;
+        }
+
+        /* 右上角切换按钮 */
+        #shapeBtn {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #ccc;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        #shapeBtn:hover {
+            background: #f5f5f5;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+        }
+
+        #shapeBtn:active {
+            transform: scale(0.92);
+        }
+
+        #shapeBtn svg {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <button id="shapeBtn" title="切换正方形/长方形">
+        <!-- icon injected by JS -->
+    </button>
+
+    <div class="scene" id="scene">
+        <div class="scene-border"></div>
+
+        <div class="layer-paper" id="paperBase"></div>
+
+        <svg class="layer-svg" id="mainSvg" viewBox="0 0 380 380" preserveAspectRatio="none">
+            <line id="crease" class="stroke-line stroke-dashed" x1="0" y1="0" x2="0" y2="0" />
+            <polyline id="ghostLines" class="stroke-line stroke-ghost" points="" />
+        </svg>
+
+        <div class="fold-wrapper" id="foldContainer">
+            <div class="fold-triangle" id="foldTri">
+                <div class="curl-overlay" id="curlId"></div>
+                <!-- Border SVG inside foldTri: clip-path clips it, and it rotates with the 3D fold -->
+                <svg id="foldBorderSvg" viewBox="0 0 380 380" preserveAspectRatio="none"
+                    style="position:absolute;inset:0;width:100%;height:100%;overflow:hidden;">
+                    <polyline id="foldBorderLine" class="stroke-line" points="" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="handle" id="h1"></div>
+        <div class="handle" id="h2"></div>
+    </div>
+
+    <script>
+        // ─── DOM refs ──────────────────────────────────────────────────────────────
+        const scene = document.getElementById('scene');
+        const paperBase = document.getElementById('paperBase');
+        const sceneBorder = document.querySelector('.scene-border');
+        const foldContainer = document.getElementById('foldContainer');
+        const foldTri = document.getElementById('foldTri');
+        const curl = document.getElementById('curlId');
+        const creaseSvg = document.getElementById('crease');
+        const ghostSvg = document.getElementById('ghostLines');
+        const foldBorderSvg = document.getElementById('foldBorderSvg');
+        const foldBorderLine = document.getElementById('foldBorderLine');
+        const h1 = document.getElementById('h1');
+        const h2 = document.getElementById('h2');
+        const shapeBtn = document.getElementById('shapeBtn');
+
+        // ─── Shape (square vs rect) ────────────────────────────────────────────────
+        let isSquare = false;          // 默认长方形
+        const SQ_W = '55vmin', SQ_H = '55vmin', SQ_MAXW = '380px', SQ_MAXH = '380px';
+        const RE_W = '70vmin', RE_H = '50vmin', RE_MAXW = '500px', RE_MAXH = '360px';
+
+        function applySceneSize() {
+            if (isSquare) {
+                scene.style.width = SQ_W; scene.style.height = SQ_H;
+                scene.style.maxWidth = SQ_MAXW; scene.style.maxHeight = SQ_MAXH;
+            } else {
+                scene.style.width = RE_W; scene.style.height = RE_H;
+                scene.style.maxWidth = RE_MAXW; scene.style.maxHeight = RE_MAXH;
+            }
+        }
+
+        function updateShapeIcon() {
+            // square icon when isSquare (click => switch to rect), rect icon when !isSquare
+            if (isSquare) {
+                shapeBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round">
+            <rect x="3" y="3" width="16" height="16" rx="1"/>
+            <line x1="3" y1="11" x2="19" y2="11" stroke-dasharray="3 2"/>
+        </svg>`;
+                shapeBtn.title = '切换为长方形';
+            } else {
+                shapeBtn.innerHTML = `<svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round">
+            <rect x="1" y="1" width="20" height="12" rx="1"/>
+            <line x1="1" y1="7" x2="21" y2="7" stroke-dasharray="3 2"/>
+        </svg>`;
+                shapeBtn.title = '切换为正方形';
+            }
+        }
+
+        shapeBtn.addEventListener('click', () => {
+            isSquare = !isSquare;
+
+            // 1. 临时禁止 transition 实现零延迟秒切
+            scene.classList.add('no-anim');
+
+            applySceneSize();
+            updateShapeIcon();
+            angle = 0;
+            p1 = isSquare ? { ...SQ_P1 } : { ...RE_P1 };
+            p2 = isSquare ? { ...SQ_P2 } : { ...RE_P2 };
+
+            // 2. 预判下一帧逻辑立即应用
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const vmin = Math.min(vw, vh);
+            let nextW = isSquare ? Math.min(vmin * 0.55, 380) : Math.min(vmin * 0.70, 500);
+            let nextH = isSquare ? nextW : Math.min(vmin * 0.50, 360);
+
+            updateLayout(nextW, nextH);
+            applyRot();
+
+            // 3. 异步移除禁止类，允许后续的手动翻折有平滑感
+            requestAnimationFrame(() => {
+                scene.classList.remove('no-anim');
+                // 此时 scene 已经到位，再次微调确保精确
+                updateLayout();
+            });
+        });
+
+        // ─── Geometry state ────────────────────────────────────────────────────────
+        // Defaults per shape mode
+        const SQ_P1 = { x: 0.30, y: 1.00, edge: 'bottom' };
+        const SQ_P2 = { x: 1.00, y: 0.38, edge: 'right' };
+        const RE_P1 = { x: 0.40, y: 1.00, edge: 'bottom' }; // rectangle default
+        const RE_P2 = { x: 1.00, y: 0.45, edge: 'right' };
+
+        let p1 = { ...RE_P1 };
+        let p2 = { ...RE_P2 };
+
+        // Perimeter position 0-4 (CW: top→right→bottom→left)
+        function getPos(p) {
+            if (p.edge === 'top') return p.x;
+            if (p.edge === 'right') return 1 + p.y;
+            if (p.edge === 'bottom') return 2 + (1 - p.x);
+            if (p.edge === 'left') return 3 + (1 - p.y);
+            return 0;
+        }
+
+        const CORNERS = [
+            { x: 0, y: 0, id: 0 }, { x: 1, y: 0, id: 1 },
+            { x: 1, y: 1, id: 2 }, { x: 0, y: 1, id: 3 }
+        ];
+
+        // ─── Snap targets: corners + edge midpoints ────────────────────────────────
+        // Returns snap candidates (normalised 0-1, with edge label)
+        function getSnapTargets() {
+            return [
+                // 4 corners
+                { x: 0, y: 0, edge: 'top', ex: 0, ey: 0 },
+                { x: 1, y: 0, edge: 'top', ex: 1, ey: 0 },
+                { x: 1, y: 1, edge: 'right', ex: 1, ey: 1 },
+                { x: 0, y: 1, edge: 'bottom', ex: 0, ey: 1 },
+                // 4 edge midpoints
+                { x: 0.5, y: 0, edge: 'top' },
+                { x: 1, y: 0.5, edge: 'right' },
+                { x: 0.5, y: 1, edge: 'bottom' },
+                { x: 0, y: 0.5, edge: 'left' },
+            ];
+        }
+
+        // Polygon area (Shoelace)
+        function polyArea(pts) {
+            let a = 0;
+            for (let i = 0; i < pts.length; i++) {
+                const j = (i + 1) % pts.length;
+                a += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+            }
+            return Math.abs(a) / 2;
+        }
+
+        // Corners going CW from perim pos a to b (exclusive)
+        function cornersBetween(a, b) {
+            let pts = [];
+            for (let i = 0; i < 4; i++) {
+                const cp = CORNERS[i].id;
+                let d = (cp - a + 4) % 4;
+                let td = (b - a + 4) % 4; if (td === 0) td = 4;
+                if (d > 0 && d < td) pts.push(CORNERS[i]);
+            }
+            pts.sort((A, B) => ((A.id - a + 4) % 4) - ((B.id - a + 4) % 4));
+            return pts;
+        }
+
+        let angle = 0;
+        let isFolding = false;
+        let activeHandle = null;
+        let startX, startY, startAngle;
+        let foldDir = 1;
+        let foldPath = [], mainPath = [];
+
+        // ─── Layout ────────────────────────────────────────────────────────────────
+        function updateLayout(overrideW, overrideH) {
+            const pos1 = getPos(p1), pos2 = getPos(p2);
+
+            const pathCW = [p1, ...cornersBetween(pos1, pos2), p2];
+            const pathCCW = [p2, ...cornersBetween(pos2, pos1), p1];
+
+            // Always fold the SMALLER area side
+            const areaCW = polyArea(pathCW);
+            const areaCCW = polyArea(pathCCW);
+            foldPath = areaCW <= areaCCW ? pathCW : pathCCW;
+            mainPath = areaCW <= areaCCW ? pathCCW : pathCW;
+
+            const toPct = pts => pts.map(p => `${p.x * 100}% ${p.y * 100}%`).join(',');
+            paperBase.style.clipPath = `polygon(${toPct(mainPath)})`;
+            sceneBorder.style.clipPath = `polygon(${toPct(mainPath)})`; // 同步裁剪实线外框
+            foldContainer.style.clipPath = `polygon(${toPct(foldPath)})`;
+            foldTri.style.clipPath = `polygon(${toPct(foldPath)})`;
+
+            // Update both SVGs with actual pixel dimensions
+            let W, H;
+            if (overrideW && overrideH) {
+                W = overrideW; H = overrideH;
+            } else {
+                const rect = scene.getBoundingClientRect();
+                W = rect.width || 380; H = rect.height || 380;
+            }
+
+            const vb = `0 0 ${W} ${H}`;
+            document.getElementById('mainSvg').setAttribute('viewBox', vb);
+            foldBorderSvg.setAttribute('viewBox', vb);
+
+            const toSvg = pts => pts.map(p => `${p.x * W},${p.y * H}`).join(' ');
+            creaseSvg.setAttribute('x1', p1.x * W); creaseSvg.setAttribute('y1', p1.y * H);
+            creaseSvg.setAttribute('x2', p2.x * W); creaseSvg.setAttribute('y2', p2.y * H);
+            ghostSvg.setAttribute('points', toSvg(foldPath));     // original-position ghost
+            foldBorderLine.setAttribute('points', toSvg(foldPath)); // border inside foldTri
+
+            foldContainer.style.transformOrigin = `${p1.x * 100}% ${p1.y * 100}%`;
+            h1.style.left = `${p1.x * 100}%`; h1.style.top = `${p1.y * 100}%`;
+            h2.style.left = `${p2.x * 100}%`; h2.style.top = `${p2.y * 100}%`;
+
+            // foldDir: which side of crease does foldPath sit?
+            const cx = foldPath.reduce((s, p) => s + p.x, 0) / foldPath.length;
+            const cy = foldPath.reduce((s, p) => s + p.y, 0) / foldPath.length;
+            const cdx = p2.x - p1.x, cdy = p2.y - p1.y;
+            foldDir = (cdx * (cy - p1.y) - cdy * (cx - p1.x)) > 0 ? 1 : -1;
+        }
+
+        // ─── Rotation ──────────────────────────────────────────────────────────────
+        function applyRot() {
+            const { width: W, height: H } = scene.getBoundingClientRect();
+            const dx = (p2.x - p1.x) * W;
+            const dy = (p2.y - p1.y) * H;
+            foldContainer.style.transform = `rotate3d(${dx},${dy},0,${angle * foldDir}deg)`;
+
+            const r = 1 - Math.abs(angle - 90) / 90;
+            curl.style.opacity = (r * 0.9).toString();
+            const gradA = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+            curl.style.background = `linear-gradient(${gradA}deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.3) 30%,rgba(255,255,255,0.5) 50%,rgba(0,0,0,0.2) 70%,rgba(0,0,0,0) 100%)`;
+
+            // 翻折即显示虚线，由淡变深，最终完全不透明 (1.0)
+            if (angle > 0.5) {
+                ghostSvg.style.opacity = Math.min(1.0, (angle / 180 * 0.8 + 0.3)).toString();
+            } else {
+                ghostSvg.style.opacity = '0';
+            }
+
+            if (angle > 90) {
+                foldTri.style.backgroundColor = 'var(--fold-back)';
+                const s = 1 - (angle - 90) / 90;
+                foldContainer.style.filter = `drop-shadow(${4 * s}px ${4 * s}px ${8 * s}px rgba(0,0,0,0.3))`;
+            } else {
+                foldTri.style.backgroundColor = 'rgba(173,216,230,0.8)';
+                const s = angle / 90;
+                foldContainer.style.filter = `drop-shadow(${-4 * s}px ${-4 * s}px ${8 * s}px rgba(0,0,0,0.3))`;
+            }
+        }
+
+        // ─── Snap to edge + optional snap to corners/midpoints ────────────────────
+        const SNAP_RADIUS = 0.12; // normalised distance threshold for snap
+
+        function snapPoint(nx, ny, otherEdge) {
+            nx = Math.max(0, Math.min(1, nx));
+            ny = Math.max(0, Math.min(1, ny));
+
+            // Find nearest edge first
+            const d = { top: ny, bottom: 1 - ny, left: nx, right: 1 - nx };
+            let minD = Infinity, bestEdge = '';
+            for (const e in d) if (e !== otherEdge && d[e] < minD) { minD = d[e]; bestEdge = e; }
+
+            // Project onto that edge
+            let px, py;
+            if (bestEdge === 'top') { px = nx; py = 0; }
+            else if (bestEdge === 'bottom') { px = nx; py = 1; }
+            else if (bestEdge === 'left') { px = 0; py = ny; }
+            else { px = 1; py = ny; }
+
+            // Check snap targets (corners & midpoints) that lie on this edge
+            const snapDist = SNAP_RADIUS;
+            let bestSnap = null, bestSnapD = Infinity;
+            for (const t of getSnapTargets()) {
+                if (t.edge !== bestEdge) continue;
+                const dd = Math.sqrt((t.x - px) ** 2 + (t.y - py) ** 2);
+                if (dd < snapDist && dd < bestSnapD) { bestSnapD = dd; bestSnap = t; }
+            }
+            if (bestSnap) { px = bestSnap.x; py = bestSnap.y; }
+
+            return { x: px, y: py, edge: bestEdge };
+        }
+
+        // ─── Events ────────────────────────────────────────────────────────────────
+        function startH(e, id) {
+            e.preventDefault(); e.stopPropagation();
+            activeHandle = id;
+            angle = 0; applyRot();
+            foldContainer.style.transition = 'none';
+        }
+
+        function startF(e) {
+            isFolding = true;
+            scene.classList.add('is-folding');
+            startX = e.clientX ?? e.touches[0].clientX;
+            startY = e.clientY ?? e.touches[0].clientY;
+            startAngle = angle;
+            foldContainer.style.transition = 'none';
+        }
+
+        function onMove(e) {
+            const cx = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+            const cy = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+            const rect = scene.getBoundingClientRect();
+
+            if (activeHandle) {
+                const nx = (cx - rect.left) / rect.width;
+                const ny = (cy - rect.top) / rect.height;
+                if (activeHandle === 1) p1 = snapPoint(nx, ny, p2.edge);
+                else p2 = snapPoint(nx, ny, p1.edge);
+                updateLayout();
+            } else if (isFolding) {
+                // Scale by actual pixel dims — crease direction must be in pixel space
+                const W = rect.width, H = rect.height;
+                const cdx = (p2.x - p1.x) * W;
+                const cdy = (p2.y - p1.y) * H;
+                const len = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
+                const nx = -cdy / len * foldDir;
+                const ny = cdx / len * foldDir;
+                const ddx = cx - startX, ddy = cy - startY;
+                const projected = -(ddx * nx + ddy * ny);
+                const r = projected / (Math.sqrt(W * W + H * H) * 0.35);
+                angle = Math.max(0, Math.min(180, startAngle + Math.sign(r) * Math.pow(Math.abs(r), 1.2) * 180));
+                applyRot();
+
+            }
+        }
+
+        function onEnd() {
+            if (isFolding) {
+                isFolding = false;
+                scene.classList.remove('is-folding');
+                foldContainer.style.transition = 'transform 0.4s cubic-bezier(0.25,1,0.5,1), filter 0.4s';
+                angle = angle > 90 ? 180 : 0;
+                applyRot();
+            }
+            activeHandle = null;
+        }
+
+        h1.addEventListener('mousedown', e => startH(e, 1));
+        h2.addEventListener('mousedown', e => startH(e, 2));
+        foldTri.addEventListener('mousedown', startF);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+
+        h1.addEventListener('touchstart', e => startH(e, 1), { passive: false });
+        h2.addEventListener('touchstart', e => startH(e, 2), { passive: false });
+        foldTri.addEventListener('touchstart', startF, { passive: false });
+        document.addEventListener('touchmove', e => {
+            if (isFolding || activeHandle) e.preventDefault();
+            onMove(e);
+        }, { passive: false });
+        document.addEventListener('touchend', onEnd);
+
+        // ─── Init ──────────────────────────────────────────────────────────────────
+        applySceneSize();
+        updateShapeIcon();
+        updateLayout();
+        applyRot();
+    </script>
+</body>
+
+</html>

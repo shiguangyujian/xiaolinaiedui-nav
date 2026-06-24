@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>花坛面积问题 - 互动课件</title>
+    <style>
+        /* ==========================================================================
+           A. 架构与视觉层 - CSS 变量驱动配色
+           ========================================================================== */
+        :root {
+            --bg-eye-care: #F4F3EC;
+            --container-bg: #FFFFFF;
+
+            --brand-primary: #3B82F6;
+            --brand-primary-hover: #2563EB;
+            --status-success: #10B981;
+            --status-focus: #F59E0B;
+            --status-error: #FB7185;
+
+            --text-main: #1F2937;
+            --text-muted: #4B5563;
+            --border-light: #E5E7EB;
+
+            --flowerbed: #FEF3C7;
+            --flowerbed-stroke: #D97706;
+            --road: #F3F4F6;
+            --road-stroke: #D1D5DB;
+
+            --road-m1: #DBEAFE;
+            --road-m1-stroke: #3B82F6;
+
+            --road-m2-corner: #FCE7F3;
+            --road-m2-corner-stroke: #EC4899;
+            --road-m2-side: #D1FAE5;
+            --road-m2-side-stroke: #10B981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+            background-color: var(--bg-eye-care);
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            padding: 1.5rem;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--container-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-light);
+        }
+
+        /* ==========================================================================
+           左侧：SVG 视觉互动区
+           ========================================================================== */
+        .svg-panel {
+            flex: 6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 2rem;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        rect {
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        text,
+        line,
+        path,
+        g {
+            transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* ==========================================================================
+           右侧：动态数据与控制面板
+           ========================================================================== */
+        .control-panel {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            padding: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.5rem;
+            text-align: center;
+            background: var(--bg-eye-care);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .tab.active {
+            background: #EFF6FF;
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+        }
+
+        .step-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .step-text {
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .step-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.2rem;
+            color: var(--text-main);
+            font-weight: 800;
+        }
+
+        .step-content {
+            position: relative;
+            font-size: 1.6rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 1.2rem;
+            background: #F9FAFB;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s;
+        }
+
+        .step-content.masked {
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            background: #FFFFFF;
+        }
+
+        .step-content .content-inner {
+            transition: filter 0.3s, opacity 0.3s;
+        }
+
+        .step-content.masked .content-inner {
+            filter: blur(6px);
+            opacity: 0.2;
+            user-select: none;
+        }
+
+        .mask-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand-primary);
+            font-weight: bold;
+            font-size: 1.4rem;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            border-radius: 12px;
+        }
+
+        .step-content.masked .mask-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .step-content.masked:hover .mask-overlay {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        mark {
+            background-color: transparent;
+            color: var(--status-focus);
+            font-weight: 800;
+            border-bottom: 3px solid var(--status-focus);
+            padding: 0 2px;
+        }
+
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px dashed var(--border-light);
+        }
+
+        .btn {
+            padding: 1.2rem;
+            font-size: 1.4rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .btn-prev {
+            flex: 1;
+            background-color: var(--bg-eye-care);
+            color: var(--text-muted);
+        }
+
+        .btn-prev:hover:not(:disabled) {
+            background-color: var(--border-light);
+            color: var(--text-main);
+        }
+
+        .btn-prev:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-next {
+            flex: 2;
+            background-color: var(--brand-primary);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-next:hover:not(:disabled) {
+            background-color: var(--brand-primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-next.success {
+            background-color: var(--status-success);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-next:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-dots {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .dot {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background-color: var(--border-light);
+            transition: all 0.4s ease;
+        }
+
+        .dot.active {
+            background-color: var(--brand-primary);
+        }
+
+        .dot.completed {
+            background-color: var(--brand-primary-hover);
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- ==================================================================
+             SVG 核心互动区
+             ================================================================== -->
+        <div class="card svg-panel">
+            <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" id="main-svg">
+                <defs>
+                    <!-- 调整箭头大小，更精致 -->
+                    <marker id="arrow-start" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto">
+                        <path d="M6,0 L0,3 L6,6 Z" fill="var(--text-muted)" />
+                    </marker>
+                    <marker id="arrow-end" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="var(--text-muted)" />
+                    </marker>
+                    <!-- 强调态尺寸线箭头 -->
+                    <marker id="arrow-start-focus" markerWidth="6" markerHeight="6" refX="0" refY="3" orient="auto">
+                        <path d="M6,0 L0,3 L6,6 Z" fill="var(--status-focus)" />
+                    </marker>
+                    <marker id="arrow-end-focus" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="var(--status-focus)" />
+                    </marker>
+                </defs>
+
+                <!-- 初始水泥路状态 (放大比例，充满画布) -->
+                <g id="initial-road">
+                    <path d="M50,50 h400 v400 h-400 Z M130,130 v240 h240 v-240 Z" fill="var(--road)"
+                        stroke="var(--road-stroke)" stroke-width="3" fill-rule="evenodd" />
+                    <g class="init-dim" opacity="0" id="init-dim">
+                        <line x1="370" y1="250" x2="450" y2="250" stroke="var(--text-muted)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="410" y="240" font-size="18" fill="var(--text-muted)" text-anchor="middle"
+                            font-weight="bold">1米</text>
+                    </g>
+                </g>
+
+                <!-- 方法一：风车形切块 (原位) -->
+                <g id="m1-group" opacity="0">
+                    <rect id="m1-top" x="50" y="50" width="320" height="80" fill="var(--road-m1)"
+                        stroke="var(--road-m1-stroke)" stroke-width="2" />
+                    <rect id="m1-right" x="370" y="50" width="80" height="320" fill="var(--road-m1)"
+                        stroke="var(--road-m1-stroke)" stroke-width="2" />
+                    <rect id="m1-bottom" x="130" y="370" width="320" height="80" fill="var(--road-m1)"
+                        stroke="var(--road-m1-stroke)" stroke-width="2" />
+                    <rect id="m1-left" x="50" y="130" width="80" height="320" fill="var(--road-m1)"
+                        stroke="var(--road-m1-stroke)" stroke-width="2" />
+
+                    <!-- 标记紧贴边缘 -->
+                    <g id="m1-dim-top" opacity="0">
+                        <!-- 紧贴上方边缘(y=50 -> y=35) -->
+                        <line x1="50" y1="35" x2="370" y2="35" stroke="var(--text-main)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="210" y="25" font-size="24" fill="var(--text-main)" text-anchor="middle"
+                            font-weight="bold">长 = 4米</text>
+                        <!-- 紧贴左侧边缘(x=50 -> x=35) -->
+                        <line x1="35" y1="50" x2="35" y2="130" stroke="var(--text-main)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="25" y="95" font-size="20" fill="var(--text-main)" text-anchor="end"
+                            font-weight="bold">1米</text>
+                    </g>
+                </g>
+
+                <!-- 方法二：四角与四边 (原位) -->
+                <g id="m2-group" opacity="0">
+                    <rect id="m2-c1" class="m2-corner" x="50" y="50" width="80" height="80" fill="var(--road-m2-corner)"
+                        stroke="var(--road-m2-corner-stroke)" stroke-width="2" />
+                    <rect id="m2-c2" class="m2-corner" x="370" y="50" width="80" height="80"
+                        fill="var(--road-m2-corner)" stroke="var(--road-m2-corner-stroke)" stroke-width="2" />
+                    <rect id="m2-c3" class="m2-corner" x="370" y="370" width="80" height="80"
+                        fill="var(--road-m2-corner)" stroke="var(--road-m2-corner-stroke)" stroke-width="2" />
+                    <rect id="m2-c4" class="m2-corner" x="50" y="370" width="80" height="80"
+                        fill="var(--road-m2-corner)" stroke="var(--road-m2-corner-stroke)" stroke-width="2" />
+
+                    <rect id="m2-s1" class="m2-side" x="130" y="50" width="240" height="80" fill="var(--road-m2-side)"
+                        stroke="var(--road-m2-side-stroke)" stroke-width="2" />
+                    <rect id="m2-s2" class="m2-side" x="370" y="130" width="80" height="240" fill="var(--road-m2-side)"
+                        stroke="var(--road-m2-side-stroke)" stroke-width="2" />
+                    <rect id="m2-s3" class="m2-side" x="130" y="370" width="240" height="80" fill="var(--road-m2-side)"
+                        stroke="var(--road-m2-side-stroke)" stroke-width="2" />
+                    <rect id="m2-s4" class="m2-side" x="50" y="130" width="80" height="240" fill="var(--road-m2-side)"
+                        stroke="var(--road-m2-side-stroke)" stroke-width="2" />
+
+                    <g id="m2-dim-c1" opacity="0">
+                        <line x1="50" y1="35" x2="130" y2="35" stroke="var(--text-main)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="90" y="25" font-size="20" fill="var(--text-main)" text-anchor="middle"
+                            font-weight="bold">1米</text>
+                        <line x1="35" y1="50" x2="35" y2="130" stroke="var(--text-main)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="25" y="95" font-size="20" fill="var(--text-main)" text-anchor="end"
+                            font-weight="bold">1米</text>
+                    </g>
+                    <g id="m2-dim-s1" opacity="0">
+                        <line x1="130" y1="35" x2="370" y2="35" stroke="var(--text-main)" stroke-width="2"
+                            marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+                        <text x="250" y="25" font-size="24" fill="var(--text-main)" text-anchor="middle"
+                            font-weight="bold">长 = 3米</text>
+                    </g>
+                </g>
+
+                <!-- 花坛主体 -->
+                <g id="flowerbed">
+                    <rect id="fb-rect" x="130" y="130" width="240" height="240" fill="var(--flowerbed)"
+                        stroke="var(--flowerbed-stroke)" stroke-width="2" />
+                    <text id="fb-text" x="250" y="250" text-anchor="middle" dominant-baseline="middle" font-size="48"
+                        font-weight="800" fill="var(--flowerbed-stroke)">花坛</text>
+                </g>
+
+                <g id="flowerbed-dim" opacity="0">
+                    <line x1="130" y1="470" x2="370" y2="470" stroke="var(--status-focus)" stroke-width="4"
+                        marker-start="url(#arrow-start-focus)" marker-end="url(#arrow-end-focus)" />
+                    <text x="250" y="495" font-size="24" fill="var(--status-focus)" text-anchor="middle"
+                        font-weight="900">边长 = 3米</text>
+                    <!-- 投影虚线框定花坛边界 -->
+                    <line x1="130" y1="370" x2="130" y2="465" stroke="var(--status-focus)" stroke-width="2"
+                        stroke-dasharray="6,4" opacity="0.5" />
+                    <line x1="370" y1="370" x2="370" y2="465" stroke="var(--status-focus)" stroke-width="2"
+                        stroke-dasharray="6,4" opacity="0.5" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- ==================================================================
+             右侧：控制面板与动态数据
+             ================================================================== -->
+        <div class="card control-panel">
+            <h1>正方形花坛面积</h1>
+
+            <div class="tabs">
+                <div class="tab active" id="tab-m1" onclick="setMethod(1)">方法一</div>
+                <div class="tab" id="tab-m2" onclick="setMethod(2)">方法二</div>
+            </div>
+
+            <div class="step-container">
+                <div class="progress-dots" id="dots"></div>
+                <div class="step-text" id="step-text">
+                    <!-- Text injected by JS -->
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-prev" id="btn-prev" onclick="prevStep()">← 上一步</button>
+                <button class="btn btn-next" id="btn-next" onclick="nextStep()">下一步 →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================================
+         D. 逻辑与数据层 (JS)
+         ================================================================== -->
+    <script>
+        // DOM Elements
+        const initialRoad = document.getElementById('initial-road');
+        const initDim = document.getElementById('init-dim');
+
+        const m1Group = document.getElementById('m1-group');
+        const m1Top = document.getElementById('m1-top');
+        const m1Right = document.getElementById('m1-right');
+        const m1Bottom = document.getElementById('m1-bottom');
+        const m1Left = document.getElementById('m1-left');
+        const m1DimTop = document.getElementById('m1-dim-top');
+
+        const m2Group = document.getElementById('m2-group');
+        const m2Corners = Array.from(document.querySelectorAll('.m2-corner'));
+        const m2Sides = Array.from(document.querySelectorAll('.m2-side'));
+        const m2DimC1 = document.getElementById('m2-dim-c1');
+        const m2DimS1 = document.getElementById('m2-dim-s1');
+
+        const fbRect = document.getElementById('fb-rect');
+        const fbText = document.getElementById('fb-text');
+        const fbDim = document.getElementById('flowerbed-dim');
+        const flowerbedGroup = document.getElementById('flowerbed');
+
+        // State Management
+        let currentMethod = 1;
+        let currentStep = 0;
+
+        // Content & Interactive Logic Dictionary
+        const steps = {
+            1: [
+                {
+                    title: "👀 观察图形",
+                    content: "正方形花坛外围有一圈水泥路。已知路宽是 <mark>1米</mark>，水泥路总面积是 <mark>16平方米</mark>。",
+                    action: () => { initDim.style.opacity = '1'; }
+                },
+                {
+                    title: "✨ 第一步：分割长方形",
+                    content: "将水泥路沿着花坛的边延伸切开，分成 4 个<mark>完全相同</mark>的“风车形”大长方形。",
+                    action: () => {
+                        initDim.style.opacity = '0';
+                        initialRoad.style.opacity = '0';
+                        m1Group.style.opacity = '1';
+                        // 移除弹出动画，保持原位展示切线
+                    }
+                },
+                {
+                    title: "💡 第二步：求单个面积",
+                    content: "因为这 4 个长方形一模一样，所以每个长方形的面积 = <br>16 ÷ 4 = <mark>4 (平方米)</mark>。",
+                    action: () => {
+                        [m1Right, m1Bottom, m1Left].forEach(el => el.style.opacity = '0.15');
+                    }
+                },
+                {
+                    title: "📏 第三步：算长方形的长",
+                    content: "已知路宽是 1 米，根据“长方形面积 = 长 × 宽”，求出这个长方形的 长 = 4 ÷ 1 = <mark>4 (米)</mark>。",
+                    action: () => { m1DimTop.style.opacity = '1'; }
+                },
+                {
+                    title: "🔍 第四步：找到花坛边长",
+                    content: "关键发现：对照图形，花坛的边长 刚好等于 长方形的“长”减去“路宽”。<br><br>即花坛边长 = 4 - 1 = <mark>3 (米)</mark>。",
+                    action: () => {
+                        fbDim.style.opacity = '1';
+                        fbRect.style.stroke = 'var(--status-focus)';
+                        fbRect.style.strokeWidth = '4';
+                        fbText.style.fill = 'var(--status-focus)';
+                    }
+                },
+                {
+                    title: "🎉 第五步：得出最终结果",
+                    content: "既然花坛是正方形，边长为 3 米。<br><br>那么花坛的面积 = 3 × 3 = <mark>9 (平方米)</mark>。",
+                    action: () => {
+                        fbRect.style.fill = 'var(--status-focus)';
+                        fbText.style.fill = '#FFFFFF';
+                        fbText.textContent = "9 平方米";
+                        // 完成态动效
+                        flowerbedGroup.style.transformOrigin = "250px 250px";
+                        flowerbedGroup.style.transform = "scale(1.05)";
+                        setTimeout(() => flowerbedGroup.style.transform = "scale(1)", 400);
+                    }
+                }
+            ],
+            2: [
+                {
+                    title: "👀 观察图形",
+                    content: "已知路宽 <mark>1米</mark>，水泥路总面积 <mark>16平方米</mark>。",
+                    action: () => { initDim.style.opacity = '1'; }
+                },
+                {
+                    title: "✨ 第一步：分割四个角",
+                    content: "换一种切分方法：先把四个角在原位单独切出来。因为路宽是 1 米，这四个角都是边长为 1 米的小正方形。",
+                    action: () => {
+                        initDim.style.opacity = '0';
+                        initialRoad.style.opacity = '0';
+                        m2Group.style.opacity = '1';
+                    }
+                },
+                {
+                    title: "💡 第二步：计算角的面积",
+                    content: "一个角的面积是<br> 1 × 1 = 1 （平方米）。<br>四个角的总面积 = <br>1 × 4 = <mark>4 (平方米)</mark>。",
+                    action: () => {
+                        m2DimC1.style.opacity = '1';
+                        m2Sides.forEach(el => el.style.opacity = '0.15');
+                    }
+                },
+                {
+                    title: "📏 第三步：算剩余面积",
+                    content: "去掉四个角，剩下的就是紧贴花坛边的 4 个小长方形。<br><br>它们的总面积 = 16 - 4 = <mark>12 (平方米)</mark>。",
+                    action: () => {
+                        m2Corners.forEach(el => el.style.opacity = '0.1');
+                        m2DimC1.style.opacity = '0';
+                        m2Sides.forEach(el => {
+                            el.style.opacity = '1';
+                        });
+                    }
+                },
+                {
+                    title: "🔍 第四步：求长方形的长",
+                    content: "这 4 个长方形完全一样，每个面积 = 12 ÷ 4 = <mark>3 (平方米)</mark>。<br>因为宽是 1 米，所以它的 长 = 3 ÷ 1 = <mark>3 (米)</mark>。",
+                    action: () => {
+                        [m2Sides[1], m2Sides[2], m2Sides[3]].forEach(el => el.style.opacity = '0.15');
+                        m2DimS1.style.opacity = '1';
+                    }
+                },
+                {
+                    title: "🎉 第五步：得出最终结果",
+                    content: "关键发现：观察图形，贴边长方形的“长”，恰好完全等于花坛的边长！<br>所以花坛面积 = 3 × 3 = <mark>9 (平方米)</mark>。",
+                    action: () => {
+                        fbDim.style.opacity = '1';
+                        fbRect.style.stroke = 'var(--status-focus)';
+                        fbRect.style.strokeWidth = '4';
+                        fbRect.style.fill = 'var(--status-focus)';
+                        fbText.style.fill = '#FFFFFF';
+                        fbText.textContent = "9 平方米";
+
+                        flowerbedGroup.style.transformOrigin = "250px 250px";
+                        flowerbedGroup.style.transform = "scale(1.05)";
+                        setTimeout(() => flowerbedGroup.style.transform = "scale(1)", 400);
+                    }
+                }
+            ]
+        };
+
+        // Core Render Engine (Double-reversible state)
+        function resetAll() {
+            // Initial
+            initialRoad.style.opacity = '1';
+            initDim.style.opacity = '0';
+
+            // M1
+            m1Group.style.opacity = '0';
+            [m1Top, m1Right, m1Bottom, m1Left].forEach(el => {
+                el.style.fill = 'var(--road-m1)';
+                el.style.stroke = 'var(--road-m1-stroke)';
+                el.style.opacity = '1';
+            });
+            m1DimTop.style.opacity = '0';
+
+            // M2
+            m2Group.style.opacity = '0';
+            m2Corners.forEach(el => {
+                el.style.fill = 'var(--road-m2-corner)';
+                el.style.stroke = 'var(--road-m2-corner-stroke)';
+                el.style.opacity = '1';
+            });
+            m2Sides.forEach(el => {
+                el.style.fill = 'var(--road-m2-side)';
+                el.style.stroke = 'var(--road-m2-side-stroke)';
+                el.style.opacity = '1';
+            });
+            m2DimC1.style.opacity = '0';
+            m2DimS1.style.opacity = '0';
+
+            // Flowerbed
+            fbRect.style.fill = 'var(--flowerbed)';
+            fbRect.style.stroke = 'var(--flowerbed-stroke)';
+            fbRect.style.strokeWidth = '2';
+            fbText.textContent = "花坛";
+            fbText.style.fill = 'var(--flowerbed-stroke)';
+            fbDim.style.opacity = '0';
+            flowerbedGroup.style.transform = "scale(1)";
+        }
+
+        function renderStep() {
+            const methodSteps = steps[currentMethod];
+            const stepData = methodSteps[currentStep];
+
+            // Text rendering with animation
+            const stepTextEl = document.getElementById('step-text');
+            stepTextEl.style.animation = 'none';
+            void stepTextEl.offsetWidth; // Reflow
+
+            const isMasked = currentStep === 0 ? '' : 'masked';
+            stepTextEl.innerHTML = `
+                <div class="step-title">${stepData.title}</div>
+                <div class="step-content ${isMasked}" id="step-content-box" onclick="revealStep()">
+                    <div class="mask-overlay"><span style="font-size: 2.5rem;">👆</span></div>
+                    <div class="content-inner">${stepData.content}</div>
+                </div>
+            `;
+            stepTextEl.style.animation = 'fadeInScale 0.5s ease forwards';
+
+            // Nav buttons update
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            const btnNext = document.getElementById('btn-next');
+            if (currentStep === methodSteps.length - 1) {
+                btnNext.innerHTML = '🎯 完成讲解';
+                btnNext.disabled = true;
+                btnNext.classList.add('success');
+            } else {
+                btnNext.innerHTML = '下一步 →';
+                btnNext.disabled = false;
+                btnNext.classList.remove('success');
+            }
+
+            // Progress indicator update
+            const dotsContainer = document.getElementById('dots');
+            dotsContainer.innerHTML = '';
+            for (let i = 0; i < methodSteps.length; i++) {
+                const dot = document.createElement('div');
+                let cName = 'dot';
+                if (i === currentStep) cName += ' active';
+                else if (i < currentStep) cName += ' completed';
+                dot.className = cName;
+                dotsContainer.appendChild(dot);
+            }
+
+            // Reconstruct timeline state up to PREVIOUS step
+            resetAll();
+            for (let i = 0; i < currentStep; i++) {
+                if (methodSteps[i].action) methodSteps[i].action();
+            }
+
+            // Step 0 is not masked, so we trigger its action immediately
+            if (currentStep === 0 && methodSteps[0].action) {
+                methodSteps[0].action();
+            }
+        }
+
+        function revealStep() {
+            const contentBox = document.getElementById('step-content-box');
+            if (contentBox && contentBox.classList.contains('masked')) {
+                contentBox.classList.remove('masked');
+                const stepData = steps[currentMethod][currentStep];
+                if (stepData.action) stepData.action();
+            }
+        }
+
+        // Global Event Handlers
+        function nextStep() {
+            if (currentStep < steps[currentMethod].length - 1) {
+                currentStep++;
+                renderStep();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                renderStep();
+            }
+        }
+
+        function setMethod(m) {
+            if (currentMethod === m) return;
+            currentMethod = m;
+            currentStep = 0;
+
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-m${m}`).classList.add('active');
+
+            renderStep();
+        }
+
+        // Keyboard Support for Presenters (PageUp/PageDown, Arrows)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+                e.preventDefault();
+                nextStep();
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                prevStep();
+            }
+        });
+
+        // Initialize App
+        renderStep();
+    </script>
+</body>
+
+</html>

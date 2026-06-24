@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>轴对称演示</title>
+    <style>
+        body {
+            font-family: "微软雅黑", "Microsoft YaHei", Arial, sans-serif;
+            background: #f6faff;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        /* Grid View Styles */
+        #grid-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2vmin;
+            width: 100%;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: #555;
+            font-weight: normal;
+            margin: 0 0 2vmin 0;
+            font-size: clamp(20px, 4vw, 32px);
+            flex: 0 0 auto;
+        }
+
+        .shape-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 2vmin;
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            /* Important for flex container children */
+        }
+
+        .grid-item {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            height: 100%;
+            padding: 2vmin;
+            box-sizing: border-box;
+        }
+
+        .grid-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-item svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .grid-item path,
+        .grid-item polygon,
+        .grid-item rect,
+        .grid-item circle {
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* Demo View Styles (Inherited & Adapted) */
+        #demo-view {
+            display: none;
+            /* Hidden by default */
+            flex: 1;
+            width: 100%;
+            height: 100vh;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0 0 15px 0;
+            color: #1976d2;
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: normal;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 0 10px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .parallelogram-box {
+            flex: 1;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0001;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Ensure content stays in */
+        }
+
+        .svg-wrap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .demo-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .right-column {
+            width: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        button {
+            width: 100%;
+            height: 50px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: none;
+            background: #1976d2;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover {
+            background: #1565c0;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #backBtn {
+            background: #757575;
+            margin-bottom: auto;
+            /* Push to bottom if needed, or just top */
+        }
+
+        #backBtn:hover {
+            background: #616161;
+        }
+
+        #resetBtn {
+            background: #2196f3;
+        }
+
+        #resetBtn:hover {
+            background: #1e88e5;
+        }
+
+        #showBtn {
+            background: #2196f3;
+        }
+
+        #showBtn:hover {
+            background: #1e88e5;
+        }
+
+        #foldBtn {
+            background: #f57c00;
+        }
+
+        #foldBtn:hover {
+            background: #ef6c00;
+        }
+
+        .symmetry-axis {
+            stroke: #ff9800;
+            pointer-events: none;
+            opacity: 0.8;
+            stroke-width: 2;
+            stroke-dasharray: 6, 6;
+        }
+
+        /* Responsive */
+        @media screen and (max-width: 768px) {
+            .shape-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .container {
+                flex-direction: column;
+                padding: 0 5px;
+                /* Reduce padding on mobile */
+            }
+
+            .parallelogram-box {
+                flex: 1;
+                /* Take all available vertical space */
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .right-column {
+                width: 100%;
+                flex-direction: row;
+                gap: 10px;
+                flex: 0 0 auto;
+                /* Don't shrink */
+            }
+
+            /* Hide title on mobile to save space */
+            .right-column h2 {
+                display: none;
+            }
+
+            .buttons {
+                flex-direction: row;
+                flex: 1;
+                gap: 10px;
+            }
+
+            button {
+                flex: 1;
+                font-size: 16px;
+                height: 44px;
+                /* Slightly smaller touch target */
+                min-width: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Grid View -->
+    <div id="grid-view">
+        <h1>下面哪些图形是轴对称图形？</h1>
+        <div class="shape-grid">
+            <!-- Row 1 -->
+            <div class="grid-item" onclick="selectShape('rect')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Rect: scaled up 1.6:1 ratio -->
+                    <rect x="5" y="22" width="90" height="56" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('square')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Square: scaled up -->
+                    <rect x="15" y="15" width="70" height="70" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('scaleneTriangle')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Scalene: scaled up, skew right -->
+                    <polygon points="10,85 90,85 70,10" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('circle')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Circle: scaled up -->
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="grid-item" onclick="selectShape('parallelogram')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Parallelogram: Slant right -->
+                    <polygon points="10,80 70,80 90,20 30,20" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('pentagon')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Regular Pentagon: mathematically precise points -->
+                    <!-- Center 50,50 Radius 40. Start -90deg. -->
+                    <polygon points="50,10 88.04,37.64 73.51,82.36 26.49,82.36 11.96,37.64" fill="none" stroke="#1976d2"
+                        stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('equiTriangle')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Equilateral Triangle -->
+                    <polygon points="10,82 90,82 50,12.72" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+            <div class="grid-item" onclick="selectShape('obtuseTriangle')">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                    <!-- Isosceles Obtuse Triangle -->
+                    <polygon points="5,75 95,75 50,45" fill="none" stroke="#1976d2" stroke-width="2" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo View -->
+    <div id="demo-view">
+        <div class="container">
+            <div class="parallelogram-box">
+                <div class="svg-wrap">
+                    <svg id="svg" class="demo-svg" style="touch-action:none;">
+                        <polygon id="poly" fill="#fcfcfc" stroke="#1976d2" stroke-width="3" style="opacity:0.9" />
+                        <polygon id="halfPoly" fill="#fcfcfc" stroke="#1976d2" stroke-width="3"
+                            style="opacity:0.9;display:none" />
+                        <polygon id="foldPoly" fill="#efefef" stroke="#1976d2" stroke-width="3"
+                            style="opacity:0.9;display:none" />
+                        <line id="axisTouchArea" stroke="transparent" stroke-width="30" stroke-linecap="round"
+                            style="cursor:grab" />
+                        <line id="axis" stroke="#f57c00" stroke-width="4" stroke-linecap="round"
+                            stroke-dasharray="15,10" style="pointer-events:none" />
+                        <g id="symmetryAxes"></g>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <h2>轴对称<br />演示</h2>
+                <div class="buttons">
+                    <button id="showBtn">显示</button>
+                    <button id="resetBtn">重置</button>
+                    <button id="foldBtn">折叠</button>
+                    <br>
+                    <button id="backBtn" onclick="goBack()">返回</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Logic from 轴对称演示250513.html adapted ---
+
+        // Global state
+        const para = { points: [] };
+        let axis = { x1: 50, y1: 300, x2: 750, y2: 300 };
+        let showingAxes = false;
+        let currentShape = '';
+
+        // DOM Elements
+        const svg = document.getElementById('svg');
+        const poly = document.getElementById('poly');
+        const halfPoly = document.getElementById('halfPoly');
+        const foldPoly = document.getElementById('foldPoly');
+        const axisLine = document.getElementById('axis');
+        const axisTouchArea = document.getElementById('axisTouchArea');
+        const gridView = document.getElementById('grid-view');
+        const demoView = document.getElementById('demo-view');
+
+        // Helper: Generate polygon points for circle approximation
+        function generateCirclePoints(cx, cy, r, segments = 60) {
+            const points = [];
+            for (let i = 0; i < segments; i++) {
+                const theta = (i / segments) * 2 * Math.PI;
+                points.push([cx + r * Math.cos(theta), cy + r * Math.sin(theta)]);
+            }
+            return points;
+        }
+
+        // Shape Definitions (Normalized 0-100)
+        // Adjusted to match reference image
+        const baseShapePoints = {
+            rect: [[15, 30], [85, 30], [85, 70], [15, 70]],
+            square: [[25, 25], [75, 25], [75, 75], [25, 75]],
+            scaleneTriangle: [[20, 75], [80, 75], [65, 25]], // Top-right skew
+            circle: generateCirclePoints(50, 50, 30),
+            parallelogram: [[10, 80], [70, 80], [90, 20], [30, 20]], // Row 2-1
+            pentagon: (function () {
+                // Precise Regular Pentagon
+                const cx = 50, cy = 50, r = 40;
+                const points = [];
+                for (let i = 0; i < 5; i++) {
+                    // Start from top (-PI/2). Loop 2PI/5
+                    const angle = -Math.PI / 2 + i * (2 * Math.PI / 5);
+                    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+                }
+                return points;
+            })(),
+            equiTriangle: [[10, 82], [90, 82], [50, 82 - 40 * Math.sqrt(3)]], // Row 2-3
+            obtuseTriangle: [[5, 75], [95, 75], [50, 45]] // Row 2-4 Isosceles Obtuse
+        };
+
+        const shapes = Object.entries(baseShapePoints).reduce((acc, [key, points]) => {
+            acc[key] = {
+                getPoints: (w, h) => {
+                    const scale = Math.min(w, h) * 0.9;
+                    const cx = w / 2;
+                    const cy = h / 2;
+                    // Center the shape points (assume they are around 50,50 in 0-100 scale)
+                    return points.map(([x, y]) => [
+                        cx + (x - 50) * scale / 100,
+                        cy + (y - 50) * scale / 100
+                    ]);
+                }
+            };
+            return acc;
+        }, {});
+
+        // --- Navigation Functions ---
+
+        window.selectShape = function (shapeKey) {
+            currentShape = shapeKey;
+            gridView.style.display = 'none';
+            demoView.style.display = 'flex';
+
+            // Initialize demo for this shape
+            // Double assurance for layout settling on mobile
+            requestAnimationFrame(() => {
+                updateShape(currentShape);
+                setTimeout(() => {
+                    updateShape(currentShape);
+                }, 50);
+            });
+        };
+
+        window.goBack = function () {
+            // Reset demo state
+            if (showingAxes) toggleAxes(); // Turn off if on
+            demoView.style.display = 'none';
+            gridView.style.display = 'flex';
+        };
+
+        // --- Core Demo Logic (Adapted) ---
+
+        // Drawing
+        function drawShape() {
+            const points = para.points;
+            if (points) {
+                poly.setAttribute('points', points.map(p => p.join(',')).join(' '));
+            }
+        }
+
+        function drawAxis() {
+            axisLine.setAttribute('x1', axis.x1);
+            axisLine.setAttribute('y1', axis.y1);
+            axisLine.setAttribute('x2', axis.x2);
+            axisLine.setAttribute('y2', axis.y2);
+            axisTouchArea.setAttribute('x1', axis.x1);
+            axisTouchArea.setAttribute('y1', axis.y1);
+            axisTouchArea.setAttribute('x2', axis.x2);
+            axisTouchArea.setAttribute('y2', axis.y2);
+        }
+
+        function updateShape(shapeName) {
+            const svgRect = svg.getBoundingClientRect();
+            const w = svgRect.width;
+            const h = svgRect.height;
+
+            if (shapes[shapeName]) {
+                para.points = shapes[shapeName].getPoints(w, h);
+            }
+
+            drawShape();
+            setAxisPosition();
+            updateCurrentSymmetryAxes(); // Pre-calculate for snapping
+
+            // Cleanup visual states
+            halfPoly.style.display = 'none';
+            foldPoly.style.display = 'none';
+
+            if (showingAxes) {
+                // If returning to a state, maybe force hide axes first
+                toggleAxes(); // toggle off
+            }
+        }
+
+        function setAxisPosition() {
+            const svgRect = svg.getBoundingClientRect();
+            const w = svgRect.width;
+            const h = svgRect.height;
+            const len = Math.min(w, h) * 0.9;
+
+            // Calculate centroid of the current shape
+            let cx, cy;
+            if (para.points && para.points.length > 0) {
+                let sumX = 0, sumY = 0;
+                for (let p of para.points) {
+                    sumX += p[0];
+                    sumY += p[1];
+                }
+                cx = sumX / para.points.length;
+                cy = sumY / para.points.length;
+            } else {
+                // Fallback to screen center
+                cx = w / 2;
+                cy = h / 2;
+            }
+
+            axis = {
+                x1: cx - len / 2,
+                y1: cy,
+                x2: cx + len / 2,
+                y2: cy
+            };
+            drawAxis();
+        }
+
+        // --- Geometry & Symmetry Logic ---
+
+        function reflectPoint(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const a = dy, b = -dx, c = dx * y1 - dy * x1;
+            const div = a * a + b * b;
+            if (div < 1e-10) return [px, py];
+            const d = (a * px + b * py + c) / div;
+            return [px - 2 * a * d, py - 2 * b * d];
+        }
+
+        function distance(p1, p2) {
+            return Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+        }
+
+        function pointsEqual(p1, p2, tolerance = 2) {
+            return distance(p1, p2) < tolerance;
+        }
+
+        let currentSymmetryAxes = [];
+
+        // Generic symmetry finder (Brute force for all pairs) - OK for small polygon counts
+        function getSymmetryAxes() {
+            const pts = para.points;
+            if (!pts) return [];
+            const axes = [];
+            const n = pts.length;
+
+            // If circle (many points), this is too slow. 
+            // Circle optimization: infinite axes. 
+            // But we just need a few or handle dragging nicely.
+            // For circle approximation, maybe just return empty or logic to snap to center?
+            // Let's rely on snapping to center for Circle.
+            if (currentShape === 'circle') {
+                // Circle symmetry: 16 evenly spaced diameters
+                const cx = pts.reduce((sum, p) => sum + p[0], 0) / n;
+                const cy = pts.reduce((sum, p) => sum + p[1], 0) / n;
+                const axes = [];
+                const count = 16;
+                for (let i = 0; i < count; i++) {
+                    const angle = (i * Math.PI) / count; // 0 to PI
+                    axes.push({
+                        x1: cx + 1000 * Math.cos(angle),
+                        y1: cy + 1000 * Math.sin(angle),
+                        x2: cx - 1000 * Math.cos(angle),
+                        y2: cy - 1000 * Math.sin(angle),
+                        angle: angle
+                    });
+                }
+                return axes;
+            }
+
+            // Existing logic for polygons
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    // Perpendicular bisector of Point i and Point j
+                    const p1 = pts[i];
+                    const p2 = pts[j];
+                    const midX = (p1[0] + p2[0]) / 2;
+                    const midY = (p1[1] + p2[1]) / 2;
+                    const rx = p1[1] - p2[1]; // Rotated -90 or 90
+                    const ry = p2[0] - p1[0];
+
+                    if (Math.hypot(rx, ry) < 1e-6) continue;
+
+                    // Candidate Axis definition
+                    const x1 = midX - rx * 1000;
+                    const y1 = midY - ry * 1000;
+                    const x2 = midX + rx * 1000;
+                    const y2 = midY + ry * 1000;
+
+                    if (checkSymmetry(x1, y1, x2, y2, pts)) {
+                        axes.push({
+                            x1: midX - rx, y1: midY - ry, // Store unit-ish vector or segment?
+                            x2: midX + rx, y2: midY + ry,
+                            angle: Math.atan2(ry, rx)
+                        });
+                    }
+                }
+            }
+
+            // Also check vertex-to-vertex bisectors? (Already covered by vertex pairs?)
+            // Actually, symmetry axis might pass through vertices (e.g. isosceles triangle).
+            // If it passes through vertices, it is perpendicular bisector of other pairs.
+            // So pair-check covers most. 
+            // Exception: Odd number of vertices, axis passes through 1 vertex and midpoint of opposite edge.
+            // That edge midpoint is bisector of the two edge vertices. So covered.
+
+            return filterUniqueAxes(axes);
+        }
+
+        function checkSymmetry(x1, y1, x2, y2, pts) {
+            // For every point, its reflection must exist in pts
+            for (let p of pts) {
+                const ref = reflectPoint(p[0], p[1], x1, y1, x2, y2);
+                let match = false;
+                for (let q of pts) {
+                    if (pointsEqual(ref, q, 3)) { // Tolerance 3px
+                        match = true;
+                        break;
+                    }
+                }
+                if (!match) return false;
+            }
+            return true;
+        }
+
+        function updateCurrentSymmetryAxes() {
+            currentSymmetryAxes = getSymmetryAxes();
+        }
+
+        function filterUniqueAxes(axes) {
+            const unique = [];
+            for (const axis of axes) {
+                // Simplify check: just angle and distance from origin?
+                // Or just check if close to existing
+                // For this demo, simple angle check + midpoint check
+                // ... implementation copied from original simplified ...
+                let isDup = false;
+                // ... skipping complex dedup for compactness, returning all valid is fine for snapping
+                unique.push(axis);
+            }
+            return unique;
+        }
+
+        // --- Interaction (Drag & Snap) ---
+
+        // Copying snap logic
+        function snapAxis(x1, y1, x2, y2) {
+            const axisLength = Math.hypot(x2 - x1, y2 - y1);
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+
+            // 1. Grid Snap (Vertical/Horizontal)
+            const deg = angle * 180 / Math.PI;
+            let snapDeg = null;
+            if (Math.abs(deg) < 5 || Math.abs(deg - 180) < 5 || Math.abs(deg + 180) < 5) snapDeg = 0;
+            else if (Math.abs(deg - 90) < 5 || Math.abs(deg + 90) < 5) snapDeg = 90;
+
+            if (snapDeg !== null) {
+                const rad = snapDeg * Math.PI / 180;
+                return {
+                    x1: midX - axisLength / 2 * Math.cos(rad),
+                    y1: midY - axisLength / 2 * Math.sin(rad),
+                    x2: midX + axisLength / 2 * Math.cos(rad),
+                    y2: midY + axisLength / 2 * Math.sin(rad)
+                };
+            }
+
+            // 2. Shape Symmetry Snap
+            // Check distance to computed symmetry axes
+            for (let sax of currentSymmetryAxes) {
+                // Check parallelism: angle close to sax.angle
+                let dAng = Math.abs(angle - sax.angle);
+                // Normalize to [0, PI]
+                dAng = dAng % Math.PI;
+                if (dAng > Math.PI / 2) dAng = Math.PI - dAng;
+
+                if (dAng < 0.1) { // ~5 degrees
+                    // Check distance from midpoint to line
+                    // Line: A*x + B*y + C = 0
+                    const A = Math.sin(sax.angle);
+                    const B = -Math.cos(sax.angle);
+                    const C = -A * ((sax.x1 + sax.x2) / 2) - B * ((sax.y1 + sax.y2) / 2);
+
+                    const dist = Math.abs(A * midX + B * midY + C);
+                    if (dist < 15) {
+                        // Snap!
+                        // Project midX, midY onto line
+                        const projX = midX - dist * A * Math.sign(A * midX + B * midY + C);
+                        const projY = midY - dist * B * Math.sign(A * midX + B * midY + C);
+
+                        // Use original length
+                        return {
+                            x1: projX - axisLength / 2 * Math.cos(sax.angle),
+                            y1: projY - axisLength / 2 * Math.sin(sax.angle),
+                            x2: projX + axisLength / 2 * Math.cos(sax.angle),
+                            y2: projY + axisLength / 2 * Math.sin(sax.angle)
+                        };
+                    }
+                }
+            }
+
+            return { x1, y1, x2, y2 };
+        }
+
+        // Drag API
+        let dragging = false;
+        let dragMode = null; // 'all' or 'start' or 'end'
+        let lastP = null;
+        let axisStart = null;
+
+        function getPt(e) {
+            const svgPt = svg.createSVGPoint();
+            if (e.touches && e.touches.length > 0) {
+                svgPt.x = e.touches[0].clientX;
+                svgPt.y = e.touches[0].clientY;
+            } else {
+                svgPt.x = e.clientX;
+                svgPt.y = e.clientY;
+            }
+            return svgPt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        function isNear(p, x, y) {
+            return Math.hypot(p.x - x, p.y - y) < 30;
+        }
+
+        axisTouchArea.addEventListener('mousedown', startDrag);
+        axisTouchArea.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('touchmove', moveDrag, { passive: false });
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            e.preventDefault();
+            const p = getPt(e);
+            lastP = p;
+            dragging = true;
+            axisStart = { ...axis };
+
+            if (isNear(p, axis.x1, axis.y1)) dragMode = 'start';
+            else if (isNear(p, axis.x2, axis.y2)) dragMode = 'end';
+            else dragMode = 'all';
+
+            document.body.style.cursor = dragMode === 'all' ? 'move' : 'crosshair';
+        }
+
+        function moveDrag(e) {
+            if (!dragging) return;
+            e.preventDefault();
+            const p = getPt(e);
+
+            if (dragMode === 'all') {
+                const dx = p.x - lastP.x;
+                const dy = p.y - lastP.y;
+                axis.x1 += dx; axis.y1 += dy;
+                axis.x2 += dx; axis.y2 += dy;
+                // Snap
+                const s = snapAxis(axis.x1, axis.y1, axis.x2, axis.y2);
+                axis = s;
+                lastP = p; // Continue relative drag
+            } else {
+                // Rotate around center
+                const midX = (axisStart.x1 + axisStart.x2) / 2;
+                const midY = (axisStart.y1 + axisStart.y2) / 2;
+                const angle = Math.atan2(p.y - midY, p.x - midX);
+
+                // Keep length? Or allow resize? Original allowed rotate.
+                // Let's keep length constant-ish or just rotate based on pointer.
+                const dist = Math.hypot(axisStart.x2 - axisStart.x1, axisStart.y2 - axisStart.y1) / 2;
+
+                // If dragging start, p is related to x1. Angle is angle(p - mid).
+                // x1 should be mid + dist * (angle). x2 is opposite.
+                // Actually start corresponds to angle. End corresponds to angle + PI.
+
+                let newAngle = angle;
+                if (dragMode === 'start') {
+                    // Dragging tail.
+                    // The new axis vector should point from P to Mid?
+                    // Let's simplified: Rotate axis so that the dragged end checks alignment with P.
+                    // x1 = mid + dist * cos(angle)...
+                    // But start is x1.
+                    axis.x1 = midX + dist * Math.cos(angle);
+                    axis.y1 = midY + dist * Math.sin(angle);
+                    axis.x2 = midX - dist * Math.cos(angle);
+                    axis.y2 = midY - dist * Math.sin(angle);
+                } else {
+                    axis.x2 = midX + dist * Math.cos(angle);
+                    axis.y2 = midY + dist * Math.sin(angle);
+                    axis.x1 = midX - dist * Math.cos(angle);
+                    axis.y1 = midY - dist * Math.sin(angle);
+                }
+
+                // Snap the whole axis based on this new position
+                const s = snapAxis(axis.x1, axis.y1, axis.x2, axis.y2);
+                axis = s;
+            }
+
+            drawAxis();
+        }
+
+        function endDrag() {
+            dragging = false;
+            dragMode = null;
+        }
+
+        // --- Button Handlers ---
+
+        document.getElementById('resetBtn').onclick = () => {
+            setAxisPosition();
+            halfPoly.style.display = 'none';
+            foldPoly.style.display = 'none';
+            if (showingAxes) toggleAxes();
+        };
+
+        function toggleAxes() {
+            showingAxes = !showingAxes;
+            const btn = document.getElementById('showBtn');
+            const g = document.getElementById('symmetryAxes');
+
+            if (showingAxes) {
+                btn.textContent = '隐藏';
+                // Draw detected axes
+                g.innerHTML = '';
+                // For Demo: Recalculate robustly or use predefined if detection fails?
+                // "Demo detection" is fun.
+                const axes = getSymmetryAxes(); // Use the detection
+
+                // Manual overrides for specific shapes if detection is tricky
+                // e.g. Rect/Square/IsoTriangle are easy.
+                // Circle: Infinite. 
+                // Scalene: None.
+
+                if (axes.length === 0 && currentShape !== 'scaleneTriangle' && currentShape !== 'parallelogram') {
+                    // If expected symmetry but none found (maybe approximation error), fallback?
+                    // Nah, let the math speak.
+                }
+
+                axes.forEach(ax => {
+                    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    // Extend the line for display
+                    const cx = (ax.x1 + ax.x2) / 2; const cy = (ax.y1 + ax.y2) / 2;
+                    const angle = ax.angle || Math.atan2(ax.y2 - ax.y1, ax.x2 - ax.x1);
+                    const L = 2000;
+                    ln.setAttribute('x1', cx - L * Math.cos(angle));
+                    ln.setAttribute('y1', cy - L * Math.sin(angle));
+                    ln.setAttribute('x2', cx + L * Math.cos(angle));
+                    ln.setAttribute('y2', cy + L * Math.sin(angle));
+                    ln.setAttribute('class', 'symmetry-axis');
+                    g.appendChild(ln);
+                });
+
+                axisLine.style.display = 'none';
+                axisTouchArea.style.display = 'none';
+            } else {
+                btn.textContent = '显示';
+                g.innerHTML = '';
+                axisLine.style.display = '';
+                axisTouchArea.style.display = '';
+            }
+        }
+
+        document.getElementById('showBtn').onclick = toggleAxes;
+
+        // --- Folding Logic ---
+        // Simplified Clip
+        function lineIntersection(p1, p2, q1, q2) {
+            const a1 = p2[1] - p1[1];
+            const b1 = p1[0] - p2[0];
+            const c1 = a1 * p1[0] + b1 * p1[1];
+            const a2 = q2[1] - q1[1];
+            const b2 = q1[0] - q2[0];
+            const c2 = a2 * q1[0] + b2 * q1[1];
+            const det = a1 * b2 - a2 * b1;
+            if (Math.abs(det) < 1e-10) return null;
+            const x = (b2 * c1 - b1 * c2) / det;
+            const y = (a1 * c2 - a2 * c1) / det;
+            return [x, y];
+        }
+
+        function clip(points, x1, y1, x2, y2) {
+            // Sutherland-Hodgman
+            let out = points;
+            // Clip line is infinite line through (x1,y1)-(x2,y2)
+            // Vector (dx, dy). Normal (-dy, dx).
+            // Standard equation: -dy*x + dx*y + C = 0? 
+            // Let's use getSide logic
+            const dx = x2 - x1; const dy = y2 - y1;
+
+            // Define "Inside" as one side. Which side? 
+            // We need TWO parts. Part A (one side) and Part B (other side).
+
+            const partA = [];
+            const partB = [];
+
+            // Helper to check side. Cross product of (Lineseg, Point-LineStart)
+            const side = (p) => (x2 - x1) * (p[1] - y1) - (y2 - y1) * (p[0] - x1);
+
+            // Actually, simple clipping splitting list of points
+            // It's tricky to get closed polygons for both sides if not convex.
+            // Assuming Convex Shapes (mostly true for this demo, except star which we don't have).
+            // Star is not convex. Sutherland-Hodgman handles convex clip region (half plane).
+            // Polygon itself doesn't need to be convex for simple half-plane clip.
+
+            // ... implementing split ... 
+
+            let newPoly = [];
+            for (let i = 0; i < points.length; i++) {
+                const cur = points[i];
+                const next = points[(i + 1) % points.length];
+                const sCur = side(cur);
+                const sNext = side(next);
+
+                if (sCur >= 0) newPoly.push(cur);
+
+                if ((sCur >= 0 && sNext < 0) || (sCur < 0 && sNext >= 0)) {
+                    // Intersection
+                    const inter = lineIntersection(cur, next, [x1, y1], [x2, y2]);
+                    if (inter) newPoly.push(inter);
+                }
+            }
+
+            // This gives Part A (side >= 0).
+            // Part B is side < 0
+            let newPolyB = [];
+            for (let i = 0; i < points.length; i++) {
+                const cur = points[i];
+                const next = points[(i + 1) % points.length];
+                const sCur = side(cur);
+                const sNext = side(next);
+
+                if (sCur < 0) newPolyB.push(cur);
+
+                if ((sCur >= 0 && sNext < 0) || (sCur < 0 && sNext >= 0)) {
+                    const inter = lineIntersection(cur, next, [x1, y1], [x2, y2]);
+                    if (inter) newPolyB.push(inter);
+                }
+            }
+
+            return [newPoly, newPolyB];
+        }
+
+        document.getElementById('foldBtn').onclick = () => {
+            const pts = para.points;
+            const [p1, p2] = clip(pts, axis.x1, axis.y1, axis.x2, axis.y2);
+
+            // Identify which part is smaller? Or just pick one to fold.
+            // Usually fold the smaller one, or the one on the "left/top"?
+            // Demo logic: keep p2 static, fold p1.
+
+            if (p1.length < 3 || p2.length < 3) return; // Can't fold
+
+            // Static: p2
+            // Folding: p1
+            halfPoly.setAttribute('points', p2.map(p => p.join(',')).join(' '));
+            halfPoly.style.display = '';
+
+            foldPoly.style.display = '';
+
+            // Animate
+            let start = null;
+            const dur = 500;
+
+            function tick(t) {
+                if (!start) start = t;
+                let prog = (t - start) / dur;
+                if (prog > 1) prog = 1;
+
+                // Interpolate p1 points to reflected positions
+                const currentPts = p1.map(p => {
+                    const r = reflectPoint(p[0], p[1], axis.x1, axis.y1, axis.x2, axis.y2);
+                    return [
+                        p[0] + (r[0] - p[0]) * prog,
+                        p[1] + (r[1] - p[1]) * prog
+                    ];
+                });
+
+                foldPoly.setAttribute('points', currentPts.map(p => p.join(',')).join(' '));
+
+                if (prog < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        };
+
+        // Resize Handler
+        const ro = new ResizeObserver(() => {
+            if (demoView.style.display !== 'none') {
+                updateShape(currentShape);
+            }
+        });
+        ro.observe(document.querySelector('.svg-wrap'));
+
+        console.log("Init complete");
+    </script>
+</body>
+
+</html>

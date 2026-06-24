@@ -1,0 +1,401 @@
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铺地砖问题 - 五年级下册数学互动课件</title>
+    <!-- 样式定义 -->
+    <style>
+        :root {
+            --primary: #FF5600;
+            --primary-dark: #EA580C;
+            --bg: #F4F3EC;
+            --text-main: #0C0302;
+            --text-secondary: #1F2937;
+            --text-muted: #9CA3AF;
+        }
+
+        html,
+        body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+        }
+
+        .app-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 2vh 2vw;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            gap: 2vh;
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1vh;
+            min-height: 0;
+        }
+
+        svg {
+            height: 100%;
+            width: 100%;
+            display: block;
+        }
+
+        .control-panel {
+            flex-shrink: 0;
+            padding: 2vh 3vw;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* 网格线样式 */
+        .grid-line {
+            stroke: var(--primary);
+            stroke-width: 1.5;
+            stroke-opacity: 0.6;
+        }
+
+        .grid-line.perfect {
+            stroke-opacity: 0.9;
+        }
+
+        .grid-line.gap {
+            stroke: #EF4444;
+            stroke-dasharray: 4;
+        }
+
+        /* 填充块样式 */
+        .tile-fill {
+            fill: var(--primary);
+            fill-opacity: 0.1;
+        }
+
+        .tile-fill.perfect {
+            fill-opacity: 0.2;
+        }
+
+        /* 工具类 */
+        .flex {
+            display: flex;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .items-end {
+            align-items: flex-end;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .px-1 {
+            padding: 0 0.25rem;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .text-tiny {
+            font-size: 10px;
+        }
+
+        .text-base {
+            font-size: 1rem;
+        }
+
+        .text-lg {
+            font-size: 1.125rem;
+        }
+
+        .text-xl {
+            font-size: 1.25rem;
+        }
+
+        .text-2xl {
+            font-size: 1.5rem;
+        }
+
+        .text-gray-400 {
+            color: var(--text-muted);
+        }
+
+        .text-gray-800 {
+            color: var(--text-secondary);
+        }
+
+        .text-orange-600 {
+            color: var(--primary-dark);
+        }
+
+        @media (min-width: 768px) {
+            .md\:text-lg {
+                font-size: 1.125rem;
+            }
+
+            .md\:text-xl {
+                font-size: 1.25rem;
+            }
+
+            .md\:text-2xl {
+                font-size: 1.5rem;
+            }
+
+            .md\:text-3xl {
+                font-size: 1.875rem;
+            }
+        }
+
+        /* 输入控件 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            outline: none;
+            margin: 1.5vh 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 86, 0, 0.3);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background-color: var(--primary-dark);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="main-content">
+            <div class="canvas-container">
+                <svg id="mainSvg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+                    <!-- 房间地面 -->
+                    <rect id="room" x="100" y="100" width="640" height="480" fill="#f9fafb" stroke="#374151"
+                        stroke-width="3"></rect>
+                    <!-- 尺寸标注 -->
+                    <g class="dimensions font-bold">
+                        <line x1="100" y1="70" x2="740" y2="70" stroke="#374151" stroke-width="2"></line>
+                        <path d="M100 60 L100 80 M740 60 L740 80" stroke="#374151" stroke-width="2"></path>
+                        <text x="420" y="55" text-anchor="middle" fill="#374151" style="font-size: 32px;">长 16 dm</text>
+                        <line x1="60" y1="100" x2="60" y2="580" stroke="#374151" stroke-width="2"></line>
+                        <path d="M50 100 L70 100 M50 580 L70 580" stroke="#374151" stroke-width="2"></path>
+                        <text x="40" y="340" text-anchor="middle" transform="rotate(-90, 40, 340)" fill="#374151"
+                            style="font-size: 32px;">宽 12 dm</text>
+                    </g>
+                    <!-- 网格容器 -->
+                    <g id="gridGroup">
+                        <rect x="100" y="100" width="640" height="480" class="tile-fill"></rect>
+                        <line x1="100" y1="100" x2="740" y2="100" class="grid-line"></line>
+                        <line x1="100" y1="340" x2="740" y2="340" class="grid-line"></line>
+                        <line x1="100" y1="580" x2="740" y2="580" class="grid-line"></line>
+                        <line x1="100" y1="100" x2="100" y2="580" class="grid-line"></line>
+                        <line x1="340" y1="100" x2="340" y2="580" class="grid-line"></line>
+                        <line x1="580" y1="100" x2="580" y2="580" class="grid-line"></line>
+                        <line x1="740" y1="100" x2="740" y2="580" class="grid-line gap"></line>
+                    </g>
+                </svg>
+            </div>
+            <div class="control-panel">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex-1">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">铺地砖问题</h2>
+                    </div>
+                    <div class="flex-1 text-center">
+                        <label class="text-base md:text-lg font-bold">边长：<span id="tileSizeDisplay"
+                                class="text-2xl md:text-3xl text-orange-600">6</span> dm</label>
+                    </div>
+                    <div class="flex-1 flex flex-col items-end">
+                        <div id="calculationDisplay" class="text-lg md:text-xl font-bold text-orange-600">2行3列，2×3=6块
+                        </div>
+                    </div>
+                </div>
+                <input type="range" id="tileSizeSlider" min="1" max="12" step="1" value="1">
+                <div class="flex justify-between text-tiny text-gray-400 px-1">
+                    <span>1dm</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12dm</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const roomWidth = 16;
+        const roomHeight = 12;
+        const scale = 40;
+        const startX = 100;
+        const startY = 100;
+        const endX = startX + roomWidth * scale;
+        const endY = startY + roomHeight * scale;
+        const slider = document.getElementById('tileSizeSlider');
+        const sizeDisplay = document.getElementById('tileSizeDisplay');
+        const gridGroup = document.getElementById('gridGroup');
+        const calculationDisplay = document.getElementById('calculationDisplay');
+        let currentAnimation = null;
+        function updateVisualization() {
+            const tileSize = parseInt(slider.value);
+            sizeDisplay.textContent = tileSize;
+            gridGroup.innerHTML = '';
+            // 停止之前的动画
+            if (currentAnimation) {
+                currentAnimation.pause();
+            }
+            const cols = Math.ceil(roomWidth / tileSize);
+            const rows = Math.ceil(roomHeight / tileSize);
+            const isPerfect = (roomWidth % tileSize === 0) && (roomHeight % tileSize === 0);
+            // 1. 绘制背景填充
+            const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bgRect.setAttribute("x", startX);
+            bgRect.setAttribute("y", startY);
+            bgRect.setAttribute("width", roomWidth * scale);
+            bgRect.setAttribute("height", roomHeight * scale);
+            bgRect.classList.add("tile-fill");
+            if (isPerfect) bgRect.classList.add("perfect");
+            gridGroup.appendChild(bgRect);
+            const hLines = [];
+            const vLines = [];
+            // 2. 准备横线
+            for (let j = 0; j <= rows; j++) {
+                let y = startY + j * tileSize * scale;
+                if (y > endY) y = endY;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", startX);
+                line.setAttribute("y1", y);
+                line.setAttribute("x2", startX);
+                line.setAttribute("y2", y);
+                line.classList.add("grid-line");
+                if (isPerfect) line.classList.add("perfect");
+                if (y === endY && roomHeight % tileSize !== 0) line.classList.add("gap");
+                gridGroup.appendChild(line);
+                hLines.push(line);
+            }
+            // 3. 准备纵线
+            for (let i = 0; i <= cols; i++) {
+                let x = startX + i * tileSize * scale;
+                if (x > endX) x = endX;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", x);
+                line.setAttribute("y1", startY);
+                line.setAttribute("x2", x);
+                line.setAttribute("y2", startY);
+                line.classList.add("grid-line");
+                if (isPerfect) line.classList.add("perfect");
+                if (x === endX && roomWidth % tileSize !== 0) line.classList.add("gap");
+                gridGroup.appendChild(line);
+                vLines.push(line);
+            }
+            // 4. 执行动画：使用 requestAnimationFrame 确保属性(x2, y2)精确更新
+            const stagger = 25; // 缩短间距使动画更流畅
+            const duration = 400;
+            const startTime = performance.now();
+
+            const activeAnims = [];
+            const easeOut = t => t * (2 - t);
+
+            function startAnim(el, attr, to, delay) {
+                const from = parseFloat(el.getAttribute(attr));
+                let rafId;
+
+                const step = (now) => {
+                    const elapsed = now - (startTime + delay);
+                    if (elapsed < 0) {
+                        rafId = requestAnimationFrame(step);
+                        return;
+                    }
+
+                    const progress = Math.min(elapsed / duration, 1);
+                    const val = from + (to - from) * easeOut(progress);
+                    el.setAttribute(attr, val);
+
+                    if (progress < 1) {
+                        rafId = requestAnimationFrame(step);
+                    }
+                };
+
+                rafId = requestAnimationFrame(step);
+                return () => cancelAnimationFrame(rafId);
+            }
+
+            // 执行横向动画
+            hLines.forEach((line, i) => {
+                activeAnims.push(startAnim(line, 'x2', endX, i * stagger));
+            });
+
+            // 执行纵向动画
+            const vStartDelay = hLines.length * stagger + 50;
+            vLines.forEach((line, i) => {
+                activeAnims.push(startAnim(line, 'y2', endY, vStartDelay + i * stagger));
+            });
+
+            currentAnimation = {
+                pause: () => activeAnims.forEach(cancel => cancel())
+            };
+            // 更新计算显示：几行几列，几x几=几块
+            // 纵向分出的块数即为“行”，横向分出的块数即为“列”
+            const rowCount = rows;
+            const colCount = cols;
+            const total = rowCount * colCount;
+            calculationDisplay.innerHTML = `${rowCount}行${colCount}列，${rowCount}×${colCount}=${total}块`;
+        }
+        slider.addEventListener('input', updateVisualization);
+        updateVisualization();
+    </script>
+</body>
+
+</html>

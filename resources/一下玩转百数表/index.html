@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百家姓百数表</title>
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            overflow: hidden;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 左侧装饰区 */
+        .sidebar {
+            width: 300px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .title-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .title-char {
+            width: 60px;
+            height: 60px;
+            perspective: 1000px;
+        }
+
+        .title-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .title-char.is-flipped .title-inner {
+            transform: rotateY(180deg);
+        }
+
+        .title-front,
+        .title-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 0.5rem;
+        }
+
+        .title-back {
+            transform: rotateY(180deg);
+        }
+
+        .char-bai-f {
+            background-color: #4ade80;
+        }
+
+        .char-jia-f {
+            background-color: #22c55e;
+        }
+
+        .char-xing-f {
+            background-color: #16a34a;
+        }
+
+        .char-bai-b {
+            background-color: #fb923c;
+        }
+
+        .char-shu-b {
+            background-color: #f97316;
+        }
+
+        .char-biao-b {
+            background-color: #ea580c;
+        }
+
+        .mascot {
+            width: 200px;
+            height: auto;
+            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
+        }
+
+        /* 右侧网格区 */
+        .grid-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            position: relative;
+            padding: 3rem 40px 40px 40px;
+        }
+
+        .grid-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 80vh;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0;
+        }
+
+        .col-label-container {
+            position: absolute;
+            right: -10px;
+            bottom: -35px;
+        }
+
+        .axis-label {
+            color: #16a34a;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #bbf7d0;
+            padding: 2px;
+            background-color: #bbf7d0;
+            box-sizing: border-box;
+        }
+
+        .cell {
+            background: white;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .cell-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .cell.is-flipped .cell-inner {
+            transform: rotateY(180deg);
+        }
+
+        .cell-front,
+        .cell-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .cell-front {
+            color: #1f2937;
+            font-family: "KaiTi", "STKaiti", serif;
+            font-size: clamp(1.2rem, 5vh, 2.8rem);
+            padding: 2px;
+            line-height: 1;
+        }
+
+        .cell-back {
+            background-color: white;
+            color: #16a34a;
+            transform: rotateY(180deg);
+            font-family: "SimHei", "STHeiti", sans-serif;
+            font-size: clamp(1rem, 4vh, 2.2rem);
+            padding: 2px;
+            line-height: 1;
+        }
+
+        .cell-back.is-highlighted {
+            background-color: #ffedd5 !important;
+            color: #ff5600 !important;
+            border: 2px solid #ff5600;
+        }
+
+        .arrow-h {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #16a34a;
+        }
+
+        .arrow-h::after {
+            content: '';
+            position: absolute;
+            right: -5px;
+            top: -4px;
+            border-left: 10px solid #16a34a;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .arrow-v {
+            position: absolute;
+            right: -20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #16a34a;
+        }
+
+        .arrow-v::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: -4px;
+            border-top: 10px solid #16a34a;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                padding: 1rem;
+            }
+
+            .sidebar {
+                padding: 1rem;
+            }
+
+            .mascot {
+                width: 120px;
+            }
+
+            .cell-front,
+            .cell-back {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 基础重置与 Tailwind 常用样式提取 */
+        * {
+            box-sizing: border-box;
+            border-width: 0;
+            border-style: solid;
+            border-color: #e5e7eb;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+
+        .show-all-btn {
+            margin-top: 1.5rem;
+            padding: 0.5rem 1.5rem;
+            background-color: #16a34a;
+            color: white;
+            border-radius: 9999px;
+            font-weight: bold;
+            transition: background-color 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .show-all-btn:hover {
+            background-color: #15803d;
+        }
+
+        .grid-main-area {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 设置按钮及弹窗样式 */
+        .settings-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            z-index: 100;
+        }
+
+        .settings-btn:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #16a34a;
+        }
+
+        .settings-textarea {
+            width: 100%;
+            height: 40vh;
+            padding: 1rem;
+            border: 1px solid #dcfce7;
+            border-radius: 0.5rem;
+            font-family: "KaiTi", "STKaiti", serif;
+            font-size: 2rem;
+            resize: none;
+            outline: none;
+            margin-bottom: 1rem;
+        }
+
+        .settings-textarea:focus {
+            border-color: #16a34a;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-cancel {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-save {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-reset {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            color: #4b5563;
+            margin-right: auto;
+        }
+
+        .btn-reset:hover {
+            background: #f9fafb;
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .mascot {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .mascot:active {
+            transform: scale(0.95);
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- 左侧 -->
+        <div class="sidebar" style="transform: translateX(0px); opacity: 1;">
+            <div class="title-box">
+                <div id="title1" class="title-char">
+                    <div class="title-inner">
+                        <div class="title-front char-bai-f">百</div>
+                        <div class="title-back char-bai-b">百</div>
+                    </div>
+                </div>
+                <div id="title2" class="title-char">
+                    <div class="title-inner">
+                        <div class="title-front char-jia-f">家</div>
+                        <div class="title-back char-shu-b">数</div>
+                    </div>
+                </div>
+                <div id="title3" class="title-char">
+                    <div class="title-inner">
+                        <div class="title-front char-xing-f">姓</div>
+                        <div class="title-back char-biao-b">表</div>
+                    </div>
+                </div>
+            </div>
+            <img src="xnh.png" alt="吉祥物" class="mascot">
+            <button id="showAllBtn" class="show-all-btn">
+                全部显示
+            </button>
+        </div>
+
+        <!-- 右侧 -->
+        <div class="grid-container">
+            <div class="grid-wrapper">
+                <div class="grid-header">
+                    <span class="axis-label">行</span>
+                </div>
+                <div class="grid-main-area">
+                    <div class="arrow-h"></div>
+                    <div class="arrow-v"></div>
+                    <div id="surnameGrid" class="grid"></div>
+                    <div class="col-label-container">
+                        <span class="axis-label">列</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="settingsBtn" class="settings-btn" title="设置">⚙️</button>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">自定义内容 (100个汉字)</div>
+            <textarea id="settingsInput" class="settings-textarea"
+                placeholder="请输入100个汉字，用空格或逗号分隔，或者直接连着写..."></textarea>
+            <div class="modal-footer">
+                <button id="resetSettings" class="btn-reset">恢复默认</button>
+                <button id="cancelSettings" class="btn-cancel">取消</button>
+                <button id="saveSettings" class="btn-save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let surnames = [];
+        const defaultSurnames = [
+            "王", "李", "张", "刘", "陈", "杨", "黄", "赵", "吴", "周",
+            "徐", "孙", "马", "朱", "胡", "郭", "何", "林", "罗", "高",
+            "郑", "梁", "谢", "宋", "唐", "许", "韩", "邓", "冯", "曹",
+            "彭", "曾", "肖", "田", "董", "潘", "袁", "蔡", "蒋", "余",
+            "于", "杜", "叶", "程", "魏", "苏", "吕", "丁", "任", "卢",
+            "姚", "沈", "钟", "姜", "崔", "谭", "陆", "范", "汪", "廖",
+            "石", "金", "韦", "贾", "夏", "付", "方", "邹", "熊", "白",
+            "孟", "秦", "邱", "侯", "江", "尹", "薛", "闫", "段", "雷",
+            "龙", "黎", "史", "陶", "贺", "毛", "郝", "顾", "龚", "邵",
+            "万", "覃", "武", "钱", "戴", "严", "莫", "孔", "向", "常"
+        ];
+
+        const grid = document.getElementById('surnameGrid');
+        const showAllBtn = document.getElementById('showAllBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsInput = document.getElementById('settingsInput');
+        const saveSettings = document.getElementById('saveSettings');
+        const cancelSettings = document.getElementById('cancelSettings');
+        const resetSettings = document.getElementById('resetSettings');
+        const mascot = document.querySelector('.mascot');
+
+        let allShown = false;
+        let isDragging = false;
+        let dragMode = 'highlight'; // 'highlight' or 'clear'
+
+        function loadSurnames() {
+            const saved = localStorage.getItem('bjx-surnames');
+            if (saved) {
+                try {
+                    surnames = JSON.parse(saved);
+                } catch (e) {
+                    surnames = [...defaultSurnames];
+                }
+            } else {
+                surnames = [...defaultSurnames];
+            }
+        }
+
+        function initGrid() {
+            grid.innerHTML = '';
+            surnames.forEach((name, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const isLast = index === 99;
+                cell.innerHTML = `
+                    <div class="cell-inner">
+                        <div class="cell-front">${name}</div>
+                        <div class="cell-back ${isLast ? 'small-text' : ''}">${index + 1}</div>
+                    </div>
+                `;
+
+                const toggleCell = () => {
+                    if (allShown) {
+                        const back = cell.querySelector('.cell-back');
+                        if (dragMode === 'highlight') {
+                            back.classList.add('is-highlighted');
+                        } else {
+                            back.classList.remove('is-highlighted');
+                        }
+                        playClickSound();
+                    } else if (!cell.classList.contains('is-flipped')) {
+                        cell.classList.add('is-flipped');
+                        playClickSound();
+                    }
+                };
+
+                const handleStart = (e) => {
+                    // 对于触摸事件，阻止其触发后续的鼠标事件防止二次翻转
+                    if (e.type === 'touchstart') {
+                        e.preventDefault();
+                    }
+
+                    isDragging = true;
+                    if (allShown) {
+                        const back = cell.querySelector('.cell-back');
+                        dragMode = back.classList.contains('is-highlighted') ? 'clear' : 'highlight';
+                        toggleCell();
+                    } else {
+                        cell.classList.toggle('is-flipped');
+                        playClickSound();
+                    }
+                };
+
+                // 鼠标事件
+                cell.addEventListener('mousedown', handleStart);
+                cell.addEventListener('mouseenter', () => {
+                    if (isDragging) {
+                        if (allShown) {
+                            toggleCell();
+                        } else if (!cell.classList.contains('is-flipped')) {
+                            cell.classList.add('is-flipped');
+                            playClickSound();
+                        }
+                    }
+                });
+
+                // 触摸事件
+                cell.addEventListener('touchstart', handleStart, { passive: false });
+
+                grid.appendChild(cell);
+            });
+        }
+
+        // 初始化加载
+        loadSurnames();
+        initGrid();
+
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('touchend', () => isDragging = false);
+
+        // 触摸滑动支持
+        grid.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cell = target?.closest('.cell');
+            if (cell) {
+                if (allShown) {
+                    const back = cell.querySelector('.cell-back');
+                    if (dragMode === 'highlight' && !back.classList.contains('is-highlighted')) {
+                        back.classList.add('is-highlighted');
+                        playClickSound();
+                    } else if (dragMode === 'clear' && back.classList.contains('is-highlighted')) {
+                        back.classList.remove('is-highlighted');
+                        playClickSound();
+                    }
+                } else if (!cell.classList.contains('is-flipped')) {
+                    cell.classList.add('is-flipped');
+                    playClickSound();
+                }
+            }
+        }, { passive: false });
+
+        showAllBtn.addEventListener('click', () => {
+            if (!allShown) {
+                allShown = true;
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.classList.add('is-flipped');
+                    const back = cell.querySelector('.cell-back');
+                    back.classList.remove('is-highlighted');
+                });
+                showAllBtn.textContent = '清除高亮';
+
+                // 标题切换为“百数表”
+                updateTitle();
+            } else {
+                // 清除高亮逻辑
+                const highlighted = document.querySelectorAll('.is-highlighted');
+                highlighted.forEach(el => el.classList.remove('is-highlighted'));
+            }
+            playClickSound();
+        });
+
+        function updateTitle() {
+            const titles = document.querySelectorAll('.title-char');
+            titles.forEach((el, i) => {
+                setTimeout(() => {
+                    el.classList.add('is-flipped');
+                }, i * 200);
+            });
+        }
+
+        // 设置逻辑
+        settingsBtn.addEventListener('click', () => {
+            settingsInput.value = surnames.join('');
+            settingsModal.style.display = 'flex';
+        });
+
+        cancelSettings.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+
+        saveSettings.addEventListener('click', () => {
+            let input = settingsInput.value.trim();
+            // 过滤非汉字字符
+            let chars = input.replace(/[^\u4e00-\u9fa5]/g, '').split('');
+
+            if (chars.length < 100) {
+                alert(`内容不足100个字（当前 ${chars.length} 个），请补充。`);
+                return;
+            }
+
+            surnames = chars.slice(0, 100);
+            localStorage.setItem('bjx-surnames', JSON.stringify(surnames));
+
+            // 重置状态
+            allShown = false;
+            showAllBtn.textContent = '全部显示';
+            document.querySelectorAll('.title-char').forEach(el => el.classList.remove('is-flipped'));
+
+            initGrid();
+            settingsModal.style.display = 'none';
+            playClickSound();
+        });
+
+        resetSettings.addEventListener('click', () => {
+            if (confirm("确定要恢复默认的百家姓吗？")) {
+                surnames = [...defaultSurnames];
+                localStorage.removeItem('bjx-surnames');
+
+                allShown = false;
+                showAllBtn.textContent = '全部显示';
+                document.querySelectorAll('.title-char').forEach(el => el.classList.remove('is-flipped'));
+
+                initGrid();
+                settingsModal.style.display = 'none';
+                playClickSound();
+            }
+        });
+
+        // 全屏切换
+        mascot.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`无法进入全屏: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // 页面入场动画
+        window.onload = () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: '.sidebar',
+                    translateX: [-50, 0],
+                    opacity: [0, 1],
+                    duration: 800,
+                    easing: 'easeOutExpo'
+                });
+            }
+        };
+
+        function playClickSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.05);
+
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {
+                console.log('Audio context error:', e);
+            }
+        }
+    </script>
+
+
+</body>
+
+</html>

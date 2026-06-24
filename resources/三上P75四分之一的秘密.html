@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>拼图克隆互动</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #ffffff;
+      font-family: sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    #workspace-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    svg.workspace {
+      width: 100%;
+      height: 100%;
+    }
+
+    .clone-group {
+      cursor: grab;
+    }
+
+    .clone-group.dragging {
+      cursor: grabbing;
+    }
+
+    .clone-group g {
+      transition: transform 0.2s ease-out;
+    }
+
+    @keyframes breatheFill {
+      0% {
+        fill-opacity: 0.2;
+      }
+
+      50% {
+        fill-opacity: 0.5;
+      }
+
+      100% {
+        fill-opacity: 0.1;
+      }
+    }
+
+    .clone-path {
+      fill: var(--shape-color, transparent);
+      fill-opacity: 0;
+      stroke: #000000;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      pointer-events: all;
+      transition: fill-opacity 0.2s ease-out;
+    }
+
+    .clone-group.dragging .clone-path {
+      animation: breatheFill 1.2s infinite ease-in-out;
+    }
+
+    .source-path {
+      stroke: #000000;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      cursor: pointer;
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="workspace-container">
+    <svg class="workspace" id="workspace">
+      <defs>
+        <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e5e7eb" stroke-width="1" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+      <g id="sources-layer"></g>
+      <g id="clones-layer"></g>
+    </svg>
+  </div>
+
+  <script>
+    let UNIT = window.innerHeight / 14;
+
+    function getShapes(U) {
+      return [
+        {
+          id: 1,
+          path: `M 0 0 L ${2 * U} 0 L ${2 * U} ${2 * U} L 0 ${2 * U} Z`,
+          cx: U, cy: U,
+          color: "#FFB3BA" // Light Red
+        },
+        {
+          id: 2,
+          path: `M 0 ${2 * U} L ${4 * U} ${2 * U} L ${2 * U} 0 Z`,
+          cx: 2 * U, cy: U,
+          color: "#BAFFC9" // Light Green
+        },
+        {
+          id: 3,
+          path: `M 0 0 L ${2 * U} 0 L 0 ${4 * U} Z`,
+          cx: U, cy: 2 * U,
+          color: "#BAE1FF" // Light Blue
+        },
+        {
+          id: 4,
+          path: `M 0 0 L ${U} 0 L ${U} ${4 * U} L 0 ${4 * U} Z`,
+          cx: 0, cy: 2 * U,
+          color: "#FFFFBA" // Light Yellow
+        }
+      ];
+    }
+
+    let SHAPES = getShapes(UNIT);
+
+    function updateGrid(U) {
+      const pattern = document.getElementById('grid');
+      pattern.setAttribute('width', U);
+      pattern.setAttribute('height', U);
+      const path = pattern.querySelector('path');
+      path.setAttribute('d', `M ${U} 0 L 0 0 0 ${U}`);
+    }
+
+    // Set initial grid
+    updateGrid(UNIT);
+
+    let clones = [];
+    let draggedClone = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let initialCloneX = 0;
+    let initialCloneY = 0;
+    let hasMoved = false;
+
+    const sourcesLayer = document.getElementById('sources-layer');
+    const clonesLayer = document.getElementById('clones-layer');
+
+    function getShapeVertices(shapeId, U) {
+      if (shapeId === 1) return [{ x: 0, y: 0 }, { x: 2 * U, y: 0 }, { x: 2 * U, y: 2 * U }, { x: 0, y: 2 * U }];
+      if (shapeId === 2) return [{ x: 0, y: 2 * U }, { x: 4 * U, y: 2 * U }, { x: 2 * U, y: 0 }];
+      if (shapeId === 3) return [{ x: 0, y: 0 }, { x: 2 * U, y: 0 }, { x: 0, y: 4 * U }];
+      if (shapeId === 4) return [{ x: 0, y: 0 }, { x: U, y: 0 }, { x: U, y: 4 * U }, { x: 0, y: 4 * U }];
+      return [];
+    }
+
+    function rotatePoint(px, py, cx, cy, angle) {
+      let rad = angle * Math.PI / 180;
+      let cos = Math.round(Math.cos(rad));
+      let sin = Math.round(Math.sin(rad));
+      let nx = cos * (px - cx) - sin * (py - cy) + cx;
+      let ny = sin * (px - cx) + cos * (py - cy) + cy;
+      return { x: nx, y: ny };
+    }
+
+    function getClonePolygon(clone) {
+      const shape = SHAPES.find(s => s.id === clone.shapeId);
+      const localVertices = getShapeVertices(clone.shapeId, UNIT);
+      return localVertices.map(v => {
+        let rotated = rotatePoint(v.x, v.y, shape.cx, shape.cy, clone.rotation);
+        return { x: clone.x + rotated.x, y: clone.y + rotated.y };
+      });
+    }
+
+    function getSourcePolygon(shape) {
+      const localVertices = getShapeVertices(shape.id, UNIT);
+      return localVertices.map(v => {
+        return { x: shape.sourceX + v.x, y: shape.sourceY + v.y };
+      });
+    }
+
+    function polygonsIntersect(a, b) {
+      let polygons = [a, b];
+      for (let i = 0; i < polygons.length; i++) {
+        let polygon = polygons[i];
+        for (let i1 = 0; i1 < polygon.length; i1++) {
+          let i2 = (i1 + 1) % polygon.length;
+          let p1 = polygon[i1];
+          let p2 = polygon[i2];
+
+          // Normal vector
+          let normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+
+          let minA = Infinity, maxA = -Infinity;
+          for (let j = 0; j < a.length; j++) {
+            let projected = normal.x * a[j].x + normal.y * a[j].y;
+            if (projected < minA) minA = projected;
+            if (projected > maxA) maxA = projected;
+          }
+
+          let minB = Infinity, maxB = -Infinity;
+          for (let j = 0; j < b.length; j++) {
+            let projected = normal.x * b[j].x + normal.y * b[j].y;
+            if (projected < minB) minB = projected;
+            if (projected > maxB) maxB = projected;
+          }
+
+          // Exact touches do not count as overlap
+          if (maxA <= minB + 0.1 || maxB <= minA + 0.1) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function checkOverlap(targetClone) {
+      let polyA = getClonePolygon(targetClone);
+      for (let clone of clones) {
+        if (clone.id === targetClone.id) continue;
+        let polyB = getClonePolygon(clone);
+        if (polygonsIntersect(polyA, polyB)) return true;
+      }
+      for (let shape of SHAPES) {
+        let polyB = getSourcePolygon(shape);
+        if (polygonsIntersect(polyA, polyB)) return true;
+      }
+      return false;
+    }
+
+    function deleteClone(clone) {
+      clones = clones.filter(c => c.id !== clone.id);
+      const el = document.getElementById(clone.id);
+      if (el) el.remove();
+    }
+
+    function initSources() {
+      sourcesLayer.innerHTML = '';
+
+      let w = window.innerWidth;
+      let h = window.innerHeight;
+
+      // Calculate 2x2 quadrant centers
+      let leftX = Math.round((w * 0.25) / UNIT) * UNIT;
+      let rightX = Math.round((w * 0.75) / UNIT) * UNIT - (3 * UNIT);
+
+      // Prevent horizontal overlap on very narrow screens
+      if (leftX + (2 * UNIT) > rightX) {
+        leftX = Math.round((w / 2 - (2 * UNIT)) / UNIT) * UNIT;
+        rightX = Math.round((w / 2) / UNIT) * UNIT;
+      }
+
+      // Screen bounds check for X
+      if (leftX < 0) leftX = 0;
+      if (rightX + (4 * UNIT) > w) rightX = Math.floor((w - (4 * UNIT)) / UNIT) * UNIT;
+      if (leftX + (2 * UNIT) > rightX) leftX = rightX - (2 * UNIT);
+
+      let topY = Math.round((h * 0.25) / UNIT) * UNIT - UNIT;
+      let bottomY = Math.round((h * 0.75) / UNIT) * UNIT - (3 * UNIT);
+
+      // Prevent vertical overlap on very short screens
+      if (topY + (2 * UNIT) > bottomY) {
+        topY = Math.round((h / 2 - (2 * UNIT)) / UNIT) * UNIT;
+        bottomY = Math.round((h / 2) / UNIT) * UNIT;
+      }
+
+      // Screen bounds check for Y
+      if (topY < 0) topY = 0;
+      if (bottomY + (4 * UNIT) > h) bottomY = Math.floor((h - (4 * UNIT)) / UNIT) * UNIT;
+      if (topY + (2 * UNIT) > bottomY) topY = bottomY - (2 * UNIT);
+
+      SHAPES[0].sourceX = leftX;
+      SHAPES[0].sourceY = topY;
+
+      SHAPES[1].sourceX = rightX;
+      SHAPES[1].sourceY = topY;
+
+      SHAPES[2].sourceX = leftX;
+      SHAPES[2].sourceY = bottomY;
+
+      SHAPES[3].sourceX = rightX;
+      SHAPES[3].sourceY = bottomY;
+
+      SHAPES.forEach(shape => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(${shape.sourceX}, ${shape.sourceY})`);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', shape.path);
+        path.setAttribute('class', 'source-path');
+        path.setAttribute('fill', shape.color);
+
+        g.appendChild(path);
+
+        g.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const clone = {
+            id: 'clone_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            shapeId: shape.id,
+            x: shape.sourceX,
+            y: shape.sourceY,
+            rotation: 0,
+            isNewFromSource: true
+          };
+          clones.push(clone);
+          renderClones();
+
+          draggedClone = clone;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          initialCloneX = clone.x;
+          initialCloneY = clone.y;
+          hasMoved = false;
+        });
+
+        sourcesLayer.appendChild(g);
+      });
+    }
+
+    function renderClones() {
+      clones.forEach(clone => {
+        let el = document.getElementById(clone.id);
+        if (!el) {
+          const shape = SHAPES.find(s => s.id === clone.shapeId);
+
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          el.setAttribute('id', clone.id);
+          el.style.setProperty('--shape-color', shape.color);
+
+          const innerG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', shape.path);
+          path.setAttribute('class', 'clone-path');
+
+          innerG.appendChild(path);
+          el.appendChild(innerG);
+
+          el.addEventListener('pointerdown', (e) => handleCloneStart(e, clone.id));
+
+          clonesLayer.appendChild(el);
+        }
+      });
+
+      Array.from(clonesLayer.children).forEach(child => {
+        if (!clones.find(c => c.id === child.id)) {
+          child.remove();
+        }
+      });
+
+      if (draggedClone) {
+        const el = document.getElementById(draggedClone.id);
+        if (el) clonesLayer.appendChild(el);
+      }
+
+      updateCloneVisuals();
+    }
+
+    function updateCloneVisuals() {
+      clones.forEach(clone => {
+        const el = document.getElementById(clone.id);
+        if (!el) return;
+
+        const isDragging = draggedClone && draggedClone.id === clone.id;
+        el.setAttribute('class', `clone-group ${isDragging ? 'dragging' : ''}`);
+        el.setAttribute('transform', `translate(${clone.x}, ${clone.y})`);
+
+        const innerG = el.firstChild;
+        const shape = SHAPES.find(s => s.id === clone.shapeId);
+        innerG.setAttribute('style', `transform-origin: ${shape.cx}px ${shape.cy}px; transform: rotate(${clone.rotation}deg);`);
+      });
+    }
+
+    function handleCloneStart(e, cloneId) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const cloneIndex = clones.findIndex(c => c.id === cloneId);
+      if (cloneIndex === -1) return;
+
+      const clone = clones[cloneIndex];
+      clones.splice(cloneIndex, 1);
+      clones.push(clone);
+
+      draggedClone = clone;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      initialCloneX = clone.x;
+      initialCloneY = clone.y;
+      hasMoved = false;
+
+      renderClones();
+    }
+
+    window.addEventListener('pointermove', (e) => {
+      if (!draggedClone) return;
+
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        hasMoved = true;
+      }
+
+      let rawX = initialCloneX + dx;
+      let rawY = initialCloneY + dy;
+
+      draggedClone.x = Math.round(rawX / UNIT) * UNIT;
+      draggedClone.y = Math.round(rawY / UNIT) * UNIT;
+
+      updateCloneVisuals();
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      if (!draggedClone) return;
+
+      let isClick = !hasMoved;
+      let oldRotation = draggedClone.rotation;
+      let oldX = initialCloneX;
+      let oldY = initialCloneY;
+      let wasNew = draggedClone.isNewFromSource;
+
+      // Drag-to-clone behavior: cancel if only clicked
+      if (isClick && wasNew) {
+        deleteClone(draggedClone);
+        draggedClone = null;
+        updateCloneVisuals();
+        return;
+      }
+
+      if (isClick) {
+        // Rotating existing clone. Allowed to overlap.
+        draggedClone.rotation += 90;
+      } else {
+        // Dragging.
+        if (wasNew) {
+          // Dragging a new clone from source. Allowed to overlap.
+        } else {
+          // Dragging an existing clone. Avoid overlap!
+          if (checkOverlap(draggedClone)) {
+            draggedClone.x = oldX;
+            draggedClone.y = oldY;
+            draggedClone.rotation = oldRotation;
+          }
+        }
+      }
+
+      if (draggedClone) {
+        delete draggedClone.isNewFromSource;
+      }
+      draggedClone = null;
+      updateCloneVisuals();
+    });
+
+    window.addEventListener('pointercancel', (e) => {
+      if (draggedClone) {
+        if (draggedClone.isNewFromSource) {
+          deleteClone(draggedClone);
+        } else {
+          delete draggedClone.isNewFromSource;
+        }
+      }
+      draggedClone = null;
+      updateCloneVisuals();
+    });
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        let oldUnit = UNIT;
+        UNIT = window.innerHeight / 14;
+        SHAPES = getShapes(UNIT);
+        updateGrid(UNIT);
+
+        clones.forEach(c => {
+          c.x = Math.round(c.x / oldUnit) * UNIT;
+          c.y = Math.round(c.y / oldUnit) * UNIT;
+        });
+
+        initSources();
+
+        clonesLayer.innerHTML = '';
+        renderClones();
+      }, 300);
+    });
+
+    initSources();
+  </script>
+</body>
+
+</html>

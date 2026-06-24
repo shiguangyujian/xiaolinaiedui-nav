@@ -1,0 +1,480 @@
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>“四连方”拼图挑战</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #2D593E;
+            --bg: #EBEDD4;
+            --grid-line: rgba(0, 0, 0, 0.1);
+            --grid-size: 50px;
+            /* 手机端适配，缩小网格 */
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        header {
+            background: white;
+            padding: 0.75rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reset-btn {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: background-color 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .main-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0.5rem;
+            overflow: hidden;
+        }
+
+        .canvas-board {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .block-unit {
+            position: absolute;
+            width: var(--grid-size);
+            height: var(--grid-size);
+            box-sizing: border-box;
+            border: 1.5px solid rgba(0, 0, 0, 0.3);
+            /* 去除白色的描边 */
+        }
+
+        .polyomino-group {
+            position: absolute;
+            cursor: grab;
+            z-index: 20;
+            touch-action: none;
+            opacity: 0.7;
+            /* 默认加入一点点透明度 */
+            transition: opacity 0.2s, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .polyomino-group.no-transition {
+            transition: none !important;
+        }
+
+        .polyomino-group.selected {
+            opacity: 1;
+            /* 选中时恢复颜色 */
+            z-index: 30;
+        }
+
+        #mirror-controls {
+            position: fixed;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            /* 默认隐藏 */
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 200;
+        }
+
+        .mirror-btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            letter-spacing: 0.1em;
+            transition: transform 0.1s;
+        }
+
+        .mirror-btn:active {
+            transform: scale(0.95);
+        }
+
+        .target-zone {
+            position: absolute;
+            border: 3px dashed #A52A2A;
+            background: rgba(165, 42, 42, 0.05);
+            background-image:
+                linear-gradient(rgba(165, 42, 42, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(165, 42, 42, 0.1) 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #A52A2A;
+            font-weight: bold;
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+
+        #win-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: white;
+            border: 4px solid var(--primary);
+            padding: 1.5rem 3rem;
+            border-radius: 2rem;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        @keyframes popOut {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .instruction {
+            font-size: 1.2rem;
+            color: #666;
+            text-align: center;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="reset-btn" onclick="resetGame()">重置</button>
+    <div id="mirror-controls">
+        <div class="mirror-btn" onclick="toggleMirrorX()">左右镜像</div>
+        <div class="mirror-btn" onclick="cloneSelected()" style="background: #3b82f6;">复制克隆</div>
+        <div class="mirror-btn" onclick="toggleMirrorY()">上下镜像</div>
+    </div>
+    <main class="main-container">
+        <div class="instruction">目标：将 5 个四连方拼入 5×4 区域。</div>
+        <div class="canvas-board" id="board">
+            <!-- 动态内容 -->
+        </div>
+    </main>
+    <div id="win-toast">🎉 挑战成功！</div>
+    <script>
+        let GRID = 50;
+        const board = document.getElementById('board');
+        const shapes = [
+            { id: 'I', coords: [[0, 0], [1, 0], [2, 0], [3, 0]], color: '#0078D7' },
+            { id: 'O', coords: [[0, 0], [1, 0], [0, 1], [1, 1]], color: '#E81123' },
+            { id: 'L', coords: [[0, 0], [0, 1], [1, 1], [2, 1]], color: '#FFB900' },
+            { id: 'S', coords: [[0, 0], [1, 0], [1, 1], [2, 1]], color: '#107C10' },
+            { id: 'T', coords: [[1, 0], [0, 1], [1, 1], [2, 1]], color: '#F7630C' }
+        ];
+        let selectedGroup = null;
+        function initLayout() {
+            selectedGroup = null;
+            document.getElementById('mirror-controls').style.display = 'none';
+            const width = board.clientWidth;
+            const height = board.clientHeight;
+            // 动态计算 GRID 大小以适配手机
+            GRID = Math.min(width / 7, height / 10);
+            document.documentElement.style.setProperty('--grid-size', GRID + 'px');
+            board.innerHTML = '';
+            // 1. 创建目标区域 (5x4)
+            const targetW = 5 * GRID;
+            const targetH = 4 * GRID;
+            const targetX = (width - targetW) / 2;
+            const targetY = (height - targetH) / 2;
+            const target = document.createElement('div');
+            target.className = 'target-zone';
+            target.style.width = targetW + 'px';
+            target.style.height = targetH + 'px';
+            target.style.left = targetX + 'px';
+            target.style.top = targetY + 'px';
+            target.innerText = "";
+            board.appendChild(target);
+            // 2. 摆放四连方 (上方 2 个，下方 3 个)
+            const positions = [
+                { x: width * 0.2, y: targetY - 2.5 * GRID },
+                { x: width * 0.6, y: targetY - 2.5 * GRID },
+                { x: width * 0.1, y: targetY + targetH + 0.5 * GRID },
+                { x: width * 0.4, y: targetY + targetH + 0.5 * GRID },
+                { x: width * 0.7, y: targetY + targetH + 0.5 * GRID }
+            ];
+            shapes.forEach((s, i) => {
+                createPolyomino(s, positions[i].x, positions[i].y);
+            });
+        }
+        function createPolyomino(shape, x, y) {
+            const group = document.createElement('div');
+            group.className = 'polyomino-group';
+            group.style.left = x + 'px';
+            group.style.top = y + 'px';
+            group.dataset.shapeId = shape.id; // 记录形状ID以便克隆
+            group.dataset.rotation = 0;
+            group.dataset.mirrorX = 1;
+            group.dataset.mirrorY = 1;
+            const minX = Math.min(...shape.coords.map(c => c[0]));
+            const maxX = Math.max(...shape.coords.map(c => c[0]));
+            const minY = Math.min(...shape.coords.map(c => c[1]));
+            const maxY = Math.max(...shape.coords.map(c => c[1]));
+            const centerX = (minX + maxX + 1) * GRID / 2;
+            const centerY = (minY + maxY + 1) * GRID / 2;
+            group.style.transformOrigin = `${centerX}px ${centerY}px`;
+            shape.coords.forEach(c => {
+                const b = document.createElement('div');
+                b.className = 'block-unit';
+                b.style.left = (c[0] * GRID) + 'px';
+                b.style.top = (c[1] * GRID) + 'px';
+                b.style.backgroundColor = shape.color;
+                group.appendChild(b);
+            });
+            board.appendChild(group);
+            bindDrag(group);
+            let startTime, startX, startY;
+            group.addEventListener('pointerdown', (e) => {
+                startTime = Date.now();
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+            group.addEventListener('pointerup', (e) => {
+                const duration = Date.now() - startTime;
+                const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+                if (duration < 200 && dist < 5) {
+                    rotateGroup(group);
+                }
+            });
+            return group; // 返回生成的元素
+        }
+        function toggleMirrorX() {
+            if (!selectedGroup) return;
+            let currentX = parseInt(selectedGroup.dataset.mirrorX) || 1;
+            selectedGroup.dataset.mirrorX = currentX * -1;
+            applyTransforms(selectedGroup);
+        }
+        function toggleMirrorY() {
+            if (!selectedGroup) return;
+            let currentY = parseInt(selectedGroup.dataset.mirrorY) || 1;
+            selectedGroup.dataset.mirrorY = currentY * -1;
+            applyTransforms(selectedGroup);
+        }
+        function cloneSelected() {
+            if (!selectedGroup) return;
+            // 获取当前选中图形的数据
+            const shapeId = selectedGroup.dataset.shapeId;
+            const shape = shapes.find(s => s.id === shapeId);
+            if (!shape) return;
+            // 在当前位置稍微偏移一点创建克隆体
+            const curX = parseFloat(selectedGroup.style.left);
+            const curY = parseFloat(selectedGroup.style.top);
+            const newGroup = createPolyomino(shape, curX + 20, curY + 20);
+            // 同步克隆体的变换状态
+            newGroup.dataset.rotation = selectedGroup.dataset.rotation;
+            newGroup.dataset.mirrorX = selectedGroup.dataset.mirrorX;
+            newGroup.dataset.mirrorY = selectedGroup.dataset.mirrorY;
+
+            newGroup.classList.add('no-transition');
+            applyTransforms(newGroup);
+            // 强制重排以应用无动画状态
+            void newGroup.offsetWidth;
+            newGroup.classList.remove('no-transition');
+
+            // 自动选中新克隆的图形
+            if (selectedGroup) selectedGroup.classList.remove('selected');
+            selectedGroup = newGroup;
+            selectedGroup.classList.add('selected');
+        }
+        function applyTransforms(group) {
+            const mx = parseInt(group.dataset.mirrorX) || 1;
+            const my = parseInt(group.dataset.mirrorY) || 1;
+            const rot = parseInt(group.dataset.rotation) || 0;
+            group.style.transform = `scaleX(${mx}) scaleY(${my}) rotate(${rot}deg)`;
+            setTimeout(checkWin, 300);
+        }
+        function rotateGroup(group) {
+            let currentRot = parseInt(group.dataset.rotation) || 0;
+            const nextRot = currentRot + 90;
+            group.dataset.rotation = nextRot;
+            applyTransforms(group);
+        }
+        function bindDrag(el) {
+            let offset = { x: 0, y: 0 };
+            let initialX, initialY;
+            el.addEventListener('pointerdown', onStart);
+            // 点击空白处取消选中
+            board.addEventListener('pointerdown', (e) => {
+                if (e.target === board) {
+                    if (selectedGroup) {
+                        selectedGroup.classList.remove('selected');
+                        selectedGroup = null;
+                        document.getElementById('mirror-controls').style.display = 'none';
+                    }
+                }
+            });
+            function onStart(e) {
+                e.stopPropagation();
+                // 处理选中状态
+                if (selectedGroup && selectedGroup !== el) {
+                    selectedGroup.classList.remove('selected');
+                }
+                selectedGroup = el;
+                el.classList.add('selected');
+                document.getElementById('mirror-controls').style.display = 'flex';
+                initialX = parseFloat(el.style.left);
+                initialY = parseFloat(el.style.top);
+                const rect = el.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+                offset.x = e.clientX - rect.left;
+                offset.y = e.clientY - rect.top;
+                el.style.zIndex = 100;
+                document.addEventListener('pointermove', onMove);
+                document.addEventListener('pointerup', onEnd);
+            }
+            function onMove(e) {
+                const boardRect = board.getBoundingClientRect();
+                let visualX = e.clientX - boardRect.left - offset.x;
+                let visualY = e.clientY - boardRect.top - offset.y;
+                const rect = el.getBoundingClientRect();
+                const currentLeft = parseFloat(el.style.left);
+                const currentTop = parseFloat(el.style.top);
+                const visualOffsetX = rect.left - boardRect.left - currentLeft;
+                const visualOffsetY = rect.top - boardRect.top - currentTop;
+                el.style.left = (visualX - visualOffsetX) + 'px';
+                el.style.top = (visualY - visualOffsetY) + 'px';
+            }
+            function onEnd() {
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onEnd);
+                el.style.zIndex = 20;
+                const curX = parseFloat(el.style.left);
+                const curY = parseFloat(el.style.top);
+                // 吸附逻辑
+                const targetZone = board.querySelector('.target-zone');
+                const tx = parseFloat(targetZone.style.left);
+                const ty = parseFloat(targetZone.style.top);
+                // 计算视觉偏移
+                const rect = el.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+                const visualX = rect.left - boardRect.left;
+                const visualY = rect.top - boardRect.top;
+                const relX = visualX - tx;
+                const relY = visualY - ty;
+                const snapRelX = Math.round(relX / GRID) * GRID;
+                const snapRelY = Math.round(relY / GRID) * GRID;
+                const dx = (tx + snapRelX) - visualX;
+                const dy = (ty + snapRelY) - visualY;
+                if (Math.hypot(dx, dy) < GRID * 0.6) {
+                    el.style.left = (curX + dx) + 'px';
+                    el.style.top = (curY + dy) + 'px';
+                }
+                checkWin();
+            }
+        }
+        function checkWin() {
+            const targetZone = board.querySelector('.target-zone');
+            const tx = Math.round(parseFloat(targetZone.style.left));
+            const ty = Math.round(parseFloat(targetZone.style.top));
+            const groups = board.querySelectorAll('.polyomino-group');
+            let occupied = new Set();
+            let inZoneCount = 0;
+            groups.forEach(g => {
+                const rect = g.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+                const blocks = g.querySelectorAll('.block-unit');
+                const rot = (parseInt(g.dataset.rotation) || 0) * Math.PI / 180;
+                const mx = parseInt(g.dataset.mirrorX) || 1;
+                const my = parseInt(g.dataset.mirrorY) || 1;
+                const gLeft = parseFloat(g.style.left);
+                const gTop = parseFloat(g.style.top);
+                const origin = g.style.transformOrigin.split(' ').map(v => parseFloat(v));
+                blocks.forEach(b => {
+                    const bx = parseFloat(b.style.left);
+                    const by = parseFloat(b.style.top);
+                    // 考虑镜像后的坐标 (相对于 origin)
+                    let relX = (bx - origin[0]) * mx;
+                    let relY = (by - origin[1]) * my;
+                    // 计算旋转后的相对坐标
+                    const rx = relX * Math.cos(rot) - relY * Math.sin(rot) + origin[0];
+                    const ry = relX * Math.sin(rot) + relY * Math.cos(rot) + origin[1];
+                    const absX = Math.round(gLeft + rx);
+                    const absY = Math.round(gTop + ry);
+                    // 检查是否在目标网格内
+                    const gridX = Math.round((absX - tx) / GRID);
+                    const gridY = Math.round((absY - ty) / GRID);
+                    if (gridX >= 0 && gridX < 5 && gridY >= 0 && gridY < 4) {
+                        occupied.add(`${gridX},${gridY}`);
+                    }
+                });
+            });
+            if (occupied.size === 20) {
+                showWin();
+            }
+        }
+        function showWin() {
+            const toast = document.getElementById('win-toast');
+            toast.style.display = 'block';
+            toast.style.animation = 'none';
+            void toast.offsetWidth; // 触发重排
+            toast.style.animation = 'popOut 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
+        }
+        function resetGame() {
+            document.getElementById('win-toast').style.display = 'none';
+            initLayout();
+        }
+        window.addEventListener('resize', initLayout);
+        window.onload = initLayout;
+    </script>
+</body>
+
+</html>

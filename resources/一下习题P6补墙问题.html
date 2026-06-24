@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>补墙游戏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #e0f2f1 0%, #c8e6c9 100%);
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+        .container {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+        }
+        
+        .toolbar {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 25px;
+            width: 170px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+        }
+        .toolbar h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+        button {
+            padding: 12px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #34495e;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        button:hover { 
+            background: rgba(255, 255, 255, 0.9); 
+            transform: translateY(-1px);
+        }
+        button.active {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            border-color: #4CAF50;
+        }
+        button.delete-active {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            border-color: #f44336;
+        }
+        button.move-active {
+            background: rgba(33, 150, 243, 0.9);
+            color: white;
+            border-color: #2196F3;
+        }
+        button.odd-active {
+            background: rgba(33, 150, 243, 0.9);
+            color: white;
+            border-color: #2196F3;
+        }
+        button.even-active {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            border-color: #4CAF50;
+        }
+        .row-control {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding-top: 12px;
+            margin-top: 5px;
+        }
+        .row-control label {
+            display: block;
+            font-size: 13px;
+            color: #444;
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .row-buttons-inline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .row-buttons-inline button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            font-size: 18px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+        #rowCount {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+            flex: 1;
+            text-align: center;
+        }
+
+        .main-area {
+            flex: 1;
+            padding: 20px 20px 20px 210px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .content-wrapper {
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .wall-container {
+            box-sizing: content-box; 
+            background: #f5f5f5;
+            border: 3px solid #333;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            position: relative;
+        }
+        #wallSvg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .brick-selector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            z-index: 10;
+        }
+        .brick-option {
+            cursor: grab;
+            transition: transform 0.2s;
+            touch-action: none;
+        }
+        .brick-option:active {
+            cursor: grabbing;
+        }
+        .brick-option svg {
+            display: block;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+
+        #paintLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        #dragGhost {
+            display: none;
+            position: absolute;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+        }
+        .breathing {
+            animation: breathe 1.2s infinite ease-in-out;
+        }
+        @keyframes breathe {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .watermark {
+            position: absolute;
+            bottom: 15px;
+            left: 25px;
+            font-size: 12px;
+            color: #7f8c8d;
+            text-decoration: none;
+            z-index: 100;
+        }
+        .watermark:hover {
+            color: #34495e;
+        }
+        
+        @media (max-width: 768px) {
+            .main-area {
+                padding: 150px 10px 10px 10px;
+            }
+            .toolbar {
+                width: calc(100% - 40px);
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                padding: 10px;
+                top: 10px; 
+                left: 20px; 
+                right: 20px;
+                transform: none;
+            }
+            .row-control { margin-top: 0; padding-top: 0; border: none; display: flex; align-items: center; gap: 10px; }
+            .watermark { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <h3>🧱 补墙游戏</h3>
+            
+            <button id="moveBtn" class="move-active" onclick="setMode('normal')">↔️ 拖拽补砖</button>
+            <button id="deleteBtn" onclick="setMode('delete')">🗑️ 消除模式</button>
+            <button id="penBtn" onclick="setMode('pen')">✏️ 画笔批注</button>
+            <button id="eraserBtn" onclick="setMode('eraser')">🧽 橡皮擦</button>
+            <button onclick="resetWall()">🔄 重置墙面</button>
+            <button id="oddRowBtn" onclick="toggleOddRowColor()">🟦 单数行变色</button>
+            <button id="evenRowBtn" onclick="toggleEvenRowColor()">🟩 双数行变色</button>
+            
+            <button id="modeToggleBtn" onclick="toggleBrickMode()" style="background: rgba(224, 247, 250, 0.8); border-color: #00bcd4; color: #00838f;">🧩 整块模式</button>
+            
+            <div class="row-control">
+                <label>墙面行数</label>
+                <div class="row-buttons-inline">
+                    <button onclick="changeRows(-1)">−</button>
+                    <div id="rowCount">5行</div>
+                    <button onclick="changeRows(1)">+</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-area">
+            <div class="content-wrapper">
+                <div class="wall-container">
+                    <svg id="wallSvg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+                </div>
+                
+                <div class="brick-selector">
+                    <div class="brick-option" id="brickSource">
+                        <svg id="sourceSvg" viewBox="0 0 80 40">
+                            <rect x="1" y="1" width="78" height="38" fill="#d4a574" stroke="#ff9800" stroke-width="3"></rect>
+                            <line x1="5" y1="20" x2="75" y2="20" stroke="rgba(0,0,0,0.2)" stroke-width="1"></line>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <svg id="paintLayer" xmlns="http://www.w3.org/2000/svg"></svg>
+    
+    <div id="dragGhost">
+        <svg id="ghostSvg" viewBox="0 0 80 40">
+            <rect id="ghostRect" x="1" y="1" width="78" height="38" fill="#d4a574" stroke="#ff9800" stroke-width="3"></rect>
+            <line id="ghostLine" x1="5" y1="20" x2="75" y2="20" stroke="rgba(0,0,0,0.2)" stroke-width="1"></line>
+        </svg>
+    </div>
+
+    <script>
+        const BRICK_WIDTH = 80;
+        const BRICK_HEIGHT = 40;
+        const COLS = 8;
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        let rows = 5;
+        let wallBricks = []; 
+        let mode = 'normal'; 
+        let currentBrickMode = 'full';
+        let oddRowColored = false;
+        let evenRowColored = false;
+        
+        let isDragging = false;
+        let dragSource = null; 
+        
+        let isDrawing = false;
+        let currentPath = null;
+        let pathData = '';
+
+        const wallSvg = document.getElementById('wallSvg');
+        const paintLayer = document.getElementById('paintLayer');
+        const dragGhost = document.getElementById('dragGhost');
+        const brickSource = document.getElementById('brickSource');
+        const sourceSvg = document.getElementById('sourceSvg');
+        const ghostSvg = document.getElementById('ghostSvg');
+        
+        function init() {
+            updateWallViewBox();
+            generateInitialWall();
+            bindEvents();
+            window.addEventListener('resize', () => requestAnimationFrame(syncWallSize));
+        }
+        
+        function updateWallViewBox() {
+            const width = COLS * BRICK_WIDTH;
+            const height = rows * BRICK_HEIGHT;
+            wallSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            requestAnimationFrame(syncWallSize);
+        }
+
+        function syncWallSize() {
+            const wrapper = document.querySelector('.content-wrapper');
+            const container = document.querySelector('.wall-container');
+            const selector = document.querySelector('.brick-selector');
+            
+            const originalDisplay = container.style.display;
+            container.style.display = 'none';
+            
+            const wrapperWidth = wrapper.clientWidth;
+            const wrapperHeight = wrapper.clientHeight - selector.offsetHeight - 15;
+            
+            container.style.display = originalDisplay || 'block';
+            
+            if (wrapperWidth <= 0 || wrapperHeight <= 0) return;
+            
+            const availableWidth = wrapperWidth - 6;
+            const availableHeight = wrapperHeight - 6;
+            
+            const wallAspect = (COLS * BRICK_WIDTH) / (rows * BRICK_HEIGHT);
+            const wrapperAspect = availableWidth / availableHeight;
+            
+            if (wallAspect > wrapperAspect) {
+                container.style.width = availableWidth + 'px';
+                container.style.height = (availableWidth / wallAspect) + 'px';
+            } else {
+                container.style.height = availableHeight + 'px';
+                container.style.width = (availableHeight * wallAspect) + 'px';
+            }
+            
+            syncBrickSize();
+        }
+
+        function syncBrickSize() {
+            const wallRect = wallSvg.getBoundingClientRect();
+            if(wallRect.width === 0) return;
+            
+            const brickDomWidth = wallRect.width / COLS;
+            const brickDomHeight = wallRect.height / rows;
+            
+            if(sourceSvg) {
+                sourceSvg.style.width = `${brickDomWidth}px`;
+                sourceSvg.style.height = `${brickDomHeight}px`;
+            }
+            if(ghostSvg) {
+                ghostSvg.style.width = `${brickDomWidth}px`;
+                ghostSvg.style.height = `${brickDomHeight}px`;
+            }
+        }
+        
+        function generateInitialWall() {
+            wallBricks = [];
+            for (let r = 0; r < rows; r++) {
+                let y = r * BRICK_HEIGHT;
+                let isTopOrBottom = (r === 0 || r === rows - 1); 
+                
+                if (r % 2 === 0) {
+                    for (let c = 0; c < COLS; c++) {
+                        let x = c * BRICK_WIDTH;
+                        let isMissing = false;
+                        if (!isTopOrBottom) {
+                            isMissing = (c >= 2 && c <= 5);
+                        }
+                        wallBricks.push({
+                            id: `r${r}c${c}`,
+                            x, y, width: BRICK_WIDTH, height: BRICK_HEIGHT,
+                            type: 'full', present: !isMissing, isFilled: false
+                        });
+                    }
+                } else {
+                    let isLeftMissing = false;
+                    if (!isTopOrBottom && currentBrickMode === 'half') {
+                        isLeftMissing = true;
+                    }
+                    wallBricks.push({
+                        id: `r${r}left`,
+                        x: 0, y, width: BRICK_WIDTH / 2, height: BRICK_HEIGHT,
+                        type: 'half', present: !isLeftMissing, isFilled: false
+                    });
+                    
+                    for (let c = 0; c < COLS - 1; c++) {
+                        let x = BRICK_WIDTH / 2 + c * BRICK_WIDTH;
+                        let isMissing = false;
+                        if (!isTopOrBottom) {
+                            isMissing = (c >= 1 && c <= 4);
+                        }
+                        wallBricks.push({
+                            id: `r${r}c${c}`,
+                            x, y, width: BRICK_WIDTH, height: BRICK_HEIGHT,
+                            type: 'full', present: !isMissing, isFilled: false
+                        });
+                    }
+                    
+                    let isRightMissing = false;
+                    if (!isTopOrBottom && currentBrickMode === 'half') {
+                        isRightMissing = true;
+                    }
+                    wallBricks.push({
+                        id: `r${r}right`,
+                        x: BRICK_WIDTH / 2 + (COLS - 1) * BRICK_WIDTH, y, width: BRICK_WIDTH / 2, height: BRICK_HEIGHT,
+                        type: 'half', present: !isRightMissing, isFilled: false
+                    });
+                }
+            }
+            renderWall();
+        }
+        
+        function generateRandomWall() {
+            wallBricks = [];
+            for (let r = 0; r < rows; r++) {
+                let y = r * BRICK_HEIGHT;
+                let isTopOrBottom = (r === 0 || r === rows - 1); 
+                
+                if (r % 2 === 0) {
+                    for (let c = 0; c < COLS; c++) {
+                        let x = c * BRICK_WIDTH;
+                        let isMissing = !isTopOrBottom && Math.random() < 0.4;
+                        wallBricks.push({
+                            id: `r${r}c${c}`,
+                            x, y, width: BRICK_WIDTH, height: BRICK_HEIGHT,
+                            type: 'full', present: !isMissing, isFilled: false
+                        });
+                    }
+                } else {
+                    let isLeftMissing = currentBrickMode === 'half' && !isTopOrBottom && Math.random() < 0.4;
+                    wallBricks.push({
+                        id: `r${r}left`,
+                        x: 0, y, width: BRICK_WIDTH / 2, height: BRICK_HEIGHT,
+                        type: 'half', present: !isLeftMissing, isFilled: false
+                    });
+                    
+                    for (let c = 0; c < COLS - 1; c++) {
+                        let x = BRICK_WIDTH / 2 + c * BRICK_WIDTH;
+                        let isMissing = !isTopOrBottom && Math.random() < 0.4;
+                        wallBricks.push({
+                            id: `r${r}c${c}`,
+                            x, y, width: BRICK_WIDTH, height: BRICK_HEIGHT,
+                            type: 'full', present: !isMissing, isFilled: false
+                        });
+                    }
+                    
+                    let isRightMissing = currentBrickMode === 'half' && !isTopOrBottom && Math.random() < 0.4;
+                    wallBricks.push({
+                        id: `r${r}right`,
+                        x: BRICK_WIDTH / 2 + (COLS - 1) * BRICK_WIDTH, y, width: BRICK_WIDTH / 2, height: BRICK_HEIGHT,
+                        type: 'half', present: !isRightMissing, isFilled: false
+                    });
+                }
+            }
+            renderWall();
+        }
+        
+        function renderWall() {
+            wallSvg.innerHTML = '';
+            
+            wallBricks.forEach(b => {
+                if (!b.present) {
+                    let bgRect = document.createElementNS(svgNS, 'rect');
+                    bgRect.setAttribute('x', b.x);
+                    bgRect.setAttribute('y', b.y);
+                    bgRect.setAttribute('width', b.width);
+                    bgRect.setAttribute('height', b.height);
+                    bgRect.setAttribute('fill', '#e0e0e0');
+                    wallSvg.appendChild(bgRect);
+                }
+                
+                if (b.present || b.isFilled) {
+                    let g = document.createElementNS(svgNS, 'g');
+                    let rect = document.createElementNS(svgNS, 'rect');
+                    rect.setAttribute('x', b.x);
+                    rect.setAttribute('y', b.y);
+                    rect.setAttribute('width', b.width);
+                    rect.setAttribute('height', b.height);
+                    
+                    let brickRow = Math.floor(b.y / BRICK_HEIGHT);
+                    let fillColor = '#d4a574';
+                    let strokeColor = '#8b6914';
+                    
+                    if (b.present) {
+                        if (oddRowColored && brickRow % 2 === 0) {
+                            fillColor = '#64b5f6';
+                            strokeColor = '#1976d2';
+                        } else if (evenRowColored && brickRow % 2 === 1) {
+                            fillColor = '#81c784';
+                            strokeColor = '#388e3c';
+                        }
+                        rect.setAttribute('fill', fillColor);
+                        rect.setAttribute('stroke', strokeColor);
+                        rect.setAttribute('stroke-width', '2');
+                    } else if (b.isFilled) {
+                        rect.setAttribute('fill', '#999999');
+                        rect.setAttribute('stroke', '#666666');
+                        rect.setAttribute('stroke-width', '2');
+                    }
+                    
+                    let line = document.createElementNS(svgNS, 'line');
+                    line.setAttribute('x1', b.x + 5);
+                    line.setAttribute('y1', b.y + b.height / 2);
+                    line.setAttribute('x2', b.x + b.width - 5);
+                    line.setAttribute('y2', b.y + b.height / 2);
+                    line.setAttribute('stroke', 'rgba(0,0,0,0.1)');
+                    line.setAttribute('stroke-width', '1');
+
+                    g.appendChild(rect);
+                    g.appendChild(line);
+
+                    if (!b.present && b.isFilled) {
+                        g.style.cursor = 'pointer';
+                        g.setAttribute('pointer-events', 'auto');
+                        const startDragEvent = (e) => {
+                            e.stopPropagation();
+                            if (mode === 'delete') {
+                                b.isFilled = false;
+                                renderWall();
+                            } else if (mode === 'normal') {
+                                startDrag(e, b, g);
+                            }
+                        };
+                        g.addEventListener('mousedown', startDragEvent);
+                        g.addEventListener('touchstart', startDragEvent, {passive: false});
+                    }
+                    wallSvg.appendChild(g);
+                }
+            });
+        }
+        
+        function toggleOddRowColor() {
+            oddRowColored = !oddRowColored;
+            const btn = document.getElementById('oddRowBtn');
+            if (oddRowColored) {
+                btn.classList.add('odd-active');
+            } else {
+                btn.classList.remove('odd-active');
+            }
+            renderWall();
+        }
+        
+        function toggleEvenRowColor() {
+            evenRowColored = !evenRowColored;
+            const btn = document.getElementById('evenRowBtn');
+            if (evenRowColored) {
+                btn.classList.add('even-active');
+            } else {
+                btn.classList.remove('even-active');
+            }
+            renderWall();
+        }
+        
+        function toggleBrickMode() {
+            const btn = document.getElementById('modeToggleBtn');
+            if (currentBrickMode === 'full') {
+                currentBrickMode = 'half';
+                btn.innerHTML = '🧩 半块模式';
+                btn.style.background = 'rgba(255, 243, 224, 0.8)';
+                btn.style.borderColor = '#ff9800';
+                btn.style.color = '#e65100';
+            } else {
+                currentBrickMode = 'full';
+                btn.innerHTML = '🧩 整块模式';
+                btn.style.background = 'rgba(224, 247, 250, 0.8)';
+                btn.style.borderColor = '#00bcd4';
+                btn.style.color = '#00838f';
+            }
+            generateInitialWall();
+        }
+
+        function startDrag(e, source, svgGroup = null) {
+            if (mode !== 'normal') return;
+            e.preventDefault();
+            
+            isDragging = true;
+            dragSource = source;
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const ghostRect = document.getElementById('ghostRect');
+            if (source === 'bottom') {
+                ghostRect.setAttribute('fill', '#d4a574');
+                ghostRect.setAttribute('stroke', '#ff9800');
+            } else {
+                ghostRect.setAttribute('fill', '#999999');
+                ghostRect.setAttribute('stroke', '#666666');
+            }
+
+            dragGhost.style.display = 'block';
+            dragGhost.style.left = clientX + 'px';
+            dragGhost.style.top = clientY + 'px';
+            
+            dragGhost.classList.add('breathing');
+            
+            if (source !== 'bottom') {
+                source.isFilled = false;
+                
+                if (svgGroup) {
+                    svgGroup.style.visibility = 'hidden';
+                } else {
+                    renderWall();
+                }
+            }
+        }
+
+        function getSvgPoint(svg, clientX, clientY) {
+            const pt = svg.createSVGPoint();
+            pt.x = clientX;
+            pt.y = clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        function handleDragEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            dragGhost.style.display = 'none';
+            dragGhost.classList.remove('breathing');
+            
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            
+            const pt = getSvgPoint(wallSvg, clientX, clientY);
+            
+            let targetBrick = null;
+            for (let b of wallBricks) {
+                if (!b.present && !b.isFilled) {
+                    const cx = b.x + b.width / 2;
+                    const cy = b.y + b.height / 2;
+                    if (Math.abs(pt.x - cx) < 40 && Math.abs(pt.y - cy) < 20) {
+                        targetBrick = b;
+                        break;
+                    }
+                }
+            }
+            
+            if (targetBrick) {
+                targetBrick.isFilled = true;
+            } else {
+                if (dragSource !== 'bottom') {
+                    dragSource.isFilled = true;
+                }
+            }
+            
+            renderWall();
+            dragSource = null;
+        }
+
+        function handlePaintStart(e) {
+            if (mode !== 'pen' && mode !== 'eraser') return;
+            isDrawing = true;
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            if (mode === 'pen') {
+                currentPath = document.createElementNS(svgNS, 'path');
+                currentPath.setAttribute('stroke', '#2980b9');
+                currentPath.setAttribute('stroke-width', '4');
+                currentPath.setAttribute('fill', 'none');
+                currentPath.setAttribute('stroke-linecap', 'round');
+                currentPath.setAttribute('stroke-linejoin', 'round');
+                
+                pathData = `M ${clientX} ${clientY}`;
+                currentPath.setAttribute('d', pathData);
+                paintLayer.appendChild(currentPath);
+            } else if (mode === 'eraser') {
+                eraseAtPoint(clientX, clientY);
+            }
+        }
+
+        function handlePaintMove(e) {
+            if (!isDrawing) return;
+            e.preventDefault(); 
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            if (mode === 'pen') {
+                pathData += ` L ${clientX} ${clientY}`;
+                currentPath.setAttribute('d', pathData);
+            } else if (mode === 'eraser') {
+                eraseAtPoint(clientX, clientY);
+            }
+        }
+
+        function handlePaintEnd() {
+            isDrawing = false;
+            currentPath = null;
+        }
+
+        function eraseAtPoint(x, y) {
+            // 确保paintLayer可以被点击
+            paintLayer.style.pointerEvents = 'auto';
+            
+            // 使用document.elementsFromPoint获取指定位置的元素
+            const elements = document.elementsFromPoint(x, y);
+            
+            // 遍历元素，找到属于paintLayer的path元素并删除
+            elements.forEach(element => {
+                if (element.tagName === 'path' && element.parentElement === paintLayer) {
+                    element.remove();
+                }
+            });
+            
+            // 恢复paintLayer的pointer-events设置
+            if (mode !== 'pen' && mode !== 'eraser') {
+                paintLayer.style.pointerEvents = 'none';
+            }
+        }
+
+        function bindEvents() {
+            brickSource.addEventListener('mousedown', (e) => startDrag(e, 'bottom'));
+            brickSource.addEventListener('touchstart', (e) => startDrag(e, 'bottom'), {passive: false});
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                dragGhost.style.left = e.clientX + 'px';
+                dragGhost.style.top = e.clientY + 'px';
+            });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                dragGhost.style.left = e.touches[0].clientX + 'px';
+                dragGhost.style.top = e.touches[0].clientY + 'px';
+            }, {passive: false});
+            
+            document.addEventListener('mouseup', handleDragEnd);
+            document.addEventListener('touchend', handleDragEnd);
+            
+            paintLayer.addEventListener('mousedown', handlePaintStart);
+            paintLayer.addEventListener('mousemove', handlePaintMove);
+            window.addEventListener('mouseup', handlePaintEnd);
+            
+            paintLayer.addEventListener('touchstart', handlePaintStart, {passive: false});
+            paintLayer.addEventListener('touchmove', handlePaintMove, {passive: false});
+            window.addEventListener('touchend', handlePaintEnd);
+        }
+        
+        function setMode(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.toolbar button').forEach(btn => {
+                if (btn.id !== 'modeToggleBtn' && btn.id !== 'oddRowBtn' && btn.id !== 'evenRowBtn') {
+                    btn.classList.remove('active', 'delete-active', 'move-active');
+                }
+            });
+            
+            if (mode === 'normal') {
+                document.getElementById('moveBtn').classList.add('move-active');
+            } else if (mode === 'delete') {
+                document.getElementById('deleteBtn').classList.add('delete-active');
+            } else if (mode === 'pen') {
+                document.getElementById('penBtn').classList.add('active');
+            } else if (mode === 'eraser') {
+                document.getElementById('eraserBtn').classList.add('active');
+            }
+            
+            if (mode === 'pen' || mode === 'eraser') {
+                paintLayer.style.pointerEvents = 'auto';
+            } else {
+                paintLayer.style.pointerEvents = 'none';
+            }
+        }
+        
+        function changeRows(delta) {
+            const newRows = Math.max(3, Math.min(10, rows + delta));
+            if (newRows !== rows) {
+                rows = newRows;
+                document.getElementById('rowCount').textContent = rows + '行';
+                updateWallViewBox();
+                generateInitialWall();
+            }
+        }
+        
+        function resetWall() {
+            generateRandomWall();
+            paintLayer.innerHTML = '';
+        }
+        
+        init();
+    </script>
+</body>
+</html>

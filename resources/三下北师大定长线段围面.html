@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>线段围面</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #F4F3EC;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            will-change: contents;
+        }
+
+        .endpoint {
+            cursor: grab;
+        }
+
+        .endpoint:active {
+            cursor: grabbing;
+        }
+
+        #curve {
+            transition: fill 0.3s ease;
+        }
+
+        .shape-panel {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 15px;
+            z-index: 10;
+        }
+
+        .shape-btn {
+            width: 52px;
+            height: 52px;
+            cursor: pointer;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .shape-btn:hover {
+            transform: scale(1.1);
+            border-color: #aaa;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .shape-btn:active {
+            transform: scale(0.95);
+        }
+
+        .shape-btn.active {
+            border-color: #222;
+            background: #f0f0f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .shape-btn.active svg {
+            stroke-width: 4;
+        }
+
+        .shape-btn svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .info-panel {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 10px 3px;
+            z-index: 10;
+            font-size: 42px;
+            color: #333;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            visibility: hidden;
+            transform-origin: left center;
+        }
+
+        .info-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(-50%) scale(1);
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .info-panel:not(.visible) {
+            transform: translateY(-50%) scale(0.9);
+        }
+
+        .info-item {
+            margin: 10px 0;
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shape-panel">
+        <button class="shape-btn" id="btn-circle" title="圆形">
+            <svg viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="14" fill="none" stroke="#222" stroke-width="3" />
+            </svg>
+        </button>
+        <button class="shape-btn" id="btn-square" title="正方形">
+            <svg viewBox="0 0 40 40">
+                <rect x="8" y="8" width="24" height="24" fill="none" stroke="#222" stroke-width="3"
+                    stroke-linejoin="round" />
+            </svg>
+        </button>
+        <button class="shape-btn" id="btn-triangle" title="正三角形">
+            <svg viewBox="0 0 40 40">
+                <polygon points="20,8 32,28 8,28" fill="none" stroke="#222" stroke-width="3" stroke-linejoin="round" />
+            </svg>
+        </button>
+    </div>
+    <div id="info-panel" class="info-panel">
+        <div class="info-item">C = 100</div>
+        <div class="info-item" id="info-area">S = 0.0</div>
+    </div>
+    <svg id="canvas">
+        <path id="curve" d="" fill="none" stroke="transparent" stroke-width="40" stroke-linecap="round"
+            stroke-linejoin="round" />
+        <path id="curve-visible" d="" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"
+            stroke-linejoin="round" pointer-events="none" />
+        <circle id="hitA" class="endpoint" r="40" fill="transparent" />
+        <circle id="nodeA" r="6" fill="#222" pointer-events="none" />
+        <circle id="hitB" class="endpoint" r="40" fill="transparent" />
+        <circle id="nodeB" r="6" fill="#222" pointer-events="none" />
+    </svg>
+
+    <script>
+        const pathCurve = document.getElementById('curve');
+        const curveVisible = document.getElementById('curve-visible');
+        const hitA = document.getElementById('hitA');
+        const nodeA = document.getElementById('nodeA');
+        const hitB = document.getElementById('hitB');
+        const nodeB = document.getElementById('nodeB');
+
+        const num_nodes = 73; // 72个间距，能被3和4整除，保证顶点精准匹配
+        let total_length = window.innerWidth * 0.6;
+        let segment_length = total_length / (num_nodes - 1);
+        let nodes = [];
+
+        let cx = window.innerWidth / 2;
+        let cy = window.innerHeight / 2;
+
+        // 初始化节点，居中直线
+        for (let i = 0; i < num_nodes; i++) {
+            nodes.push({
+                x: cx - total_length / 2 + i * segment_length,
+                y: cy,
+                old_x: cx - total_length / 2 + i * segment_length,
+                old_y: cy
+            });
+        }
+
+        let activeTouches = {};
+        let globalHasDraggedNode = false;
+        let isClosed = false;
+        let currentShape = 'line';
+        let isAnimating = false;
+        let animationProgress = 0;
+        let animationType = '';
+        let targetShapeType = '';
+        let morphStartNodes = [];
+        let unfoldSource = '';
+
+        function getShapeNodes(shapeType, foldT) {
+            let P = total_length;
+            let ncx = window.innerWidth / 2;
+            let ncy = window.innerHeight / 2;
+            let result = [];
+
+            if (shapeType === 'line') {
+                for (let i = 0; i < num_nodes; i++) {
+                    result.push({ x: ncx - P / 2 + i * segment_length, y: ncy });
+                }
+                return result;
+            }
+
+            if (shapeType === 'circle') {
+                let R = P / (2 * Math.PI);
+                let targetK = 1 / R;
+                let k = targetK * foldT;
+                for (let i = 0; i < num_nodes; i++) {
+                    let s = i * segment_length - P / 2;
+                    let x, y;
+                    if (k < 1e-5) {
+                        x = ncx + s;
+                        y = ncy;
+                    } else {
+                        let r = 1 / k;
+                        let alpha = s * k;
+                        x = ncx + r * Math.sin(alpha);
+                        y = ncy - r * (1 - Math.cos(alpha));
+                    }
+                    result.push({ x, y });
+                }
+                return result;
+            }
+
+            if (shapeType === 'square') {
+                let a = P / 4;
+                let theta = (Math.PI / 2) * foldT;
+                for (let i = 0; i < num_nodes; i++) {
+                    let s = i * segment_length;
+                    let x, y;
+                    if (s <= 0.5 * a) {
+                        let d = 0.5 * a - s;
+                        let H2x = ncx - a / 2;
+                        let H2y = ncy;
+                        let H1x = H2x + a * (-Math.cos(theta));
+                        let H1y = H2y + a * (-Math.sin(theta));
+                        x = H1x + d * (-Math.cos(2 * theta));
+                        y = H1y + d * (-Math.sin(2 * theta));
+                    } else if (s <= 1.5 * a) {
+                        let d = 1.5 * a - s;
+                        let H2x = ncx - a / 2;
+                        let H2y = ncy;
+                        x = H2x + d * (-Math.cos(theta));
+                        y = H2y + d * (-Math.sin(theta));
+                    } else if (s <= 2.5 * a) {
+                        x = ncx + (s - 2 * a);
+                        y = ncy;
+                    } else if (s <= 3.5 * a) {
+                        let d = s - 2.5 * a;
+                        let H3x = ncx + a / 2;
+                        let H3y = ncy;
+                        x = H3x + d * Math.cos(theta);
+                        y = H3y + d * (-Math.sin(theta));
+                    } else {
+                        let d = s - 3.5 * a;
+                        let H3x = ncx + a / 2;
+                        let H3y = ncy;
+                        let H4x = H3x + a * Math.cos(theta);
+                        let H4y = H3y + a * (-Math.sin(theta));
+                        x = H4x + d * Math.cos(2 * theta);
+                        y = H4y + d * (-Math.sin(2 * theta));
+                    }
+                    result.push({ x: x, y: y });
+                }
+                return result;
+            }
+
+            if (shapeType === 'triangle') {
+                let a = P / 3;
+                let theta = ((2 * Math.PI) / 3) * foldT;
+                for (let i = 0; i < num_nodes; i++) {
+                    let s = i * segment_length;
+                    let x, y;
+                    if (s <= a) {
+                        let d = a - s;
+                        x = ncx - a / 2 + d * (-Math.cos(theta));
+                        y = ncy + d * (-Math.sin(theta));
+                    } else if (s <= 2 * a) {
+                        x = ncx - 1.5 * a + s;
+                        y = ncy;
+                    } else {
+                        let d = s - 2 * a;
+                        x = ncx + a / 2 + d * Math.cos(theta);
+                        y = ncy + d * (-Math.sin(theta));
+                    }
+                    result.push({ x, y });
+                }
+                return result;
+            }
+            return result;
+        }
+
+        function updateButtonStates(type) {
+            document.querySelectorAll('.shape-btn').forEach(btn => btn.classList.remove('active'));
+            if (type !== 'line' && type !== 'custom') {
+                const btn = document.getElementById(`btn-${type}`);
+                if (btn) btn.classList.add('active');
+            }
+        }
+
+        function formShape(type) {
+            if (currentShape === type && !isAnimating) {
+                resetLine();
+                return;
+            }
+
+            targetShapeType = type;
+            isAnimating = true;
+            animationProgress = 0;
+            isClosed = false;
+            activeTouches = {};
+
+            if (currentShape === 'line') {
+                animationType = 'fold';
+            } else {
+                animationType = 'morph';
+                morphStartNodes = nodes.map(n => ({ x: n.x, y: n.y }));
+            }
+            updateButtonStates(type);
+        }
+
+        function stopAnimationIfNeeded() {
+            if (isAnimating) {
+                isAnimating = false;
+                for (let i = 0; i < num_nodes; i++) {
+                    nodes[i].old_x = nodes[i].x;
+                    nodes[i].old_y = nodes[i].y;
+                }
+            }
+            currentShape = 'custom';
+            updateButtonStates('custom');
+        }
+
+        // 鼠标与触摸事件
+        function startDrag(id, clientX, clientY, type) {
+            let touchState = {
+                type: type,
+                x: clientX,
+                y: clientY,
+                startX: clientX,
+                startY: clientY,
+                nodeIndex: -1,
+                potentialNode: -1,
+                hasDraggedNode: false,
+                isTranslatingShape: false
+            };
+            activeTouches[id] = touchState;
+
+            if (type === 'A') {
+                touchState.nodeIndex = 0;
+            } else if (type === 'B') {
+                touchState.nodeIndex = num_nodes - 1;
+            } else if (type === 'Shape') {
+            let minDist = Infinity;
+                let closest = -1;
+                for (let i = 0; i < num_nodes; i++) {
+                    let ddx = nodes[i].x - clientX;
+                    let ddy = nodes[i].y - clientY;
+                    let d = ddx * ddx + ddy * ddy;
+                    if (d < minDist) {
+                        minDist = d;
+                        closest = i;
+                    }
+                }
+
+                if (showInfo && minDist > 625) {
+                    touchState.isTranslatingShape = true;
+                } else {
+                    touchState.potentialNode = closest;
+                }
+            }
+
+            if (type !== 'Shape') {
+                stopAnimationIfNeeded();
+            }
+        }
+
+        function doDrag(id, clientX, clientY) {
+            let touchState = activeTouches[id];
+            if (!touchState) return;
+
+            if (touchState.isTranslatingShape) {
+                let dx = clientX - touchState.x;
+                let dy = clientY - touchState.y;
+                let totalDx = clientX - touchState.startX;
+                let totalDy = clientY - touchState.startY;
+
+                if (!touchState.hasDraggedNode && (Math.abs(totalDx) > 3 || Math.abs(totalDy) > 3)) {
+                    touchState.hasDraggedNode = true;
+                    globalHasDraggedNode = true;
+                    stopAnimationIfNeeded();
+                }
+                if (touchState.hasDraggedNode) {
+                    for (let i = 0; i < num_nodes; i++) {
+                        nodes[i].x += dx;
+                        nodes[i].y += dy;
+                        nodes[i].old_x += dx;
+                        nodes[i].old_y += dy;
+                    }
+                }
+                touchState.x = clientX;
+                touchState.y = clientY;
+            } else if (touchState.nodeIndex !== -1) {
+                touchState.x = clientX;
+                touchState.y = clientY;
+            } else if (touchState.potentialNode !== -1) {
+                let totalDx = clientX - touchState.startX;
+                let totalDy = clientY - touchState.startY;
+                if (touchState.nodeIndex === -1 && (Math.abs(totalDx) > 3 || Math.abs(totalDy) > 3)) {
+                    touchState.nodeIndex = touchState.potentialNode;
+                    touchState.hasDraggedNode = true;
+                    globalHasDraggedNode = true;
+                    stopAnimationIfNeeded();
+                }
+                if (touchState.nodeIndex !== -1) {
+                    touchState.x = clientX;
+                    touchState.y = clientY;
+                }
+            }
+        }
+
+        function endDrag(id) {
+            delete activeTouches[id];
+        }
+
+        hitA.addEventListener('mousedown', (e) => startDrag('mouse', e.clientX, e.clientY, 'A'));
+        hitB.addEventListener('mousedown', (e) => startDrag('mouse', e.clientX, e.clientY, 'B'));
+        pathCurve.addEventListener('mousedown', (e) => startDrag('mouse', e.clientX, e.clientY, 'Shape'));
+        window.addEventListener('mousemove', (e) => doDrag('mouse', e.clientX, e.clientY));
+        window.addEventListener('mouseup', () => endDrag('mouse'));
+
+        hitA.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                startDrag(touch.identifier, touch.clientX, touch.clientY, 'A');
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        hitB.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                startDrag(touch.identifier, touch.clientX, touch.clientY, 'B');
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        pathCurve.addEventListener('touchstart', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                startDrag(touch.identifier, touch.clientX, touch.clientY, 'Shape');
+            }
+            // No preventDefault to let click fire
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                doDrag(touch.identifier, touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                endDrag(touch.identifier);
+            }
+        });
+        window.addEventListener('touchcancel', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                endDrag(touch.identifier);
+            }
+        });
+
+        document.getElementById('btn-circle').addEventListener('click', () => formShape('circle'));
+        document.getElementById('btn-square').addEventListener('click', () => formShape('square'));
+        document.getElementById('btn-triangle').addEventListener('click', () => formShape('triangle'));
+
+        document.getElementById('btn-circle').addEventListener('touchstart', (e) => { e.preventDefault(); formShape('circle'); }, { passive: false });
+        document.getElementById('btn-square').addEventListener('touchstart', (e) => { e.preventDefault(); formShape('square'); }, { passive: false });
+        document.getElementById('btn-triangle').addEventListener('touchstart', (e) => { e.preventDefault(); formShape('triangle'); }, { passive: false });
+
+        // 隐藏功能：复原默认线段
+        function resetLine() {
+            if (currentShape === 'line' && !isAnimating) return;
+            activeTouches = {};
+            isClosed = false;
+
+            targetShapeType = 'line';
+            isAnimating = true;
+            animationProgress = 0;
+
+            if (['circle', 'square', 'triangle'].includes(currentShape)) {
+                animationType = 'unfold';
+                unfoldSource = currentShape;
+            } else {
+                animationType = 'morph';
+                morphStartNodes = nodes.map(n => ({ x: n.x, y: n.y }));
+            }
+
+            updateButtonStates('line');
+        }
+
+        const infoPanel = document.getElementById('info-panel');
+        const infoArea = document.getElementById('info-area');
+        let showInfo = false;
+
+        function showInfoPanel(e) {
+            if (globalHasDraggedNode) {
+                globalHasDraggedNode = false;
+                return;
+            }
+            let cdx2 = nodes[num_nodes - 1].x - nodes[0].x;
+            let cdy2 = nodes[num_nodes - 1].y - nodes[0].y;
+            let currentDist2 = Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2);
+
+            let isAnyDraggingNode = Object.values(activeTouches).some(ts => ts.nodeIndex !== -1);
+            let shouldFill2 = isClosed || (isAnyDraggingNode && currentDist2 < 30);
+
+            if (shouldFill2) {
+                if (!showInfo) {
+                    showInfo = true;
+                    infoPanel.classList.add('visible');
+                }
+                if (e) e.preventDefault();
+            }
+        }
+
+        function hideInfoPanel(e) {
+            if (showInfo) {
+                showInfo = false;
+                infoPanel.classList.remove('visible');
+            }
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+
+        pathCurve.addEventListener('click', showInfoPanel);
+        pathCurve.addEventListener('touchstart', showInfoPanel, { passive: false });
+
+        infoPanel.addEventListener('click', hideInfoPanel);
+        infoPanel.addEventListener('touchstart', hideInfoPanel, { passive: false });
+
+        // 窗口大小调整
+        window.addEventListener('resize', () => {
+            let ncx = window.innerWidth / 2;
+            let ncy = window.innerHeight / 2;
+            let dx = ncx - cx;
+            let dy = ncy - cy;
+
+            let new_total_length = window.innerWidth * 0.75;
+            let scale = new_total_length / total_length;
+
+            total_length = new_total_length;
+            segment_length = total_length / (num_nodes - 1);
+
+            for (let node of nodes) {
+                // 平移并缩放
+                node.x = ncx + (node.x + dx - ncx) * scale;
+                node.y = ncy + (node.y + dy - ncy) * scale;
+                node.old_x = ncx + (node.old_x + dx - ncx) * scale;
+                node.old_y = ncy + (node.old_y + dy - ncy) * scale;
+            }
+            cx = ncx;
+            cy = ncy;
+
+            if (currentShape !== 'custom') {
+                let targetPositions = getShapeNodes(currentShape, 1);
+                for (let i = 0; i < num_nodes; i++) {
+                    nodes[i].x = targetPositions[i].x;
+                    nodes[i].y = targetPositions[i].y;
+                    nodes[i].old_x = nodes[i].x;
+                    nodes[i].old_y = nodes[i].y;
+                }
+            }
+        });
+
+        // 物理更新循环
+        // 预计算拖拽节点标记数组，避免每次迭代查表
+        const dragFlags = new Uint8Array(num_nodes);
+
+        function update() {
+            if (isAnimating) {
+                animationProgress += 0.015;
+                if (animationProgress >= 1) {
+                    animationProgress = 1;
+                }
+
+                let ap = animationProgress;
+                let t = ap < 0.5 ? 2 * ap * ap : 1 - (-2 * ap + 2) * (-2 * ap + 2) / 2;
+
+                if (animationType === 'fold') {
+                    let targetPositions = getShapeNodes(targetShapeType, t);
+                    for (let i = 0; i < num_nodes; i++) {
+                        nodes[i].x = targetPositions[i].x;
+                        nodes[i].y = targetPositions[i].y;
+                    }
+                } else if (animationType === 'unfold') {
+                    let targetPositions = getShapeNodes(unfoldSource, 1 - t);
+                    for (let i = 0; i < num_nodes; i++) {
+                        nodes[i].x = targetPositions[i].x;
+                        nodes[i].y = targetPositions[i].y;
+                    }
+                } else if (animationType === 'morph') {
+                    let targetPositions = getShapeNodes(targetShapeType, 1);
+                    for (let i = 0; i < num_nodes; i++) {
+                        nodes[i].x = morphStartNodes[i].x + (targetPositions[i].x - morphStartNodes[i].x) * t;
+                        nodes[i].y = morphStartNodes[i].y + (targetPositions[i].y - morphStartNodes[i].y) * t;
+                    }
+                }
+
+                if (animationProgress === 1) {
+                    isAnimating = false;
+                    currentShape = targetShapeType;
+                    for (let i = 0; i < num_nodes; i++) {
+                        nodes[i].old_x = nodes[i].x;
+                        nodes[i].old_y = nodes[i].y;
+                    }
+                    if (targetShapeType !== 'line') isClosed = true;
+                }
+            }
+
+            // 收集拖拽节点并标记到数组
+            dragFlags.fill(0);
+            for (let id in activeTouches) {
+                let ts = activeTouches[id];
+                if (ts.nodeIndex !== -1) {
+                    let idx = ts.nodeIndex;
+                    nodes[idx].x = ts.x;
+                    nodes[idx].y = ts.y;
+                    dragFlags[idx] = 1;
+                }
+            }
+
+            if (!isAnimating) {
+                // 1. Verlet积分
+                for (let i = 0; i < num_nodes; i++) {
+                    if (dragFlags[i]) continue;
+
+                    let node = nodes[i];
+                    let vx = node.x - node.old_x;
+                    let vy = node.y - node.old_y;
+
+                    node.old_x = node.x;
+                    node.old_y = node.y;
+
+                    // 阻尼，防止无限滑动，使其像放在桌面上的绳子
+                    node.x += vx * 0.1;
+                    node.y += vy * 0.1;
+                }
+
+                // 2. 距离约束解析 (从80降至30，移动端性能大幅提升)
+                let iterations = 30;
+                let lastIdx = num_nodes - 1;
+                for (let iter = 0; iter < iterations; iter++) {
+                    for (let i = 0; i < lastIdx; i++) {
+                        let n1 = nodes[i];
+                        let n2 = nodes[i + 1];
+                        let dx = n2.x - n1.x;
+                        let dy = n2.y - n1.y;
+                        let distSq = dx * dx + dy * dy;
+
+                        if (distSq < 0.0001) {
+                            dx = (Math.random() - 0.5) * 0.1;
+                            dy = (Math.random() - 0.5) * 0.1;
+                            distSq = dx * dx + dy * dy;
+                        }
+
+                        let dist = Math.sqrt(distSq);
+                        let diff = (segment_length - dist) / dist;
+
+                        let f1 = dragFlags[i];
+                        let f2 = dragFlags[i + 1];
+
+                        if (f1 && f2) continue;
+
+                        if (!f1 && !f2) {
+                            let ox = dx * diff * 0.5;
+                            let oy = dy * diff * 0.5;
+                            n1.x -= ox; n1.y -= oy;
+                            n2.x += ox; n2.y += oy;
+                        } else if (!f1) {
+                            let ox = dx * diff;
+                            let oy = dy * diff;
+                            n1.x -= ox; n1.y -= oy;
+                        } else {
+                            let ox = dx * diff;
+                            let oy = dy * diff;
+                            n2.x += ox; n2.y += oy;
+                        }
+                    }
+
+                    if (isClosed) {
+                        let fA = dragFlags[0];
+                        let fB = dragFlags[lastIdx];
+
+                        if (fA && !fB) {
+                            nodes[lastIdx].x = nodes[0].x;
+                            nodes[lastIdx].y = nodes[0].y;
+                        } else if (fB && !fA) {
+                            nodes[0].x = nodes[lastIdx].x;
+                            nodes[0].y = nodes[lastIdx].y;
+                        } else if (!fA && !fB) {
+                            let avgX = (nodes[0].x + nodes[lastIdx].x) * 0.5;
+                            let avgY = (nodes[0].y + nodes[lastIdx].y) * 0.5;
+                            nodes[0].x = nodes[lastIdx].x = avgX;
+                            nodes[0].y = nodes[lastIdx].y = avgY;
+                        }
+                    }
+                } // closes for loop
+            } // closes if (!isAnimating)
+
+            // 4. 判断是否闭环并填充
+            let cdx = nodes[num_nodes - 1].x - nodes[0].x;
+            let cdy = nodes[num_nodes - 1].y - nodes[0].y;
+            let currentDist = Math.sqrt(cdx * cdx + cdy * cdy);
+
+            let isAnyDraggingNode = false;
+            for (let i = 0; i < num_nodes; i++) { if (dragFlags[i]) { isAnyDraggingNode = true; break; } }
+            let isAnyTranslating = Object.values(activeTouches).some(ts => ts.isTranslatingShape && ts.hasDraggedNode);
+            let isDraggingAnything = isAnyDraggingNode || isAnyTranslating;
+
+            if (!isDraggingAnything && !isAnimating) {
+                if (currentDist < 30) {
+                    isClosed = true;
+                } else {
+                    isClosed = false;
+                }
+            } else if (isAnimating) {
+                if (animationType === 'morph' && targetShapeType !== 'line') {
+                    isClosed = true;
+                } else {
+                    isClosed = false;
+                }
+            }
+
+            let shouldFill = isClosed || (isAnyDraggingNode && currentDist < 30);
+
+            if (shouldFill) {
+                pathCurve.setAttribute('fill', 'rgba(100, 180, 255, 0.3)');
+                pathCurve.style.cursor = 'pointer';
+            } else {
+                pathCurve.setAttribute('fill', 'none');
+                pathCurve.style.cursor = 'default';
+                if (showInfo) {
+                    showInfo = false;
+                    infoPanel.classList.remove('visible');
+                }
+            }
+
+            if (showInfo) {
+                let areaPixel = 0;
+                for (let i = 0; i < num_nodes - 1; i++) {
+                    areaPixel += nodes[i].x * nodes[i + 1].y - nodes[i + 1].x * nodes[i].y;
+                }
+                areaPixel += nodes[num_nodes - 1].x * nodes[0].y - nodes[0].x * nodes[num_nodes - 1].y;
+                areaPixel = Math.abs(areaPixel) / 2;
+
+                let logicalArea = areaPixel * (10000 / (total_length * total_length));
+                infoArea.innerText = `S ≈ ${logicalArea.toFixed(1)}`;
+            }
+
+            // 5. 绘制平滑曲线 (二阶贝塞尔)
+            // 使用数组构建路径字符串，避免大量字符串拼接
+            let parts = [`M ${nodes[0].x} ${nodes[0].y}`];
+
+            // 动态判断需要渲染出锐利顶点的索引 (使用Set实现O(1)查找)
+            let sharpSet = null;
+            if (currentShape === 'square' || targetShapeType === 'square') {
+                sharpSet = new Set([9, 27, 45, 63]);
+            } else if (currentShape === 'triangle' || targetShapeType === 'triangle') {
+                sharpSet = new Set([24, 48]);
+            }
+
+            for (let i = 0; i < num_nodes - 1; i++) {
+                let xc = (nodes[i].x + nodes[i + 1].x) * 0.5;
+                let yc = (nodes[i].y + nodes[i + 1].y) * 0.5;
+
+                if (i === 0) {
+                    parts.push(`L ${xc} ${yc}`);
+                } else if (sharpSet && sharpSet.has(i)) {
+                    parts.push(`L ${nodes[i].x} ${nodes[i].y} L ${xc} ${yc}`);
+                } else {
+                    parts.push(`Q ${nodes[i].x} ${nodes[i].y},${xc} ${yc}`);
+                }
+            }
+            parts.push(`L ${nodes[num_nodes - 1].x} ${nodes[num_nodes - 1].y}`);
+
+            if (shouldFill) {
+                parts.push('Z');
+            }
+
+            let d = parts.join(' ');
+            pathCurve.setAttribute('d', d);
+            curveVisible.setAttribute('d', d);
+
+            let ax = nodes[0].x, ay = nodes[0].y;
+            let bx = nodes[num_nodes - 1].x, by = nodes[num_nodes - 1].y;
+            hitA.setAttribute('cx', ax);
+            hitA.setAttribute('cy', ay);
+            nodeA.setAttribute('cx', ax);
+            nodeA.setAttribute('cy', ay);
+
+            hitB.setAttribute('cx', bx);
+            hitB.setAttribute('cy', by);
+            nodeB.setAttribute('cx', bx);
+            nodeB.setAttribute('cy', by);
+
+            requestAnimationFrame(update);
+        }
+
+        // 禁止页面缩放 (双击 & 双指)
+        document.addEventListener('gesturestart', function (event) {
+            event.preventDefault();
+        });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            let now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function (event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 PC 端浏览器缩放 (Ctrl+滚轮, Trackpad双指缩放)
+        document.addEventListener('wheel', function (event) {
+            if (event.ctrlKey || event.metaKey) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 PC 端键盘缩放 (Ctrl/Cmd + +/-)
+        document.addEventListener('keydown', function (event) {
+            if ((event.ctrlKey || event.metaKey) &&
+                (event.key === '=' || event.key === '-' || event.key === '+' || event.key === '_')) {
+                event.preventDefault();
+            }
+        });
+
+        update();
+    </script>
+</body>
+
+</html>

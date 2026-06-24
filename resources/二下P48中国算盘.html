@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国算盘 · 互动拨珠</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      background: #F4F3ED;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #wrap {
+      padding: 0 10vw;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg#abacus {
+      width: min(calc(100vw - 40px), calc((100vh - 40px) * 840 / 500));
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 10px 36px rgba(0, 0, 0, 0.15));
+      cursor: default;
+      user-select: none;
+      outline: none;
+    }
+
+    svg * {
+      outline: none;
+    }
+
+    .bead {
+      cursor: pointer;
+    }
+
+    .bead:focus {
+      outline: none;
+    }
+
+    #modeToggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      background: transparent;
+      color: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: bold;
+      font-family: 'Noto Serif SC', serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      z-index: 100;
+      user-select: none;
+    }
+
+    #modeToggle:hover {
+      color: rgba(0, 0, 0, 0.9);
+      border-color: rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <button id="modeToggle">7</button>
+  <div id="wrap">
+    <svg id="abacus" viewBox="0 0 840 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gFrame" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8956a" />
+          <stop offset="40%" stop-color="#a0623a" />
+          <stop offset="100%" stop-color="#6b3a1e" />
+        </linearGradient>
+        <linearGradient id="gFrameH" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#c8956a" />
+          <stop offset="50%" stop-color="#a0623a" />
+          <stop offset="100%" stop-color="#c8956a" />
+        </linearGradient>
+        <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#b87040" />
+          <stop offset="100%" stop-color="#7a4520" />
+        </linearGradient>
+        <radialGradient id="gBead" cx="35%" cy="28%" r="65%">
+          <stop offset="0%" stop-color="#7a7a84" />
+          <stop offset="45%" stop-color="#4a4a54" />
+          <stop offset="100%" stop-color="#252528" />
+        </radialGradient>
+        <radialGradient id="gBeadHL" cx="35%" cy="25%" r="50%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.35)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+        </radialGradient>
+        <linearGradient id="gRod" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7a4520" />
+          <stop offset="30%" stop-color="#c87840" />
+          <stop offset="70%" stop-color="#c87840" />
+          <stop offset="100%" stop-color="#7a4520" />
+        </linearGradient>
+        <linearGradient id="gPanel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f5efe8" />
+          <stop offset="100%" stop-color="#ede4d8" />
+        </linearGradient>
+        <!-- gMark removed -->
+        <filter id="fShadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.4)" />
+        </filter>
+        <linearGradient id="gMetalStem" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#9a7b45" />
+          <stop offset="30%" stop-color="#f0d592" />
+          <stop offset="50%" stop-color="#c9a65d" />
+          <stop offset="80%" stop-color="#f0d592" />
+          <stop offset="100%" stop-color="#7a5d2c" />
+        </linearGradient>
+        <linearGradient id="gMetalCap" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#8a6727" />
+          <stop offset="30%" stop-color="#f5dfa3" />
+          <stop offset="70%" stop-color="#d6b360" />
+          <stop offset="100%" stop-color="#6b4c16" />
+        </linearGradient>
+        <radialGradient id="gMetalTop" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#fff9e6" />
+          <stop offset="50%" stop-color="#e8c97d" />
+          <stop offset="100%" stop-color="#a88238" />
+        </radialGradient>
+      </defs>
+
+      <!-- top label zone (y=0..68): click here to set 个位 -->
+      <g id="labels" font-family="'Noto Serif SC',serif" text-anchor="middle" fill="rgba(255,220,150,0.82)"
+        visibility="hidden"></g>
+
+      <!-- ── Frame (starts at y=70) ── -->
+      <rect id="f-shadow" x="8" y="76" width="824" height="362" rx="14" fill="rgba(0,0,0,0.35)" />
+      <rect id="f-base" x="0" y="68" width="840" height="374" rx="13" fill="url(#gFrame)" filter="url(#fShadow)" />
+      <rect id="f-panel" x="20" y="88" width="800" height="334" rx="4" fill="url(#gPanel)" />
+
+      <!-- Beam (Moved up visually behind beads but in front of rods) -->
+      <g id="rods"></g>
+
+      <rect x="20" y="188" width="800" height="20" fill="url(#gBeam)" />
+      <rect x="20" y="188" width="800" height="3" fill="rgba(220,150,80,0.5)" rx="1" />
+      <rect x="20" y="205" width="800" height="3" fill="rgba(0,0,0,0.2)" rx="1" />
+
+      <!-- Frame detail lines -->
+      <rect id="f-detail-top" x="20" y="88" width="800" height="3" fill="rgba(220,160,90,0.3)" rx="1" />
+      <rect id="f-detail-bot" x="20" y="419" width="800" height="3" fill="rgba(0,0,0,0.15)" rx="1" />
+
+      <!-- Content (beads) -->
+      <g id="beads"></g>
+
+      <!-- Frame borders on top -->
+      <rect id="f-border-top" x="0" y="68" width="840" height="20" rx="13" fill="url(#gFrameH)" />
+      <rect id="f-border-bot" x="0" y="422" width="840" height="20" rx="13" fill="url(#gFrameH)" />
+      <rect id="f-border-l" x="0" y="68" width="20" height="374" rx="13" fill="url(#gFrame)" />
+      <rect id="f-border-r" x="820" y="68" width="20" height="374" rx="13" fill="url(#gFrame)" />
+      <rect id="f-corner-tl" x="0" y="68" width="30" height="30" rx="13" fill="url(#gFrame)" />
+      <rect id="f-corner-tr" x="810" y="68" width="30" height="30" rx="13" fill="url(#gFrame)" />
+      <rect id="f-corner-bl" x="0" y="412" width="30" height="30" rx="13" fill="url(#gFrame)" />
+      <rect id="f-corner-br" x="810" y="412" width="30" height="30" rx="13" fill="url(#gFrame)" />
+
+      <!-- Reset Button -->
+      <g id="reset-button" cursor="pointer">
+        <ellipse id="reset-shadow" cx="105" cy="80" rx="18" ry="6" fill="rgba(0,0,0,0.4)" />
+        <ellipse id="reset-base" cx="105" cy="78" rx="16" ry="5" fill="url(#gMetalStem)" />
+        <rect id="reset-stem" x="99" y="54" width="12" height="24" fill="url(#gMetalStem)" />
+        <g id="reset-head" style="transition: transform 0.1s cubic-bezier(0.2,0,0.2,1);">
+          <ellipse id="reset-cap-bot" cx="105" cy="54" rx="20" ry="6" fill="#7a5d2c" />
+          <rect id="reset-cap-mid" x="85" y="48" width="40" height="6" fill="url(#gMetalCap)" />
+          <ellipse id="reset-cap-top" cx="105" cy="48" rx="20" ry="7" fill="url(#gMetalTop)" />
+        </g>
+      </g>
+
+      <!-- ── Digit display below ── -->
+      <g id="digits" font-family="'Noto Serif SC',serif" text-anchor="middle"></g>
+    </svg>
+  </div>
+
+  <script>
+    // ── Constants ──────────────────────────────────────────────────────────────
+    const NUM_COLS = 9;
+    const BRX = 28;
+    const BRY = 12;
+    const BEAD_STEP = BRY * 2 + 5;   // 29
+
+    const UPPER_TOP = 92;
+    const BEAM_TOP = 188;
+    const BEAM_BOT = 208;
+    const LOWER_BOT = 418;
+
+    let isModernMode = false;
+    let U_REST = [], U_ACTV = [];
+    let L_REST = [], L_ACTV = [];
+
+    function updateConstants() {
+      const tD = isModernMode ? 29 : 0;
+      const bD = isModernMode ? -29 : 0;
+      const U_TOP = UPPER_TOP + tD;
+      const L_BOT = LOWER_BOT + bD;
+
+      U_REST = [U_TOP + BRY + 3, U_TOP + BRY + 3 + BEAD_STEP];
+      U_ACTV = [BEAM_TOP - BRY - 5 - BEAD_STEP, BEAM_TOP - BRY - 5];
+
+      L_REST = []; L_ACTV = [];
+      for (let i = 0; i < 5; i++) L_REST[4 - i] = L_BOT - BRY - 4 - i * BEAD_STEP;
+      for (let i = 0; i < 5; i++) L_ACTV[i] = BEAM_BOT + BRY + 5 + i * BEAD_STEP;
+    }
+    updateConstants();
+
+    function animateAttrs(el, attrs, duration = 300) {
+      if (!el) return;
+      const start = {};
+      for (const k in attrs) start[k] = parseFloat(el.getAttribute(k));
+      const startTime = performance.now();
+      function step(time) {
+        let p = (time - startTime) / duration;
+        if (p > 1) p = 1;
+        const ease = 1 - Math.pow(1 - p, 3);
+        for (const k in attrs) {
+          el.setAttribute(k, start[k] + (attrs[k] - start[k]) * ease);
+        }
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    const FRAME_L = 20, FRAME_R = 820;
+    const COL_STEP = (FRAME_R - FRAME_L) / NUM_COLS;
+    const rodX = c => FRAME_L + COL_STEP * (c + 0.5);
+
+    // Position names: index 0 = ones, right to left
+    const POS = ['个', '十', '百', '千', '万', '十万', '百万', '千万', '亿', '十亿', '百亿', '千亿', '万亿'];
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    const upperActive = Array(NUM_COLS).fill(0);
+    const lowerActive = Array(NUM_COLS).fill(0);
+    const upperBeads = [];
+    const lowerBeads = [];
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const rodsG = document.getElementById('rods');
+    const beadsG = document.getElementById('beads');
+    const labelsG = document.getElementById('labels');
+    const digitsG = document.getElementById('digits');
+
+    // ── Marker columns ─────────────────────────────────────────────────────────
+    const markerCols = new Set([3, 9]);
+
+    // ── Build ──────────────────────────────────────────────────────────────────
+    // ── Labels state ─────────────────────────────────────────────────────────
+    let onesCol = -1;      // which column is 个位 (-1 = not set)
+    let labelsVisible = false;
+
+    for (let col = 0; col < NUM_COLS; col++) {
+      const cx = rodX(col);
+
+      // Rod
+      rodsG.appendChild(mkEl('rect', {
+        id: `rod-${col}`,
+        x: cx - 4, y: UPPER_TOP, width: 8,
+        height: LOWER_BOT - UPPER_TOP, rx: 4, fill: 'url(#gRod)'
+      }));
+
+      // Position label placeholders (text updated dynamically)
+      const lt1 = mkText(cx, 26, '', 'rgba(0,0,0,0.88)', 20);
+      lt1.id = `label1-${col}`;
+      const lt2 = mkText(cx, 52, '', 'rgba(0,0,0,0.72)', 20);
+      lt2.id = `label2-${col}`;
+      labelsG.appendChild(lt1);
+      labelsG.appendChild(lt2);
+
+      // Digit text (hidden by default, below frame at y=500)
+      const dg = mkText(cx, 500, '', 'rgba(200,160,80,0.5)', 40);
+      dg.id = `digit-${col}`;
+      dg.setAttribute('visibility', 'hidden');
+      digitsG.appendChild(dg);
+
+      // Upper beads
+      upperBeads[col] = [];
+      for (let b = 0; b < 2; b++) {
+        const g = makeBead(cx, U_REST[b]);
+        g.dataset.col = col; g.dataset.section = 'upper'; g.dataset.bead = b;
+        g.addEventListener('click', onBeadClick);
+        beadsG.appendChild(g);
+        upperBeads[col][b] = g;
+      }
+
+      // Lower beads
+      lowerBeads[col] = [];
+      for (let b = 0; b < 5; b++) {
+        const g = makeBead(cx, L_REST[b]);
+        g.dataset.col = col; g.dataset.section = 'lower'; g.dataset.bead = b;
+        g.addEventListener('click', onBeadClick);
+        beadsG.appendChild(g);
+        lowerBeads[col][b] = g;
+      }
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function mkEl(tag, attrs) {
+      const el = document.createElementNS(svgNS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    function mkText(x, y, txt, fill, size) {
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('x', x); t.setAttribute('y', y);
+      t.setAttribute('fill', fill); t.setAttribute('font-size', size);
+      t.textContent = txt;
+      return t;
+    }
+
+    // Build a rounded-rect bead path: wide in middle, fully rounded ends
+    function beadPath(rx, ry) {
+      // Like a stadium/discorectangle: rect of width=(rx-ry)*2 with semicircle caps
+      const inner = rx - ry;  // half-width of flat middle section
+      return `M ${-inner},${-ry} A ${ry},${ry} 0 0,0 ${-inner},${ry} L ${inner},${ry} A ${ry},${ry} 0 0,0 ${inner},${-ry} Z`;
+    }
+
+    function makeBead(cx, cy) {
+      const g = document.createElementNS(svgNS, 'g');
+      g.setAttribute('class', 'bead');
+      g.setAttribute('transform', `translate(${cx},${cy})`);
+      g.setAttribute('focusable', 'false');
+      g.style.transition = 'transform 0.08s ease-out';
+
+      const d = beadPath(BRX, BRY);
+      // Shadow
+      const sh = mkEl('path', { d, transform: 'translate(2,3)', fill: 'rgba(0,0,0,0.3)' });
+      // Body
+      const el = mkEl('path', { d, fill: 'url(#gBead)' });
+      // Highlight (small ellipse top-left)
+      const hl = mkEl('ellipse', { cx: -4, cy: -3, rx: BRX * 0.55, ry: BRY * 0.45, fill: 'url(#gBeadHL)' });
+      // Equator line
+      const eqD = beadPath(BRX, BRY * 0.18);
+      const rim = mkEl('path', { d: eqD, fill: 'none', stroke: 'rgba(255,255,255,0.12)', 'stroke-width': 1 });
+      g.append(sh, el, hl, rim);
+      return g;
+    }
+
+    function setBeadY(gEl, y) {
+      const cx = +gEl.getAttribute('transform').match(/translate\(([^,]+)/)[1];
+      gEl.setAttribute('transform', `translate(${cx},${y})`);
+    }
+
+    function updateAllDigits() {
+      // Find leftmost and rightmost columns with non-zero values
+      let minCol = NUM_COLS, maxCol = -1;
+      for (let c = 0; c < NUM_COLS; c++) {
+        if (upperActive[c] * 5 + lowerActive[c] > 0) {
+          minCol = Math.min(minCol, c);
+          maxCol = Math.max(maxCol, c);
+        }
+      }
+
+      let start = minCol, end = maxCol;
+      // If unit position (个位) is set and visible, ensure it's included in range if any bead is active
+      if (labelsVisible && onesCol !== -1 && maxCol !== -1) {
+        start = Math.min(minCol, onesCol);
+        end = Math.max(maxCol, onesCol);
+      }
+
+      for (let c = 0; c < NUM_COLS; c++) {
+        const el = document.getElementById(`digit-${c}`);
+        if (!el) continue;
+        const v = upperActive[c] * 5 + lowerActive[c];
+        const inRange = end >= 0 && c >= start && c <= end;
+        if (inRange) {
+          el.textContent = v;
+          el.setAttribute('visibility', 'visible');
+          el.setAttribute('fill', 'rgba(0,0,0,0.95)');
+          el.setAttribute('font-size', 50);
+        } else {
+          el.setAttribute('visibility', 'hidden');
+        }
+      }
+    }
+
+    // Only show labels for offset 0–3 (个~千位), hide others
+    function setLabels() {
+      for (let col = 0; col < NUM_COLS; col++) {
+        const t1 = document.getElementById(`label1-${col}`);
+        const t2 = document.getElementById(`label2-${col}`);
+        if (!t1 || !t2) continue;
+        if (onesCol === -1) { t1.textContent = ''; t2.textContent = ''; continue; }
+        const offset = onesCol - col;  // 0=个, 1=十, 2=百, 3=千
+        // Only display first 4 places
+        if (offset < 0 || offset > 3) {
+          t1.textContent = ''; t2.textContent = '';
+        } else {
+          const name = POS[offset];  // always single-char in 0-3 range
+          t1.textContent = name; t2.textContent = '位';
+          t1.setAttribute('font-size', 28); t2.setAttribute('font-size', 28);
+          t1.setAttribute('y', 28 + (isModernMode ? 29 : 0)); t2.setAttribute('y', 55 + (isModernMode ? 29 : 0));
+          t1.setAttribute('visibility', 'visible'); t2.setAttribute('visibility', 'visible');
+        }
+      }
+    }
+
+    function toggleLabels(col) {
+      if (onesCol === col) {
+        labelsVisible = !labelsVisible;
+        labelsG.setAttribute('visibility', labelsVisible ? 'visible' : 'hidden');
+      } else {
+        onesCol = col;
+        labelsVisible = true;
+        labelsG.setAttribute('visibility', 'visible');
+        setLabels();
+      }
+      updateAllDigits();
+    }
+
+    // ── Mode Toggle ────────────────────────────────────────────────────────────
+    document.getElementById('modeToggle').addEventListener('click', function () {
+      isModernMode = !isModernMode;
+      this.textContent = isModernMode ? "5" : "7";
+      updateConstants();
+
+      const tD = isModernMode ? 29 : 0;
+      const bD = isModernMode ? -29 : 0;
+      const dh = isModernMode ? -58 : 0;
+
+      animateAttrs(document.getElementById('f-shadow'), { y: 76 + tD, height: 362 + dh });
+      animateAttrs(document.getElementById('f-base'), { y: 68 + tD, height: 374 + dh });
+      animateAttrs(document.getElementById('f-panel'), { y: 88 + tD, height: 334 + dh });
+      animateAttrs(document.getElementById('f-border-top'), { y: 68 + tD });
+      animateAttrs(document.getElementById('f-border-bot'), { y: 422 + bD });
+      animateAttrs(document.getElementById('f-border-l'), { y: 68 + tD, height: 374 + dh });
+      animateAttrs(document.getElementById('f-border-r'), { y: 68 + tD, height: 374 + dh });
+      animateAttrs(document.getElementById('f-corner-tl'), { y: 68 + tD });
+      animateAttrs(document.getElementById('f-corner-tr'), { y: 68 + tD });
+      animateAttrs(document.getElementById('f-corner-bl'), { y: 412 + bD });
+      animateAttrs(document.getElementById('f-corner-br'), { y: 412 + bD });
+      animateAttrs(document.getElementById('f-detail-top'), { y: 88 + tD });
+      animateAttrs(document.getElementById('f-detail-bot'), { y: 419 + bD });
+
+      animateAttrs(document.getElementById('reset-shadow'), { cy: 80 + tD });
+      animateAttrs(document.getElementById('reset-base'), { cy: 78 + tD });
+      animateAttrs(document.getElementById('reset-stem'), { y: 54 + tD });
+      animateAttrs(document.getElementById('reset-cap-bot'), { cy: 54 + tD });
+      animateAttrs(document.getElementById('reset-cap-mid'), { y: 48 + tD });
+      animateAttrs(document.getElementById('reset-cap-top'), { cy: 48 + tD });
+
+      for (let c = 0; c < NUM_COLS; c++) {
+        animateAttrs(document.getElementById(`rod-${c}`), { y: 92 + tD, height: 326 + dh });
+        const dg = document.getElementById(`digit-${c}`);
+        if (dg) animateAttrs(dg, { y: 500 + bD });
+        const lt1 = document.getElementById(`label1-${c}`);
+        const lt2 = document.getElementById(`label2-${c}`);
+        if (lt1) animateAttrs(lt1, { y: 28 + tD });
+        if (lt2) animateAttrs(lt2, { y: 55 + tD });
+
+        if (isModernMode) {
+          if (upperActive[c] > 1) upperActive[c] = 1;
+          if (lowerActive[c] > 4) lowerActive[c] = 4;
+        }
+        for (let i = 0; i < 2; i++) {
+          if (isModernMode && i === 1) upperBeads[c][i].style.display = 'none';
+          else upperBeads[c][i].style.display = '';
+
+          if (isModernMode) {
+            if (i === 0) setBeadY(upperBeads[c][i], upperActive[c] >= 1 ? U_ACTV[1] : U_REST[0]);
+          } else {
+            const at = i === 1 ? upperActive[c] >= 1 : upperActive[c] >= 2;
+            setBeadY(upperBeads[c][i], at ? U_ACTV[i] : U_REST[i]);
+          }
+        }
+        for (let i = 0; i < 5; i++) {
+          if (isModernMode && i === 0) lowerBeads[c][i].style.display = 'none';
+          else lowerBeads[c][i].style.display = '';
+
+          if (isModernMode) {
+            if (i > 0) {
+              const isActive = i <= lowerActive[c];
+              setBeadY(lowerBeads[c][i], isActive ? L_ACTV[i - 1] : L_REST[i]);
+            }
+          } else {
+            setBeadY(lowerBeads[c][i], i < lowerActive[c] ? L_ACTV[i] : L_REST[i]);
+          }
+        }
+      }
+      updateAllDigits();
+    });
+
+    // ── Top-zone click only (y < 68) → set 个位 ───────────────────────────
+    document.getElementById('abacus').addEventListener('click', function (e) {
+      if (e.target.closest('.bead')) return;
+      const svgRect = this.getBoundingClientRect();
+      const scaleX = 840 / svgRect.width;
+      const scaleY = 500 / svgRect.height;
+      const svgY = (e.clientY - svgRect.top) * scaleY;
+      if (svgY > 68 + (isModernMode ? 29 : 0)) return;  // only respond in the top label zone
+      const clickX = (e.clientX - svgRect.left) * scaleX;
+      const col = Math.floor((clickX - FRAME_L) / COL_STEP);
+      if (col >= 0 && col < NUM_COLS) toggleLabels(col);
+    });
+
+    // ── Click logic ────────────────────────────────────────────────────────────
+    function onBeadClick(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const col = +this.dataset.col, b = +this.dataset.bead;
+      if (this.dataset.section === 'upper') handleUpper(col, b);
+      else handleLower(col, b);
+    }
+
+    function handleUpper(col, b) {
+      if (isModernMode && b === 1) return;
+      const a = upperActive[col];
+      if (isModernMode) {
+        upperActive[col] = a >= 1 ? 0 : 1;
+      } else {
+        const atBeam = b === 1 ? a >= 1 : a >= 2;
+        if (atBeam) upperActive[col] = b === 1 ? 0 : 1;
+        else upperActive[col] = b === 1 ? Math.max(a, 1) : 2;
+      }
+      for (let i = 0; i < 2; i++) {
+        if (isModernMode) {
+          if (i === 0) setBeadY(upperBeads[col][i], upperActive[col] >= 1 ? U_ACTV[1] : U_REST[0]);
+        } else {
+          const at = i === 1 ? upperActive[col] >= 1 : upperActive[col] >= 2;
+          setBeadY(upperBeads[col][i], at ? U_ACTV[i] : U_REST[i]);
+        }
+      }
+      updateAllDigits();
+    }
+
+    function handleLower(col, b) {
+      if (isModernMode && b === 0) return;
+      const a = lowerActive[col];
+      if (isModernMode) {
+        lowerActive[col] = b <= a ? b - 1 : b;
+      } else {
+        lowerActive[col] = b < a ? b : b + 1;
+      }
+      for (let i = 0; i < 5; i++) {
+        if (isModernMode) {
+          if (i > 0) {
+            const isActive = i <= lowerActive[col];
+            setBeadY(lowerBeads[col][i], isActive ? L_ACTV[i - 1] : L_REST[i]);
+          }
+        } else {
+          setBeadY(lowerBeads[col][i], i < lowerActive[col] ? L_ACTV[i] : L_REST[i]);
+        }
+      }
+      updateAllDigits();
+    }
+
+    // ── Reset Button Logic ─────────────────────────────────────────────────────
+    const rBtn = document.getElementById('reset-button');
+    const rHead = document.getElementById('reset-head');
+
+    function pressReset() {
+      rHead.style.transform = 'translateY(16px)';
+      for (let c = 0; c < NUM_COLS; c++) {
+        upperActive[c] = 0;
+        lowerActive[c] = 0;
+        for (let i = 0; i < 2; i++) {
+          if (isModernMode) {
+            if (i === 0) setBeadY(upperBeads[c][i], U_REST[0]);
+          } else {
+            setBeadY(upperBeads[c][i], U_REST[i]);
+          }
+        }
+        for (let i = 0; i < 5; i++) {
+          if (isModernMode) {
+            if (i > 0) setBeadY(lowerBeads[c][i], L_REST[i]);
+          } else {
+            setBeadY(lowerBeads[c][i], L_REST[i]);
+          }
+        }
+      }
+      updateAllDigits();
+    }
+
+    function releaseReset() {
+      rHead.style.transform = 'translateY(0)';
+    }
+
+    rBtn.addEventListener('mousedown', pressReset);
+    window.addEventListener('mouseup', releaseReset);
+    rBtn.addEventListener('touchstart', (e) => { e.preventDefault(); pressReset(); }, { passive: false });
+    window.addEventListener('touchend', releaseReset);
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3的倍数特征探究</title>
+    <script src="p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #F4F3EC;
+            font-family: sans-serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+        }
+
+        .top-bar input {
+            font-size: 24px;
+            width: 100px;
+            text-align: center;
+            border: 2px solid #FF5600;
+            border-radius: 10px;
+            padding: 5px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .top-bar input:focus {
+            box-shadow: 0 0 10px rgba(255, 86, 0, 0.3);
+        }
+
+        .top-bar label {
+            font-size: 20px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 22px;
+            color: #FF5600;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            pointer-events: none;
+            line-height: 1.5;
+            min-width: 400px;
+        }
+
+        .btn {
+            background: #FF5600;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(255, 86, 0, 0.3);
+        }
+
+        .btn:hover {
+            background: #e04a00;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .numpad {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            z-index: 20;
+        }
+
+        .numpad.active {
+            display: grid;
+        }
+
+        .numpad button {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            border: none;
+            border-radius: 10px;
+            background: #f4f3ec;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .numpad button:active {
+            background: #e0e0e0;
+            transform: scale(0.95);
+        }
+
+        .numpad button.confirm {
+            background: #FF5600;
+            color: white;
+            font-size: 20px;
+        }
+
+        .numpad button.confirm:active {
+            background: #e04a00;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top-bar">
+        <input type="text" id="numInput" value="234" readonly style="cursor: pointer;">
+        <button id="splitBtn" class="btn">拆分</button>
+    </div>
+    <div class="numpad" id="numpad">
+        <button onpointerdown="inputDigit(1); event.preventDefault();">1</button>
+        <button onpointerdown="inputDigit(2); event.preventDefault();">2</button>
+        <button onpointerdown="inputDigit(3); event.preventDefault();">3</button>
+        <button onpointerdown="inputDigit(4); event.preventDefault();">4</button>
+        <button onpointerdown="inputDigit(5); event.preventDefault();">5</button>
+        <button onpointerdown="inputDigit(6); event.preventDefault();">6</button>
+        <button onpointerdown="inputDigit(7); event.preventDefault();">7</button>
+        <button onpointerdown="inputDigit(8); event.preventDefault();">8</button>
+        <button onpointerdown="inputDigit(9); event.preventDefault();">9</button>
+        <button onpointerdown="clearInput(); event.preventDefault();">C</button>
+        <button onpointerdown="inputDigit(0); event.preventDefault();">0</button>
+        <button class="confirm" onpointerdown="confirmInput(); event.preventDefault();">确定</button>
+        <div style="grid-column: span 3; color: #999; font-size: 14px; text-align: center; margin-top: 5px;">
+            限于页面显示仅限300以内。</div>
+    </div>
+    <div class="info" id="infoText">
+        234 = 2个百 + 3个十 + 4个一
+    </div>
+    <div id="canvas-container"></div>
+    <script>
+        let numInput = document.getElementById('numInput');
+        let infoText = document.getElementById('infoText');
+        let splitBtn = document.getElementById('splitBtn');
+        let isSplit = false;
+
+        let hundreds = 9, tens = 9, ones = 9;
+        let rotationX = 0, rotationY = 0;
+        let cubes = [];
+        let splitProgress = 0; // 用于动画 0 到 1
+
+        function updateNum() {
+            let val = parseInt(numInput.value);
+            if (isNaN(val) || val < 1) return;
+            if (val > 300) { val = 321; numInput.value = 321; }
+            hundreds = Math.floor(val / 100);
+            tens = Math.floor((val % 100) / 10);
+            ones = val % 10;
+            isSplit = false;
+            splitProgress = 0;
+            splitBtn.innerText = "拆分";
+            updateInfo();
+            generateCubes();
+        }
+
+        numInput.addEventListener('input', updateNum);
+
+        let isTypingNew = true;
+        let numpad = document.getElementById('numpad');
+
+        numInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            numpad.classList.add('active');
+            isTypingNew = true;
+        });
+
+        document.addEventListener('click', (e) => {
+            if (numpad.classList.contains('active') && !numpad.contains(e.target) && e.target !== numInput) {
+                confirmInput();
+            }
+        });
+
+        function inputDigit(digit) {
+            if (isTypingNew) {
+                numInput.value = digit;
+                isTypingNew = false;
+            } else {
+                if (numInput.value.length < 3) {
+                    numInput.value += digit;
+                }
+            }
+            updateNum();
+        }
+
+        function clearInput() {
+            numInput.value = '';
+        }
+
+        function confirmInput() {
+            let val = parseInt(numInput.value);
+            if (isNaN(val) || val < 1) {
+                numInput.value = '1';
+                updateNum();
+            }
+            numpad.classList.remove('active');
+        }
+
+        splitBtn.addEventListener('click', () => {
+            isSplit = !isSplit;
+            splitBtn.innerText = isSplit ? "复原" : "拆分";
+            updateInfo();
+        });
+
+        function updateInfo() {
+            let val = parseInt(numInput.value) || 0;
+            if (!isSplit) {
+                infoText.innerHTML = `${val} = ${hundreds}个百 + ${tens}个十 + ${ones}个一`;
+            } else {
+                let remainder = hundreds + tens + ones;
+                let isMultiple = (remainder % 3 === 0);
+                infoText.innerHTML = `
+                    <span style="color:#666">${hundreds > 0 ? hundreds + '×(99+1)' : ''} 
+                    ${hundreds > 0 && tens > 0 ? '+' : ''} 
+                    ${tens > 0 ? tens + '×(9+1)' : ''} 
+                    ${(hundreds > 0 || tens > 0) && ones > 0 ? '+' : ''} 
+                    ${ones > 0 ? ones + '×1' : ''}</span><br>
+                    剩下的 <span style="font-size: 28px;">${hundreds} + ${tens} + ${ones} = ${remainder}</span><br>
+                    ${remainder} ${isMultiple ? "是" : "不是"} 3的倍数，所以 ${val} <span style="font-size: 28px;">${isMultiple ? "是" : "不是"}</span> 3的倍数`;
+            }
+        }
+
+        class Cube {
+            constructor(tx, ty, tz, baseColor, isRemainder) {
+                this.tx = tx; this.ty = ty; this.tz = tz;
+                this.baseColor = baseColor;
+                this.isRemainder = isRemainder;
+                this.x = tx; this.y = ty; this.z = tz;
+                this.opacity = 255;
+            }
+            display() {
+                push();
+
+                let curColor = [...this.baseColor];
+                let targetY = this.ty;
+
+                if (isSplit) {
+                    if (!this.isRemainder) {
+                        // 非余数部分（99 / 9）：渐变到灰色半透明
+                        curColor[0] = lerp(curColor[0], 200, splitProgress);
+                        curColor[1] = lerp(curColor[1], 200, splitProgress);
+                        curColor[2] = lerp(curColor[2], 200, splitProgress);
+                        this.opacity = lerp(255, 60, splitProgress);
+                    } else {
+                        // 余数部分（1）：浮起来并保持亮色
+                        targetY = this.ty - 40 * splitProgress;
+                    }
+                } else {
+                    this.opacity = lerp(this.opacity, 255, 0.1);
+                    if (!this.isRemainder) {
+                        curColor[0] = lerp(curColor[0], this.baseColor[0], 1 - splitProgress);
+                        curColor[1] = lerp(curColor[1], this.baseColor[1], 1 - splitProgress);
+                        curColor[2] = lerp(curColor[2], this.baseColor[2], 1 - splitProgress);
+                    }
+                }
+
+                this.y = lerp(this.y, targetY, 0.1);
+
+                translate(this.tx, this.y, this.tz);
+                fill(curColor[0], curColor[1], curColor[2], this.opacity);
+                stroke(curColor[0] * 0.8, curColor[1] * 0.8, curColor[2] * 0.8, this.opacity);
+
+                // 去掉描边让效果更整洁，或者保留一点点
+                strokeWeight(0.5);
+                box(18);
+                pop();
+            }
+        }
+
+        function generateCubes() {
+            cubes = [];
+            let size = 20;
+
+            // 计算总宽度居中
+            let hWidth = hundreds * (size * 10 + 20);
+            let tWidth = tens * (size + 10);
+            let oWidth = Math.min(ones, 5) * (size + 5);
+            let totalWidth = hWidth + tWidth + oWidth;
+
+            let curX = -totalWidth / 2;
+
+            // 百位（一板10x10）
+            for (let h = 0; h < hundreds; h++) {
+                for (let i = 0; i < 100; i++) {
+                    let cx = curX + Math.floor(i / 10) * size;
+                    let cy = -(i % 10) * size;
+                    let cz = 0;
+                    let isR = (i === 99); // 最后一个作为余数1
+                    cubes.push(new Cube(cx, cy, cz, [255, 86, 0], isR));
+                }
+                curX += (size * 10 + 20);
+            }
+
+            // 十位（一条1x10）
+            for (let t = 0; t < tens; t++) {
+                for (let i = 0; i < 10; i++) {
+                    let cx = curX + t * (size + 10);
+                    let cy = -i * size;
+                    let cz = 0;
+                    let isR = (i === 9); // 最后一个作为余数1
+                    cubes.push(new Cube(cx, cy, cz, [78, 205, 196], isR));
+                }
+            }
+            if (tens > 0) curX += tens * (size + 10) + 10;
+
+            // 个位（1x1）
+            for (let o = 0; o < ones; o++) {
+                let cx = curX + (o % 5) * (size + 5);
+                let cy = -Math.floor(o / 5) * size;
+                let cz = 0;
+                cubes.push(new Cube(cx, cy, cz, [255, 202, 58], true));
+            }
+        }
+
+        function setup() {
+            const canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+            canvas.parent('canvas-container');
+            updateNum();
+        }
+
+        function draw() {
+            background(244, 243, 236);
+
+            if (isSplit) {
+                splitProgress += 0.05;
+                if (splitProgress > 1) splitProgress = 1;
+            } else {
+                splitProgress -= 0.05;
+                if (splitProgress < 0) splitProgress = 0;
+            }
+
+            if (mouseIsPressed && mouseY > 80 && mouseY < windowHeight - 120) {
+                rotationY += (mouseX - pmouseX) * 0.01;
+                rotationX -= (mouseY - pmouseY) * 0.01;
+            }
+            rotationX = constrain(rotationX, -PI / 2, PI / 2);
+
+            ambientLight(150);
+            directionalLight(255, 255, 255, 0.5, 0.5, -1);
+            pointLight(255, 255, 255, 200, -200, 300);
+
+            rotateX(rotationX);
+            rotateY(rotationY);
+
+            // 整体向下移一点，适应屏幕中心
+            translate(0, 80, 80);
+
+            cubes.forEach(c => c.display());
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+
+</html>

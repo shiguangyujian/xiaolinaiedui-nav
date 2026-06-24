@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>数一数正方体有几个？</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            background-color: #fcfbf9; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            /* 禁止移动端双击缩放 */
+            touch-action: none;
+        }
+        
+        #stage {
+            width: 100%; height: 100%; display: block;
+            touch-action: none; cursor: default;
+        }
+
+        #lasso-path {
+            fill: rgba(255, 165, 0, 0.05); 
+            stroke: #dcae86; 
+            stroke-width: 1.5;
+            stroke-dasharray: 6 4; 
+            pointer-events: none;
+        }
+
+        .cube { transition: opacity 0.3s; cursor: grab; }
+        .cube:active { cursor: grabbing; }
+
+        /* --- 颜色定义 (淡橙色系) --- */
+        :root {
+            --c-stroke: #5d4a3e;
+            --c-top: #fffcf7;
+            --c-front: #ffe4c4;
+            --c-right: #ffcd9e;
+            --c-ui-bg: rgba(255, 255, 255, 0.9);
+            --c-ui-shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        .face-top { fill: var(--c-top); stroke: var(--c-stroke); stroke-width: 1.5px; stroke-linejoin: round; }
+        .face-front { fill: var(--c-front); stroke: var(--c-stroke); stroke-width: 1.5px; stroke-linejoin: round; }
+        .face-right { fill: var(--c-right); stroke: var(--c-stroke); stroke-width: 1.5px; stroke-linejoin: round; }
+
+        .cube.highlight .face-top { fill: #ffffff; }
+        .cube.highlight .face-front { fill: #fff0db; }
+        .cube.highlight .face-right { fill: #ffdfbf; }
+
+        /* --- UI Controls --- */
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--c-ui-bg);
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px var(--c-ui-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
+        }
+        
+        .icon-btn:active { transform: scale(0.95); }
+        .icon-btn svg { width: 24px; height: 24px; fill: #5d4a3e; }
+
+        /* --- Settings Panel --- */
+        #settings-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 260px;
+            background: var(--c-ui-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px var(--c-ui-shadow);
+            backdrop-filter: blur(10px);
+            z-index: 99;
+            transform-origin: top right;
+            transition: opacity 0.2s, transform 0.2s;
+            display: none;
+        }
+        
+        #settings-panel.visible {
+            display: block;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .setting-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            color: #5d4a3e;
+            font-weight: 500;
+        }
+
+        /* Custom Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            padding: 10px 0; /* Increase touch area */
+        }
+        
+        input[type=range]:focus { outline: none; }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #e0e0e0;
+            border-radius: 3px;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #dcae86;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -9px; /* center thumb */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <!-- Reset Button -->
+        <button class="icon-btn" id="reset-btn" title="重置 / Reset">
+            <svg viewBox="0 0 24 24">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+        </button>
+        <!-- Settings Button -->
+        <button class="icon-btn" id="settings-btn" title="设置 / Settings">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L3.15 8.87c-.11.2-.06.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.11-.22.06-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div id="settings-panel">
+        <div class="setting-row">
+            <div class="label-row">
+                <span>数量</span>
+                <span id="count-value">70</span>
+            </div>
+            <input type="range" id="count-slider" min="10" max="150" step="5">
+        </div>
+    </div>
+
+    <svg id="stage" xmlns="http://www.w3.org/2000/svg">
+        <g id="cubes-layer"></g>
+        <path id="lasso-path" d="" />
+    </svg>
+
+    <script>
+        const stage = document.getElementById('stage');
+        const cubesLayer = document.getElementById('cubes-layer');
+        const lassoPathEl = document.getElementById('lasso-path');
+        
+        // UI Elements
+        const resetBtn = document.getElementById('reset-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const countSlider = document.getElementById('count-slider');
+        const countValue = document.getElementById('count-value');
+
+        // Load saved count
+        const savedCount = localStorage.getItem('cube_count');
+        const initialCount = savedCount ? parseInt(savedCount) : 70;
+
+        // --- 配置 ---
+        const CONFIG = {
+            size: 32,             // 基础大小，会被动态调整
+            depth: 14,            
+            angle: Math.PI / 4,   
+            count: initialCount,  
+            minSelection: 2,
+            maxSelection: 10,
+            stackOverlap: 32,     // 基础重叠，会被动态调整
+            animLerp: 0.15,
+            snapDist: 60,
+            safeRadius: 50        // 基础半径，会被动态调整
+        };
+
+        let cubes = [];
+        let stacks = [];
+        let mode = 'idle'; 
+        let dragTarget = null;
+        let dragOffset = { x: 0, y: 0 };
+        let lassoPoints = [];
+        
+        let globalZIndexCounter = 0;
+
+        // --- UI Logic ---
+
+        // Init UI state
+        countSlider.value = CONFIG.count;
+        countValue.textContent = CONFIG.count;
+
+        // Toggle Settings
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPanel.classList.toggle('visible');
+        });
+
+        // Close settings when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+                settingsPanel.classList.remove('visible');
+            }
+        });
+
+        // Slider Change
+        countSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            countValue.textContent = val;
+            CONFIG.count = val;
+            localStorage.setItem('cube_count', val);
+            init(); // Re-init immediately
+        });
+
+        // Reset
+        resetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            init();
+        });
+
+        // --- 类定义 ---
+
+        class Cube {
+            constructor(id, x, y) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.tx = this.x;
+                this.ty = this.y;
+                
+                this.stackId = null;
+                this.isTop = false;
+                
+                this.zIndex = 0;
+
+                this.el = this.createSVG();
+                this.updateTransform();
+            }
+
+            createSVG() {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.classList.add("cube");
+                g.dataset.id = this.id;
+
+                const s = CONFIG.size;
+                const d = CONFIG.depth;
+                const dx = d * Math.cos(CONFIG.angle);
+                const dy = -d * Math.sin(CONFIG.angle);
+
+                const pFront = `M 0 0 L ${s} 0 L ${s} ${s} L 0 ${s} Z`;
+                const pTop = `M 0 0 L ${dx} ${dy} L ${s+dx} ${dy} L ${s} 0 Z`;
+                const pRight = `M ${s} 0 L ${s+dx} ${dy} L ${s+dx} ${s+dy} L ${s} ${s} Z`;
+
+                const createPath = (d, cls) => {
+                    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    p.setAttribute("d", d);
+                    p.setAttribute("class", cls);
+                    return p;
+                };
+
+                g.appendChild(createPath(pRight, "face-right"));
+                g.appendChild(createPath(pTop, "face-top"));
+                g.appendChild(createPath(pFront, "face-front"));
+
+                return g;
+            }
+
+            update() {
+                const dx = this.tx - this.x;
+                const dy = this.ty - this.y;
+                if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                    this.x += dx * CONFIG.animLerp;
+                    this.y += dy * CONFIG.animLerp;
+                    this.updateTransform();
+                }
+            }
+
+            updateTransform() {
+                this.el.setAttribute("transform", `translate(${this.x.toFixed(1)}, ${this.y.toFixed(1)})`);
+            }
+        }
+
+        class Stack {
+            constructor(cubesList) {
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.cubes = cubesList; 
+                this.updateRoles();
+                
+                this.x = cubesList[0].x;
+                this.y = cubesList[0].y;
+
+                this.bringToFront();
+            }
+
+            updateRoles() {
+                this.cubes.forEach((c, index) => {
+                    c.stackId = this.id;
+                    c.isTop = (index === 0);
+                });
+            }
+
+            setTarget(tx, ty) {
+                this.x = tx;
+                this.y = ty;
+                this.cubes.forEach((c, i) => {
+                    c.tx = tx;
+                    c.ty = ty + i * CONFIG.stackOverlap;
+                });
+            }
+
+            removeTop() {
+                if (this.cubes.length === 0) return null;
+                const top = this.cubes.shift(); 
+                top.stackId = null;
+                top.isTop = false;
+                
+                if (this.cubes.length < 2) {
+                    this.cubes.forEach(c => { 
+                        c.stackId = null; 
+                        c.isTop = false; 
+                    });
+                    stacks = stacks.filter(s => s.id !== this.id);
+                } else {
+                    this.y += CONFIG.stackOverlap;
+                    this.updateRoles();
+                    this.setTarget(this.x, this.y); 
+                }
+                return top;
+            }
+
+            addTop(cube) {
+                this.cubes.unshift(cube);
+                cube.zIndex = this.cubes[1].zIndex; 
+                
+                this.updateRoles();
+                this.y -= CONFIG.stackOverlap;
+                this.setTarget(this.x, this.y);
+            }
+
+            bringToFront() {
+                globalZIndexCounter++;
+                this.cubes.forEach(c => c.zIndex = globalZIndexCounter);
+            }
+        }
+
+        // --- 初始化 & 逻辑 ---
+
+        function init() {
+            cubes = [];
+            stacks = [];
+            cubesLayer.innerHTML = '';
+            globalZIndexCounter = 0;
+            
+            let attempts = 0;
+            const maxAttempts = 5000; 
+
+            // 1. 动态计算生成区域
+            // 上方留 10%，下方留 20% (确保底部有足够空间)，左右各 10%
+            const marginTop = Math.max(60, window.innerHeight * 0.15);
+            const marginBottom = Math.max(80, window.innerHeight * 0.2); // 底部保留至少 20%
+            const marginX = Math.max(40, window.innerWidth * 0.15);
+            
+            const spawnW = window.innerWidth - marginX * 2;
+            const spawnH = window.innerHeight - marginTop - marginBottom;
+
+            // 2. 自动缩放逻辑 (Auto-Scale)
+            // 根据可用面积和方块数量，动态调整方块大小
+            // 计算可用面积
+            const availableArea = spawnW * spawnH;
+            // 估算每个方块占用的理想面积 (包含间隙)
+            const areaPerCube = availableArea / CONFIG.count;
+            // 估算合适的大小 (开根号，系数 0.6 为排布效率估值)
+            let idealSize = Math.sqrt(areaPerCube * 0.6);
+            
+            // 限制最大和最小尺寸
+            const maxSize = 32;
+            const minSize = 16;
+            
+            // 最终尺寸
+            const finalSize = Math.max(minSize, Math.min(maxSize, idealSize));
+            
+            // 更新配置
+            CONFIG.size = finalSize;
+            CONFIG.stackOverlap = finalSize; // 保持重叠高度等于尺寸，无缝衔接
+            CONFIG.safeRadius = finalSize * 1.5; // 碰撞半径随之调整
+
+            for(let i=0; i<CONFIG.count; i++) {
+                let x, y, validPosition = false;
+                while (!validPosition && attempts < maxAttempts) {
+                    attempts++;
+                    // 在安全区域内随机生成
+                    x = Math.random() * spawnW + marginX;
+                    y = Math.random() * spawnH + marginTop; // 注意 Y 起点是 marginTop
+                    
+                    validPosition = true;
+                    // 碰撞检测
+                    // 如果数量非常多(例如>120)，为了性能和防止死循环，可以略微放宽或跳过碰撞
+                    if (CONFIG.count < 150) {
+                        for (let existing of cubes) {
+                            const dist = Math.hypot(x - existing.x, y - existing.y);
+                            if (dist < CONFIG.safeRadius) {
+                                validPosition = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                // 兜底位置
+                if (!validPosition) {
+                     x = Math.random() * spawnW + marginX;
+                     y = Math.random() * spawnH + marginTop;
+                }
+                
+                const c = new Cube(i, x, y);
+                cubes.push(c);
+                cubesLayer.appendChild(c.el);
+            }
+            
+            sortDOM();
+            if (!window.loopStarted) {
+                loop();
+                window.loopStarted = true;
+            }
+        }
+
+        function sortDOM() {
+            const sorted = [...cubes].sort((a, b) => {
+                if (a.zIndex !== b.zIndex) {
+                    return a.zIndex - b.zIndex; 
+                }
+                return b.y - a.y; 
+            });
+
+            const frag = document.createDocumentFragment();
+            sorted.forEach(c => frag.appendChild(c.el));
+            cubesLayer.appendChild(frag);
+        }
+
+        function loop() {
+            cubes.forEach(c => c.update());
+            
+            if (!mode.startsWith('drag')) {
+                sortDOM();
+            } else {
+                sortDOM();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- 交互处理 ---
+
+        function getPointer(e) {
+            const t = e.touches ? e.touches[0] : e;
+            return { x: t.clientX, y: t.clientY };
+        }
+
+        function hitTest(point) {
+            const hits = cubes.filter(c => {
+                const dx = point.x - (c.x + CONFIG.size/2);
+                const dy = point.y - (c.y + CONFIG.size/2);
+                return Math.sqrt(dx*dx + dy*dy) < CONFIG.size;
+            });
+            
+            if (hits.length > 0) {
+                hits.sort((a, b) => {
+                    if (a.zIndex !== b.zIndex) return b.zIndex - a.zIndex; 
+                    return a.y - b.y; 
+                });
+                return hits[0]; 
+            }
+            return null;
+        }
+
+        // Stop propagation for UI
+        document.getElementById('controls').addEventListener('mousedown', e => e.stopPropagation());
+        document.getElementById('controls').addEventListener('touchstart', e => e.stopPropagation());
+        document.getElementById('settings-panel').addEventListener('mousedown', e => e.stopPropagation());
+        document.getElementById('settings-panel').addEventListener('touchstart', e => e.stopPropagation());
+
+        stage.addEventListener('mousedown', onStart);
+        stage.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(e); }, {passive:false});
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); onMove(e); }, {passive:false});
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+
+        function onStart(e) {
+            if(e.target.closest('#controls') || e.target.closest('#settings-panel')) return;
+
+            const p = getPointer(e);
+            const targetCube = hitTest(p);
+
+            if (targetCube) {
+                if (targetCube.stackId) {
+                    const stack = stacks.find(s => s.id === targetCube.stackId);
+                    
+                    if (targetCube === stack.cubes[0]) {
+                        mode = 'drag_cube';
+                        stack.removeTop(); 
+                        dragTarget = targetCube;
+                        
+                        globalZIndexCounter++;
+                        dragTarget.zIndex = globalZIndexCounter;
+
+                        dragOffset = { x: p.x - targetCube.x, y: p.y - targetCube.y };
+                    } else {
+                        mode = 'drag_stack';
+                        dragTarget = stack;
+                        
+                        stack.bringToFront();
+
+                        dragOffset = { x: p.x - stack.x, y: p.y - stack.y };
+                        stack.cubes.forEach(c => c.el.classList.add('highlight'));
+                    }
+                } else {
+                    mode = 'drag_cube';
+                    dragTarget = targetCube;
+                    
+                    globalZIndexCounter++;
+                    dragTarget.zIndex = globalZIndexCounter;
+
+                    dragOffset = { x: p.x - targetCube.x, y: p.y - targetCube.y };
+                }
+            } else {
+                mode = 'lasso';
+                lassoPoints = [p];
+                updateLassoUI();
+            }
+        }
+
+        function onMove(e) {
+            const p = getPointer(e);
+
+            if (mode === 'drag_cube') {
+                dragTarget.tx = p.x - dragOffset.x;
+                dragTarget.ty = p.y - dragOffset.y;
+                dragTarget.x = dragTarget.tx; 
+                dragTarget.y = dragTarget.ty;
+                dragTarget.updateTransform();
+
+            } else if (mode === 'drag_stack') {
+                const nx = p.x - dragOffset.x;
+                const ny = p.y - dragOffset.y;
+                dragTarget.setTarget(nx, ny);
+                dragTarget.cubes.forEach(c => {
+                    c.x = c.tx; c.y = c.ty; c.updateTransform();
+                });
+
+            } else if (mode === 'lasso') {
+                lassoPoints.push(p);
+                updateLassoUI();
+            }
+        }
+
+        function onEnd(e) {
+            if (mode === 'lasso') {
+                checkLassoSelection();
+                lassoPoints = [];
+                updateLassoUI();
+            } else if (mode === 'drag_cube') {
+                checkSnap(dragTarget);
+            } else if (mode === 'drag_stack') {
+                dragTarget.cubes.forEach(c => c.el.classList.remove('highlight'));
+            }
+
+            mode = 'idle';
+            dragTarget = null;
+        }
+
+        function updateLassoUI() {
+            if (lassoPoints.length < 2) {
+                lassoPathEl.setAttribute('d', '');
+                return;
+            }
+            const d = "M " + lassoPoints.map(p => `${p.x},${p.y}`).join(" L ");
+            lassoPathEl.setAttribute('d', d);
+        }
+
+        function checkLassoSelection() {
+            const freeCubes = cubes.filter(c => !c.stackId);
+            const selected = [];
+            
+            freeCubes.forEach(c => {
+                if (pointInPoly({x: c.x + CONFIG.size/2, y: c.y + CONFIG.size/2}, lassoPoints)) {
+                    selected.push(c);
+                }
+            });
+
+            if (selected.length >= CONFIG.minSelection && selected.length <= CONFIG.maxSelection) {
+                createStack(selected);
+            }
+        }
+
+        function createStack(list) {
+            // 计算圈选的中心点
+            let sumX = 0, sumY = 0;
+            list.forEach(c => { sumX += c.x; sumY += c.y; });
+            const avgX = sumX / list.length;
+            const avgY = sumY / list.length;
+
+            // 将堆栈目标设置为平均中心位置
+            const tx = avgX;
+            // Y轴位置调整：让堆栈在视觉上垂直居中于圈选中心
+            const ty = avgY - (list.length * CONFIG.stackOverlap) / 2;
+
+            list.sort((a, b) => a.y - b.y);
+
+            const stack = new Stack(list);
+            stacks.push(stack);
+            stack.setTarget(tx, ty);
+        }
+
+        function checkSnap(cube) {
+            for (let s of stacks) {
+                const topC = s.cubes[0];
+                const dx = cube.x - topC.x;
+                const dy = cube.y - topC.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < CONFIG.snapDist && dy < CONFIG.stackOverlap) {
+                    s.addTop(cube);
+                    break;
+                }
+            }
+        }
+
+        function pointInPoly(pt, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                const intersect = ((yi > pt.y) !== (yj > pt.y)) &&
+                    (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        init();
+        window.addEventListener('resize', init);
+
+    </script>
+</body>
+</html>

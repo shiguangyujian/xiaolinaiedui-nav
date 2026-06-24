@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>有余数除法</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8f9fa;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        #svg-canvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .stick-group {
+            cursor: grab;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+        }
+
+        .stick-group:active {
+            cursor: grabbing;
+        }
+
+        .stick-group.dragging {
+            transition: none !important;
+        }
+
+        .stick-group.selected .stick-body {
+            fill: #fdab47;
+            /* Vibrant Orange */
+        }
+
+        .stick-body {
+            fill: #B4D668;
+            stroke: #2F3337;
+            stroke-width: 2px;
+        }
+
+        .stick-tip {
+            fill: #FFFFFF;
+            stroke: #2F3337;
+            stroke-width: 2px;
+        }
+
+        #selection-rect {
+            fill: rgba(74, 144, 226, 0.1);
+            stroke: #4A90E2;
+            stroke-width: 1.5;
+            stroke-dasharray: 4;
+            pointer-events: none;
+        }
+
+        #hint {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 12px 28px;
+            border-radius: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            color: #2F3337;
+            font-size: 15px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Reset Button */
+        #reset-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            color: #4A90E2;
+        }
+
+        #reset-btn:hover {
+            transform: rotate(180deg) scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        #reset-btn:active {
+            transform: rotate(180deg) scale(0.9);
+        }
+
+        #reset-btn svg {
+            width: 22px;
+            /* Shrinked */
+            height: 22px;
+            /* Shrinked */
+        }
+
+        /* Removed #mode-toggle specific styling */
+
+        /* Control Column (Right Center) */
+        #right-controls {
+            /* Renamed from #counter-controls */
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #4A90E2;
+        }
+
+        .control-btn:hover {
+            background: #4A90E2;
+            color: #FFFFFF;
+            transform: scale(1.1);
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+        }
+
+        .control-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .ghost {
+            opacity: 0.15;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Right Sidebar Controls -->
+    <div id="right-controls">
+        <button class="control-btn" id="add-btn" title="增加小棒">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </button>
+
+        <!-- Mode Toggle (Moved and unified styling) -->
+        <button class="control-btn" id="mode-toggle" title="切换形状模式">
+            <svg id="square-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            </svg>
+            <svg id="triangle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="display:none;">
+                <path d="M3 20h18L12 4z"></path>
+            </svg>
+        </button>
+
+        <button class="control-btn" id="sub-btn" title="减少小棒">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Reset Button (Bottom Right) -->
+    <button id="reset-btn" title="重置刷新">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M23 4v6h-6"></path>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+    </button>
+
+    <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                <feOffset dx="2" dy="4" result="offsetblur" />
+                <feComponentTransfer>
+                    <feFuncA type="linear" slope="0.2" />
+                </feComponentTransfer>
+                <feMerge>
+                    <feMergeNode />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+
+        <g id="ghost-layer"></g>
+        <g id="stick-layer"></g>
+        <rect id="selection-rect" x="0" y="0" width="0" height="0" display="none" />
+    </svg>
+
+    <script>
+        const svg = document.getElementById('svg-canvas');
+        const stickLayer = document.getElementById('stick-layer');
+        const ghostLayer = document.getElementById('ghost-layer');
+        const selectionRect = document.getElementById('selection-rect');
+        const resetBtn = document.getElementById('reset-btn');
+        const modeToggle = document.getElementById('mode-toggle');
+        const addBtn = document.getElementById('add-btn');
+        const subBtn = document.getElementById('sub-btn');
+        const squareIcon = document.getElementById('square-icon');
+        const triangleIcon = document.getElementById('triangle-icon');
+
+        const stickWidth = 20;
+        const stickHeight = 180;
+        let stickCount = 8;
+        const defaultRotation = 25;
+
+        // Mode state: 'triangle' (3 sticks) or 'square' (4 sticks)
+        let mergeMode = 'square';
+        let mergeTargetCount = 4;
+
+        let sticks = [];
+        let isLassoing = false;
+        let startPoint = { x: 0, y: 0 };
+        let selectedSticks = new Set();
+        let shapeCount = 0;
+
+        function init() {
+            stickLayer.innerHTML = '';
+            ghostLayer.innerHTML = '';
+            sticks = [];
+            selectedSticks.clear();
+            shapeCount = 0;
+
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            const spacing = Math.min(80, (width - 150) / Math.max(1, stickCount - 1));
+            const totalWidth = (stickCount - 1) * spacing;
+            const startX = (width - totalWidth) / 2;
+            const startY = height * 0.25;
+
+            for (let i = 0; i < stickCount; i++) {
+                const x = startX + i * spacing;
+                const y = startY;
+                createStick(x, y, i);
+            }
+        }
+
+        function createStick(x, y, id) {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("class", "stick-group");
+            g.setAttribute("filter", "url(#shadow)");
+
+            const body = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            body.setAttribute("class", "stick-body");
+            body.setAttribute("x", -stickWidth / 2);
+            body.setAttribute("y", -stickHeight / 2);
+            body.setAttribute("width", stickWidth);
+            body.setAttribute("height", stickHeight);
+            body.setAttribute("rx", stickWidth / 2);
+            body.setAttribute("ry", stickWidth / 2);
+            body.style.strokeLinejoin = "round";
+
+            // White tip circle at bottom, perfectly aligned with the arc
+            const tip = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            tip.setAttribute("class", "stick-tip");
+            tip.setAttribute("cx", 0);
+            tip.setAttribute("cy", stickHeight / 2 - stickWidth / 2);
+            tip.setAttribute("r", stickWidth / 2);
+            tip.style.strokeLinejoin = "round";
+
+            g.appendChild(body);
+            g.appendChild(tip);
+            stickLayer.appendChild(g);
+
+            const stickObj = {
+                el: g,
+                id: id,
+                x: x,
+                y: y,
+                rot: defaultRotation,
+                isMerged: false,
+                update() {
+                    this.el.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.rot}deg)`;
+                }
+            };
+
+            stickObj.update();
+            makeDraggable(stickObj);
+            sticks.push(stickObj);
+        }
+
+        function createGhost(x, y, rot) {
+            if (sticks.length === 0) return;
+            // Use the first stick's element structure to clone
+            const g = document.querySelector('.stick-group').cloneNode(true);
+            g.setAttribute("class", "stick-group ghost");
+            g.removeAttribute("filter");
+            g.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+            ghostLayer.appendChild(g);
+        }
+
+        function makeDraggable(s) {
+            let dragging = false;
+            let offset = { x: 0, y: 0 };
+            let rafId = null;
+            let hasLeftOrigin = false;
+
+            const onMove = (e) => {
+                if (!dragging) return;
+                const pt = getSVGPoint(e);
+
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    s.x = pt.x + offset.x;
+                    s.y = pt.y + offset.y;
+                    s.update();
+                });
+            };
+
+            const onUp = (e) => {
+                if (!dragging) return;
+                dragging = false;
+                s.el.classList.remove('dragging');
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                if (rafId) cancelAnimationFrame(rafId);
+            };
+
+            s.el.addEventListener('pointerdown', (e) => {
+                if (s.isMerged || isLassoing) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                // If this is the first move, leave a ghost at the origin
+                if (!hasLeftOrigin) {
+                    createGhost(s.x, s.y, s.rot);
+                    hasLeftOrigin = true;
+                }
+
+                dragging = true;
+                s.el.classList.add('dragging');
+                s.el.classList.add('selected');
+                selectedSticks.add(s);
+
+                const pt = getSVGPoint(e);
+                offset.x = s.x - pt.x;
+                offset.y = s.y - pt.y;
+
+                stickLayer.appendChild(s.el);
+
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
+            });
+        }
+
+        function startSelection(e) {
+            if (e.target !== svg) return;
+            isLassoing = true;
+            startPoint = getSVGPoint(e);
+
+            selectionRect.setAttribute("display", "block");
+            selectionRect.setAttribute("x", startPoint.x);
+            selectionRect.setAttribute("y", startPoint.y);
+            selectionRect.setAttribute("width", 0);
+            selectionRect.setAttribute("height", 0);
+
+            clearSelection();
+        }
+
+        function moveSelection(e) {
+            if (!isLassoing) return;
+            const currentPoint = getSVGPoint(e);
+
+            const x = Math.min(startPoint.x, currentPoint.x);
+            const y = Math.min(startPoint.y, currentPoint.y);
+            const w = Math.abs(currentPoint.x - startPoint.x);
+            const h = Math.abs(currentPoint.y - startPoint.y);
+
+            selectionRect.setAttribute("x", x);
+            selectionRect.setAttribute("y", y);
+            selectionRect.setAttribute("width", w);
+            selectionRect.setAttribute("height", h);
+
+            checkIntersection(x, y, w, h);
+        }
+
+        function endSelection() {
+            if (!isLassoing) return;
+            isLassoing = false;
+            selectionRect.setAttribute("display", "none");
+
+            if (selectedSticks.size === mergeTargetCount) {
+                mergeToShape();
+            }
+        }
+
+        function getSVGPoint(e) {
+            const p = svg.createSVGPoint();
+            p.x = e.clientX;
+            p.y = e.clientY;
+            const ctm = svg.getScreenCTM();
+            return p.matrixTransform(ctm.inverse());
+        }
+
+        function checkIntersection(x, y, w, h) {
+            sticks.forEach(s => {
+                if (s.isMerged) return;
+
+                const halfW = 40;
+                const halfH = stickHeight / 2 + 10;
+
+                const isInside = (s.x - halfW) < x + w && (s.x + halfW) > x &&
+                    (s.y - halfH) < y + h && (s.y + halfH) > y;
+
+                if (isInside) {
+                    s.el.classList.add('selected');
+                    selectedSticks.add(s);
+                } else {
+                    s.el.classList.remove('selected');
+                    selectedSticks.delete(s);
+                }
+            });
+        }
+
+        function clearSelection() {
+            sticks.forEach(s => s.el.classList.remove('selected'));
+            selectedSticks.clear();
+        }
+
+        function mergeToShape() {
+            const selectedArr = Array.from(selectedSticks);
+            selectedSticks.clear();
+
+            selectedArr.forEach(s => {
+                createGhost(s.x, s.y, s.rot);
+                s.isMerged = true;
+                s.el.classList.remove('selected');
+                s.el.classList.remove('dragging');
+            });
+
+            // Calculations
+            const viewWidth = window.innerWidth;
+            const viewHeight = window.innerHeight;
+            const L = stickHeight;
+
+            const maxShapes = Math.floor(stickCount / mergeTargetCount);
+            const spacing = Math.min(viewWidth / (maxShapes + 1), L * 1.5);
+            const startCx = (viewWidth - (maxShapes - 1) * spacing) / 2;
+            const Cx = startCx + shapeCount * spacing;
+            const Baseline = viewHeight * 0.75;
+
+            shapeCount++;
+
+            // Use requestAnimationFrame to ensure the transition triggers
+            // (Wait for classes to be removed before moving)
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (mergeMode === 'triangle') {
+                        const H = (Math.sqrt(3) / 2) * L;
+                        const Cy = Baseline - (H / 2);
+
+                        // Stagger the movement for a more dynamic feel
+                        selectedArr.forEach((s, idx) => {
+                            setTimeout(() => {
+                                if (idx === 0) { s.x = Cx - L / 4; s.y = Cy - H / 6; s.rot = 30; }
+                                else if (idx === 1) { s.x = Cx + L / 4; s.y = Cy - H / 6; s.rot = -30; }
+                                else if (idx === 2) { s.x = Cx; s.y = Cy + H / 3; s.rot = 90; }
+                                s.update();
+                            }, idx * 40); // 40ms stagger
+                        });
+                    } else if (mergeMode === 'square') {
+                        const Cy = Baseline - (L / 2);
+                        selectedArr.forEach((s, idx) => {
+                            setTimeout(() => {
+                                if (idx === 0) { s.x = Cx; s.y = Cy - L / 2; s.rot = 90; }
+                                else if (idx === 1) { s.x = Cx; s.y = Cy + L / 2; s.rot = 90; }
+                                else if (idx === 2) { s.x = Cx - L / 2; s.y = Cy; s.rot = 0; }
+                                else if (idx === 3) { s.x = Cx + L / 2; s.y = Cy; s.rot = 0; }
+                                s.update();
+                            }, idx * 40);
+                        });
+                    }
+                });
+            });
+        }
+
+        // Toggle Mode
+        modeToggle.addEventListener('click', () => {
+            if (mergeMode === 'square') {
+                mergeMode = 'triangle';
+                mergeTargetCount = 3;
+                squareIcon.style.display = 'none';
+                triangleIcon.style.display = 'block';
+            } else {
+                mergeMode = 'square';
+                mergeTargetCount = 4;
+                squareIcon.style.display = 'block';
+                triangleIcon.style.display = 'none';
+            }
+            init(); // Reset stage on mode switch
+        });
+
+        // Add / Sub Sticks
+        addBtn.addEventListener('click', () => {
+            stickCount++;
+            init();
+        });
+
+        subBtn.addEventListener('click', () => {
+            if (stickCount > 1) {
+                stickCount--;
+                init();
+            }
+        });
+
+        svg.addEventListener('pointerdown', startSelection);
+        window.addEventListener('pointermove', moveSelection);
+        window.addEventListener('pointerup', endSelection);
+        resetBtn.addEventListener('click', init);
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', () => init());
+    </script>
+
+</body>
+
+</html>

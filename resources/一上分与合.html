@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分与合</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-image: linear-gradient(to top, #c1dfc4 0%, #deecdd 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部数字显示 */
+        .top-numbers {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .number-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 56px;
+            color: black;
+            border: 3px solid #333;
+            position: absolute;
+            z-index: 2;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .number-circle:hover {
+            transform: scale(1.05);
+        }
+
+        .number-circle.updating {
+            animation: numberUpdate 0.4s ease-in-out;
+        }
+
+        @keyframes numberUpdate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); background-color: #FFE4B5; }
+            100% { transform: scale(1); }
+        }
+
+        .number-1 { background-color: #A8D4FF; }
+        .number-2 { background-color: #F9FFA8; }
+        .number-3 { background-color: #90EE90; }
+
+        .top-container {
+            background-color: transparent;
+            padding: 15px 10px 10px;
+            position: relative;
+            width: 200px;
+            height: 180px;
+        }
+
+        /* 三角形布局 */
+        .number-circle.number-3 {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .number-circle.number-2 {
+            bottom: 0;
+            left: 0;
+        }
+
+        .number-circle.number-1 {
+            bottom: 0;
+            right: 0;
+        }
+
+        /* SVG连接线样式 */
+        .connection-svg {
+            pointer-events: none;
+        }
+
+        /* 主要游戏区域 */
+        .main-area {
+            flex: 1;
+            display: flex;
+            position: relative;
+            margin-bottom: 20px;
+            min-width: 800px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .canvas-container {
+            position: relative;
+            overflow: hidden;
+            width: 90vw;
+            max-width: calc(100vw - 300px);
+            height: calc(90vh - 300px);
+            min-height: 300px;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: crosshair;
+            width: 100%;
+            height: auto;
+            border: 3px solid #333;
+            border-radius: 10px;
+            transition: filter 0.2s ease;
+        }
+
+        #gameCanvas.dragging {
+            filter: brightness(1.1) contrast(1.05);
+        }
+
+
+
+        /* 底部元素选择器 */
+        .bottom-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px auto;
+        }
+
+        .element-btn {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .element-btn:hover {
+            border-color: #333;
+            transform: scale(1.1);
+        }
+
+        .element-btn.active {
+            border-color: #333;
+            background-color: #e7f3ff;
+        }
+
+
+
+        /* 数字小键盘样式 */
+        .number-keypad {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: -80px;
+        }
+
+        .number-keypad.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 380px;
+        }
+
+        .keypad-btn {
+            width: 60px;
+            height: 60px;
+            background-color: #B8E6B8;
+            border: 2px solid #aaa;
+            border-radius: 8px;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .keypad-btn:hover {
+            background-color: #A5D6A5;
+            border-color: #6B9A6B;
+            transform: scale(1.05);
+        }
+
+        .keypad-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                height: 100vh;
+                overflow: hidden;
+            }
+            
+            .container {
+                height: 100vh;
+                padding: 0;
+            }
+            
+            /* 主游戏区域优化 */
+            .main-area {
+                flex: 1;
+                min-width: auto;
+                margin-bottom: 10px;
+                padding: 0 10px;
+            }
+            
+            .canvas-container {
+                width: 100%;
+                max-width: none;
+                height: calc(100vh - 280px);
+                min-height: 250px;
+            }
+            
+            #gameCanvas {
+                border-width: 2px;
+                border-radius: 8px;
+            }
+            
+            /* 底部控制区域优化 */
+            .bottom-controls {
+                margin: 10px auto 15px;
+                gap: 8px;
+                padding: 0 10px;
+            }
+            
+            .element-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+                border-width: 2px;
+                border-radius: 6px;
+            }
+            
+            /* 小键盘优化 */
+            .number-keypad {
+                padding: 12px;
+                border-radius: 10px;
+                margin-top: -60px;
+            }
+            
+            .keypad-grid {
+                grid-template-columns: repeat(5, 1fr);
+                width: 420px;
+                gap: 6px;
+            }
+            
+            .keypad-btn {
+                width: 54px;
+                height: 54px;
+                font-size: 28px;
+                border-radius: 6px;
+            }
+        }
+        
+        /* 小屏幕设备进一步优化 */
+        @media (max-width: 480px) {
+            .canvas-container {
+                height: calc(100vh - 400px);
+                min-height: 200px;
+            }
+            .keypad-grid {
+                grid-template-columns: repeat(5, 1fr);
+                width: 320px;
+                gap: 4px;
+            }
+            
+            .keypad-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 24px;
+            }
+        }
+        
+        /* 横屏模式优化 */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .container {
+                flex-direction: row;
+            }
+            
+            .top-numbers {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                margin: 0;
+                z-index: 10;
+            }
+            
+            .main-area {
+                flex: 1;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .canvas-container {
+                width: calc(100vw - 20px);
+                height: calc(100vh - 120px);
+                margin-top: 60px;
+            }
+            
+            .bottom-controls {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+                margin: 0;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .element-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 22px;
+            }
+            
+            /* 横屏模式连接线坐标调整 */
+            .connection-svg line:first-of-type {
+                x1: 80; y1: 30; x2: 20; y2: 120;
+            }
+            .connection-svg line:last-of-type {
+                x1: 80; y1: 30; x2: 140; y2: 120;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部数字显示 -->
+        <div class="top-numbers">
+            <div class="top-container">
+                <svg class="connection-svg" width="200" height="180" style="position: absolute; top: 0; left: 0; z-index: 1;">
+                    <!-- 左侧连接线：从顶部中心到左下角 -->
+                    <line x1="100" y1="40" x2="25" y2="155" stroke="#333" stroke-width="3" class="connection-line"/>
+                    <!-- 右侧连接线：从顶部中心到右下角 -->
+                    <line x1="100" y1="40" x2="175" y2="155" stroke="#333" stroke-width="3" class="connection-line"/>
+                </svg>
+                <div class="number-circle number-3" id="num3" onclick="toggleKeypad()">3</div>
+                <div class="number-circle number-2" id="num2" onclick="toggleLeftSide()">2</div>
+                <div class="number-circle number-1" id="num1" onclick="toggleRightSide()">1</div>
+                
+                <!-- 浮动数字小键盘 -->
+                <div class="number-keypad" id="numberKeypad">
+                    <div class="keypad-grid">
+                        <button class="keypad-btn" onclick="selectNumber(1)">1</button>
+                        <button class="keypad-btn" onclick="selectNumber(2)">2</button>
+                        <button class="keypad-btn" onclick="selectNumber(3)">3</button>
+                        <button class="keypad-btn" onclick="selectNumber(4)">4</button>
+                        <button class="keypad-btn" onclick="selectNumber(5)">5</button>
+                        <button class="keypad-btn" onclick="selectNumber(6)">6</button>
+                        <button class="keypad-btn" onclick="selectNumber(7)">7</button>
+                        <button class="keypad-btn" onclick="selectNumber(8)">8</button>
+                        <button class="keypad-btn" onclick="selectNumber(9)">9</button>
+                        <button class="keypad-btn" onclick="selectNumber(10)">10</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要游戏区域 -->
+        <div class="main-area">
+            <div class="canvas-container">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+
+
+        </div>
+
+        <!-- 底部元素选择器 -->
+        <div class="bottom-controls">
+            <button class="element-btn active" onclick="changeElement(this, '🍎')" title="苹果">🍎</button>
+            <button class="element-btn" onclick="changeElement(this, '⚽️')" title="足球">⚽️</button>
+            <button class="element-btn" onclick="changeElement(this, '🦋')" title="蝴蝶">🦋</button>
+            <button class="element-btn" onclick="changeElement(this, '1')" title="数字">1</button>
+        </div>
+    </div>
+
+    <script>
+const _0x3cf0=['textAlign','#F0E68C','click','width','num2','num3','mouseup','touches','beginPath','getElementById','size','strokeStyle','remove','top','clientY','random','devicePixelRatio','getBoundingClientRect','add','left','#DDD','moveTo','lineTo','style','max','updateZone','scale','touchmove','fillStyle','px\x20Arial','target','contains','dragging','updating','show','black','resize','isLeft','crosshair','load','fillText','setLineDash','innerWidth','symbol','hidden','draw','min','height','mousemove','addEventListener','numberKeypad','preventDefault','classList','textContent','gameCanvas','center','active','forEach','clearRect','length','querySelectorAll'];const _0x53e4=function(_0x3cf0d1,_0x53e419){_0x3cf0d1=_0x3cf0d1-0x0;let _0x471a9a=_0x3cf0[_0x3cf0d1];return _0x471a9a;};let currentElement='🍎';let totalNumber=0x6;let leftCount=0x0;let rightCount=0x0;let draggedElement=null;let elements=[];let canvas,ctx;let isDragging=![];let dragOffset={'x':0x0,'y':0x0};let leftHidden=![];let rightHidden=![];let keypadVisible=![];class GameElement{constructor(_0x81fbf9,_0xa25b40,_0x2770b4){this['x']=_0x81fbf9;this['y']=_0xa25b40;this['symbol']=_0x2770b4;this['size']=window['innerWidth']<=0x1e0?0x28:window[_0x53e4('0x2a')]<=0x300?0x2d:0x32;this['isLeft']=_0x81fbf9<canvas['getBoundingClientRect']()[_0x53e4('0x3')]/0x2;}['draw'](){const _0x11cf6a=window[_0x53e4('0x2a')]<=0x1e0?0x24:window[_0x53e4('0x2a')]<=0x300?0x2a:0x30;ctx['font']=_0x11cf6a+_0x53e4('0x1d');ctx[_0x53e4('0x0')]=_0x53e4('0x37');ctx['textBaseline']='middle';ctx[_0x53e4('0x28')](this[_0x53e4('0x2b')],this['x'],this['y']);}['contains'](_0x36bcef,_0x17d69b){const _0x15c1b6=Math['sqrt']((_0x36bcef-this['x'])**0x2+(_0x17d69b-this['y'])**0x2);return _0x15c1b6<=this['size']/0x2;}[_0x53e4('0x19')](){const _0x8d0da6=this['isLeft'];this['isLeft']=this['x']<canvas[_0x53e4('0x11')]()[_0x53e4('0x3')]/0x2;if(_0x8d0da6!==this[_0x53e4('0x25')]){if(_0x8d0da6){leftCount--;rightCount++;}else{rightCount--;leftCount++;}updateCounts();}}}function resizeCanvas(){const _0xd158b3=canvas['parentElement'];const _0x1dd060=_0xd158b3['getBoundingClientRect']();const _0x3536fd=_0x1dd060['width'];const _0x331ade=_0x1dd060['height'];const _0xcbd676=window[_0x53e4('0x10')]||0x1;canvas[_0x53e4('0x3')]=_0x3536fd*_0xcbd676;canvas['height']=_0x331ade*_0xcbd676;ctx[_0x53e4('0x1a')](_0xcbd676,_0xcbd676);canvas['style'][_0x53e4('0x3')]=_0x3536fd+'px';canvas[_0x53e4('0x17')][_0x53e4('0x2f')]=_0x331ade+'px';}function init(){canvas=document[_0x53e4('0x9')](_0x53e4('0x36'));ctx=canvas['getContext']('2d');resizeCanvas();window[_0x53e4('0x31')](_0x53e4('0x24'),()=>{resizeCanvas();const _0x16fbda=window[_0x53e4('0x2a')]<=0x1e0?0x28:window[_0x53e4('0x2a')]<=0x300?0x2d:0x32;elements['forEach'](_0x37cc13=>{_0x37cc13[_0x53e4('0xa')]=_0x16fbda;});draw();});canvas['addEventListener']('mousedown',handleMouseDown);canvas['addEventListener'](_0x53e4('0x30'),handleMouseMove);canvas[_0x53e4('0x31')](_0x53e4('0x6'),handleMouseUp);canvas['addEventListener']('touchstart',handleTouchStart,{'passive':![]});canvas[_0x53e4('0x31')]('touchmove',handleTouchMove,{'passive':![]});canvas[_0x53e4('0x31')]('touchend',handleTouchEnd);refreshTopNumbers();generateElements();}function refreshTopNumbers(){const _0x566b83=leftCount+rightCount;const _0x53a053=document['getElementById']('num2');const _0x3e6dea=document['getElementById']('num1');const _0x41772b=document[_0x53e4('0x9')](_0x53e4('0x5'));if(_0x53a053[_0x53e4('0x35')]!==leftCount['toString']()&&!leftHidden){_0x53a053[_0x53e4('0x34')]['add']('updating');setTimeout(()=>_0x53a053[_0x53e4('0x34')][_0x53e4('0xc')]('updating'),0x190);}if(_0x3e6dea[_0x53e4('0x35')]!==rightCount['toString']()&&!rightHidden){_0x3e6dea[_0x53e4('0x34')][_0x53e4('0x12')](_0x53e4('0x21'));setTimeout(()=>_0x3e6dea[_0x53e4('0x34')][_0x53e4('0xc')](_0x53e4('0x21')),0x190);}if(!leftHidden)_0x53a053[_0x53e4('0x35')]=leftCount;if(!rightHidden)_0x3e6dea['textContent']=rightCount;_0x41772b['textContent']=_0x566b83;}function generateElements(){elements=[];leftCount=0x0;rightCount=0x0;const _0x14ec5=canvas['getBoundingClientRect']();for(let _0x575f79=0x0;_0x575f79<totalNumber;_0x575f79++){const _0x422f8f=Math['random']()<0.5;const _0xbe231a=_0x422f8f?Math['random']()*(_0x14ec5['width']/0x2-0x50)+0x28:Math[_0x53e4('0xf')]()*(_0x14ec5[_0x53e4('0x3')]/0x2-0x50)+_0x14ec5[_0x53e4('0x3')]/0x2+0x28;const _0x5e3a1b=Math[_0x53e4('0xf')]()*(_0x14ec5['height']-0xa0)+0x50;const _0x1d54d5=new GameElement(_0xbe231a,_0x5e3a1b,currentElement);elements['push'](_0x1d54d5);if(_0x422f8f)leftCount++;else rightCount++;}updateCounts();draw();}function draw(){const _0x3fc2a2=canvas[_0x53e4('0x11')]();ctx[_0x53e4('0x3a')](0x0,0x0,_0x3fc2a2['width'],_0x3fc2a2[_0x53e4('0x2f')]);ctx[_0x53e4('0x1c')]='#F9FFA8';ctx['fillRect'](0x0,0x0,_0x3fc2a2['width']/0x2,_0x3fc2a2[_0x53e4('0x2f')]);ctx[_0x53e4('0x1c')]='#A8D4FF';ctx['fillRect'](_0x3fc2a2[_0x53e4('0x3')]/0x2,0x0,_0x3fc2a2[_0x53e4('0x3')]/0x2,_0x3fc2a2[_0x53e4('0x2f')]);ctx[_0x53e4('0x29')]([0x8,0x8]);ctx[_0x53e4('0xb')]='#333';ctx['lineWidth']=0x3;ctx[_0x53e4('0x8')]();ctx[_0x53e4('0x15')](_0x3fc2a2[_0x53e4('0x3')]/0x2,0x0);ctx[_0x53e4('0x16')](_0x3fc2a2[_0x53e4('0x3')]/0x2,_0x3fc2a2['height']);ctx['stroke']();ctx['setLineDash']([]);ctx['fillStyle']=_0x53e4('0x23');elements['forEach'](_0x9b9f9c=>{if(!_0x9b9f9c[_0x53e4('0x2c')]&&!(leftHidden&&_0x9b9f9c[_0x53e4('0x25')])&&!(rightHidden&&!_0x9b9f9c['isLeft'])){_0x9b9f9c[_0x53e4('0x2d')]();}});}function getCanvasCoordinates(_0x59cf09){const _0x178fa9=canvas['getBoundingClientRect']();return{'x':_0x59cf09['clientX']-_0x178fa9[_0x53e4('0x13')],'y':_0x59cf09[_0x53e4('0xe')]-_0x178fa9[_0x53e4('0xd')]};}function getTouchCoordinates(_0x16c389){const _0x17c310=canvas[_0x53e4('0x11')]();return{'x':_0x16c389[_0x53e4('0x7')][0x0]['clientX']-_0x17c310[_0x53e4('0x13')],'y':_0x16c389['touches'][0x0]['clientY']-_0x17c310[_0x53e4('0xd')]};}function handleMouseDown(_0x41b43a){const _0x203524=getCanvasCoordinates(_0x41b43a);for(let _0x188dea=elements[_0x53e4('0x3b')]-0x1;_0x188dea>=0x0;_0x188dea--){if(elements[_0x188dea]['contains'](_0x203524['x'],_0x203524['y'])){draggedElement=elements[_0x188dea];isDragging=!![];dragOffset['x']=_0x203524['x']-draggedElement['x'];dragOffset['y']=_0x203524['y']-draggedElement['y'];canvas['classList'][_0x53e4('0x12')](_0x53e4('0x20'));break;}}}function handleMouseMove(_0x4f1df2){const _0x1f6f48=getCanvasCoordinates(_0x4f1df2);if(isDragging&&draggedElement){const _0x26098c=canvas['getBoundingClientRect']();draggedElement['x']=_0x1f6f48['x']-dragOffset['x'];draggedElement['y']=_0x1f6f48['y']-dragOffset['y'];draggedElement['x']=Math[_0x53e4('0x18')](0x19,Math['min'](_0x26098c['width']-0x19,draggedElement['x']));draggedElement['y']=Math[_0x53e4('0x18')](0x19,Math['min'](_0x26098c['height']-0x19,draggedElement['y']));draggedElement['updateZone']();draw();}else{let _0x5630ee=![];for(let _0x4b6f6a=elements['length']-0x1;_0x4b6f6a>=0x0;_0x4b6f6a--){if(elements[_0x4b6f6a]['contains'](_0x1f6f48['x'],_0x1f6f48['y'])&&!elements[_0x4b6f6a][_0x53e4('0x2c')]&&!(leftHidden&&elements[_0x4b6f6a]['isLeft'])&&!(rightHidden&&!elements[_0x4b6f6a]['isLeft'])){_0x5630ee=!![];break;}}canvas['style']['cursor']=_0x5630ee?'pointer':_0x53e4('0x26');}}function handleMouseUp(_0x4bd5b0){isDragging=![];draggedElement=null;canvas[_0x53e4('0x34')]['remove']('dragging');}function handleTouchStart(_0x5ed916){_0x5ed916[_0x53e4('0x33')]();const _0x50ca20=getTouchCoordinates(_0x5ed916);for(let _0x3d9899=elements['length']-0x1;_0x3d9899>=0x0;_0x3d9899--){if(elements[_0x3d9899]['contains'](_0x50ca20['x'],_0x50ca20['y'])){draggedElement=elements[_0x3d9899];isDragging=!![];dragOffset['x']=_0x50ca20['x']-draggedElement['x'];dragOffset['y']=_0x50ca20['y']-draggedElement['y'];canvas['classList'][_0x53e4('0x12')](_0x53e4('0x20'));break;}}}function handleTouchMove(_0x57160c){_0x57160c['preventDefault']();if(!isDragging||!draggedElement)return;const _0x59d8e7=getTouchCoordinates(_0x57160c);const _0x2a7b5a=canvas[_0x53e4('0x11')]();draggedElement['x']=_0x59d8e7['x']-dragOffset['x'];draggedElement['y']=_0x59d8e7['y']-dragOffset['y'];draggedElement['x']=Math[_0x53e4('0x18')](0x19,Math['min'](_0x2a7b5a[_0x53e4('0x3')]-0x19,draggedElement['x']));draggedElement['y']=Math['max'](0x19,Math[_0x53e4('0x2e')](_0x2a7b5a[_0x53e4('0x2f')]-0x19,draggedElement['y']));draggedElement['updateZone']();draw();}function handleTouchEnd(_0x5861cb){isDragging=![];draggedElement=null;canvas[_0x53e4('0x34')]['remove'](_0x53e4('0x20'));}function updateCounts(){refreshTopNumbers();}function changeNumber(_0x47607b){totalNumber=_0x47607b;generateElements();}function changeElement(_0x5a25d1,_0x11b440){document[_0x53e4('0x3c')]('.element-btn')[_0x53e4('0x39')](_0x54f493=>_0x54f493['classList']['remove'](_0x53e4('0x38')));_0x5a25d1['classList'][_0x53e4('0x12')]('active');currentElement=_0x11b440;elements[_0x53e4('0x39')](_0x47b954=>{_0x47b954[_0x53e4('0x2b')]=currentElement;});draw();}function toggleLeftSide(){leftHidden=!leftHidden;const _0x542302=document['getElementById'](_0x53e4('0x4'));if(leftHidden){_0x542302[_0x53e4('0x35')]='?';_0x542302[_0x53e4('0x17')]['backgroundColor']=_0x53e4('0x14');}else{_0x542302['textContent']=leftCount;_0x542302['style']['backgroundColor']=_0x53e4('0x1');}draw();}function toggleRightSide(){rightHidden=!rightHidden;const _0x1c0908=document['getElementById']('num1');if(rightHidden){_0x1c0908['textContent']='?';_0x1c0908[_0x53e4('0x17')]['backgroundColor']='#DDD';}else{_0x1c0908[_0x53e4('0x35')]=rightCount;_0x1c0908['style']['backgroundColor']='#87CEEB';}draw();}function toggleKeypad(){const _0x4a5197=document['getElementById']('numberKeypad');keypadVisible=!keypadVisible;if(keypadVisible){_0x4a5197['classList']['add']('show');}else{_0x4a5197[_0x53e4('0x34')][_0x53e4('0xc')](_0x53e4('0x22'));}}function selectNumber(_0xcc7aa){totalNumber=_0xcc7aa;generateElements();const _0x418b25=document[_0x53e4('0x9')](_0x53e4('0x32'));_0x418b25[_0x53e4('0x34')]['remove'](_0x53e4('0x22'));keypadVisible=![];}document['addEventListener'](_0x53e4('0x2'),function(_0x5f2446){const _0x707eb5=document[_0x53e4('0x9')]('numberKeypad');const _0x468d42=document['getElementById'](_0x53e4('0x5'));if(keypadVisible&&!_0x707eb5[_0x53e4('0x1f')](_0x5f2446['target'])&&_0x5f2446[_0x53e4('0x1e')]!==_0x468d42){_0x707eb5[_0x53e4('0x34')][_0x53e4('0xc')](_0x53e4('0x22'));keypadVisible=![];}});window[_0x53e4('0x31')](_0x53e4('0x27'),init);document['addEventListener'](_0x53e4('0x1b'),function(_0xd786d4){if(draggedElement){_0xd786d4['preventDefault']();}},{'passive':![]});
+    </script>
+</body>
+</html>

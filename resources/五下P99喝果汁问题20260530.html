@@ -1,0 +1,3262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小乐的喝果汁问题</title>
+
+
+    <style>
+        /* === 核心变量定义与高级色彩系统 === */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #d6d6d6 100%);
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --card-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.1), 0 8px 10px -6px rgba(148, 163, 184, 0.05);
+            --card-shadow-hover: 0 20px 30px -5px rgba(148, 163, 184, 0.2), 0 10px 15px -5px rgba(148, 163, 184, 0.1);
+
+            --step1-primary: #ea580c;
+            --step1-bg: #ffedd5;
+            --step1-border: #fed7aa;
+
+            --step2-primary: #2563eb;
+            --step2-bg: #dbeafe;
+            --step2-border: #bfdbfe;
+
+            --step3-primary: #9333ea;
+            --step3-bg: #f3e8ff;
+            --step3-border: #d8b4fe;
+
+            --step4-primary: #dc2626;
+            --step4-bg: #fee2e2;
+            --step4-border: #fca5a5;
+        }
+
+        /* === 基础复位与全局高亮去除 === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            /* 去除点击出现的大矩形高亮 */
+            outline: none;
+            /* 去除选中边框 */
+        }
+
+        /* 强制一屏幕显示，禁止全局滚动 */
+        html,
+        body {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-gradient);
+            color: #1e293b;
+            padding: 0.75rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* === 页面顶部 === */
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            flex: 0 0 auto;
+            gap: 1rem;
+        }
+
+        .gradient-title {
+            background: linear-gradient(135deg, #ea580c 0%, #00a2ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            white-space: nowrap;
+        }
+
+        #global-hint {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #ea580c;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            padding: 0.4rem 1.25rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 12px rgba(148, 163, 184, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .header-btns {
+            display: flex;
+            gap: 0.5rem;
+            justify-self: end;
+        }
+
+        .top-btn {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid #cbd5e1;
+            padding: 0.35rem 1.25rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .top-btn:hover {
+            background: white;
+            color: #2563eb;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transform: translateY(-1px);
+        }
+
+        /* === 横向滚动卡片容器结构 === */
+        .slider-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            align-items: center;
+            padding: 0 3.5rem;
+            /* 留出左右悬浮箭头的空间 */
+            flex: 1;
+            /* 占据剩余可用高度 */
+            min-height: 0;
+            /* 防止溢出 */
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-viewport {
+            width: 100%;
+            height: 100%;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            display: flex;
+            align-items: center;
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        .slider-viewport::-webkit-scrollbar {
+            display: none;
+            /* Safari and Chrome */
+        }
+
+        .slider-track {
+            display: flex;
+            gap: 1.25rem;
+            width: 100%;
+            height: 100%;
+            padding: 0.5rem 0;
+        }
+
+        /* === 步骤卡片样式 === */
+        .step-card {
+            flex: 0 0 calc(33.333% - 0.84rem);
+            /* 默认桌面端显示 3 个卡片 */
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100%;
+            /* 占满 slider 轨道高度 */
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @media (max-width: 1023px) and (min-width: 768px) {
+            .step-card {
+                flex: 0 0 calc(50% - 0.63rem);
+                /* 平板端显示 2 个卡片 */
+            }
+        }
+
+        @media (max-width: 767px) {
+            .step-card {
+                flex: 0 0 100%;
+                /* 移动端显示 1 个卡片 */
+            }
+        }
+
+        /* === 折叠卡片状态 === */
+        .step-card.collapsed {
+            background: rgba(255, 255, 255, 0.45);
+            border: 2px dashed rgba(148, 163, 184, 0.35);
+            box-shadow: none;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .step-card.fill-card {
+            background-color: #f0f8ff;
+        }
+
+        .step-card.collapsed:hover {
+            background: rgba(255, 255, 255, 0.65);
+            border-color: rgba(148, 163, 184, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .step-card.collapsed .step-badge {
+            transform: scale(1.2);
+            margin-bottom: 0;
+            animation: pulse 2s infinite;
+        }
+
+        /* 引导性虚线提示 */
+        .step-card.collapsed::after {
+            content: "点击卡片展开步骤";
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-top: 0.85rem;
+            opacity: 0.7;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.25);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+            }
+        }
+
+        /* 折叠状态下隐藏内容 */
+        .step-card.collapsed .step-action,
+        .step-card.collapsed .cup-wrapper,
+        .step-card.collapsed .questions-container {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* 展开动画 */
+        .step-action,
+        .cup-wrapper,
+        .questions-container {
+            width: 100%;
+            opacity: 1;
+            transition: opacity 0.3s ease, height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+            height: 150px;
+        }
+
+        /* 顶部步骤徽章 */
+        .step-badge {
+            font-size: 0.85rem;
+            font-weight: 800;
+            padding: 0.25rem 0.85rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+
+        /* 各卡片色彩主题 */
+        .step-badge.badge-drink {
+            background: #ffedd5;
+            color: #ea580c;
+            border-color: #fed7aa;
+        }
+
+        .step-badge.badge-fill {
+            background: #dbeafe;
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+
+        .step-action {
+            height: 50px;
+            font-size: 2.25rem;
+            color: #0f172a;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* 眼睛按钮交互样式 */
+        .eye-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .eye-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .eye-btn:hover {
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.08);
+            transform: scale(1.08);
+        }
+
+        .eye-btn.active {
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.15);
+        }
+
+        .eye-icon {
+            width: 1.35rem;
+            height: 1.35rem;
+            display: block;
+        }
+
+        /* 眼睛图标的 SVG 属性强化显现 */
+        .eye-btn svg {
+            stroke: currentColor;
+            stroke-width: 2px;
+            fill: none;
+        }
+
+        .eye-btn.active svg {
+            stroke: #2563eb;
+        }
+
+        /* === 虚拟杯子及玻璃遮罩（自适应大小） === */
+        .cup-wrapper {
+            position: relative;
+            flex: 1;
+            /* 弹性高度自适应 */
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+
+        .cup-wrapper svg {
+            width: auto;
+            height: 100%;
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        .liquid-rect {
+            transition: fill 0.1s ease, opacity 0.1s ease;
+        }
+
+        .liquid-label {
+            transition: opacity 0.1s ease;
+        }
+
+        .liquid-label-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            height: 100%;
+            white-space: nowrap;
+        }
+
+        [data-step="4"] .liquid-label-inner {
+            font-size: 1rem;
+        }
+
+        .quarter-lines {
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        /* === 问题与点击回答区域 === */
+        .questions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 0.5rem;
+            margin-top: auto;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 1.5rem;
+        }
+
+        .question-row.question-juice {
+            color: #ff7f50;
+        }
+
+        .question-row.question-water {
+            color: #00a2ff;
+        }
+
+        .question-juice .answer-badge {
+            color: #ff7f50;
+            background: #fff5f2;
+        }
+
+        .question-juice .answer-badge:hover {
+            background: #ffe3d9;
+            color: #e05319;
+        }
+
+        .question-juice .answer-badge.revealed {
+            background: #fff5f2;
+            color: #ff7f50;
+            border: 1.5px solid #ffccb8;
+            box-shadow: 0 4px 6px -1px rgba(255, 127, 80, 0.15);
+        }
+
+        .question-water .answer-badge {
+            color: #00a2ff;
+            background: #f0f9ff;
+        }
+
+        .question-water .answer-badge:hover {
+            background: #dbeffe;
+            color: #0084d1;
+        }
+
+        .question-water .answer-badge.revealed {
+            background: #f0f9ff;
+            color: #00a2ff;
+            border: 1.5px solid #bde3ff;
+            box-shadow: 0 4px 6px -1px rgba(0, 162, 255, 0.15);
+        }
+
+        .question-label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-juice {
+            background: #ff7f50;
+        }
+
+        .dot-water {
+            background: #00a2ff;
+        }
+
+        .answer-badge {
+            background: #f1f5f9;
+            color: #64748b;
+            border: none;
+            width: 100px;
+            height: 64px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .answer-badge:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+            transform: scale(1.1);
+        }
+
+        .answer-badge.revealed {
+            background: #eff6ff;
+            color: #2563eb;
+            width: auto;
+            height: 64px;
+            padding: 0 0.85rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
+            border: 1.5px solid #bfdbfe;
+            font-family: inherit;
+            font-size: 2rem;
+            animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .fraction-box {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            line-height: 1;
+            margin: 0 0.5rem;
+        }
+
+        .fraction-num {
+            border-bottom: 1.5px solid currentColor;
+            padding-bottom: 1px;
+            font-size: 0.85em;
+        }
+
+        .fraction-denom {
+            font-size: 0.85em;
+            padding-top: 1px;
+        }
+
+        /* === 重选按钮 === */
+        .reselect-btn {
+            position: absolute;
+            right: 1rem;
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            padding: 0.25rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .reselect-btn:hover {
+            background: #e2e8f0;
+            color: #334155;
+            border-color: #94a3b8;
+        }
+
+        /* === 悬浮横向滚动切换按钮 === */
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #cbd5e1;
+            border-radius: 50%;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            color: #334155;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .slider-btn:hover:not(:disabled) {
+            background: white;
+            color: #2563eb;
+            transform: translateY(-50%) scale(1.08);
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.15);
+        }
+
+        .slider-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .slider-btn.left {
+            left: 0;
+        }
+
+        .slider-btn.right {
+            right: 0;
+        }
+
+        /* === 提示文本样式 === */
+        #drag-hint-2.visible,
+        #drag-hint-3.visible {
+            opacity: 1 !important;
+            height: auto !important;
+            margin-top: 0.25rem;
+        }
+
+        /* === 右侧隐藏点击区域样式 === */
+        .side-click-area {
+            opacity: 0.25;
+            transition: all 0.3s ease;
+        }
+
+        .side-click-area:hover {
+            opacity: 0.8;
+        }
+
+        .side-click-area.active {
+            opacity: 1;
+        }
+
+        .side-click-area .guide-box {
+            transition: all 0.3s ease;
+        }
+
+        .side-click-area.active .guide-box {
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        #click-vertical-3.active .guide-box {
+            fill: #2563eb;
+            stroke: #2563eb;
+        }
+
+        #click-vertical-3.active .guide-text {
+            fill: #ffffff;
+        }
+
+        #click-horizontal-3.active .guide-box {
+            fill: #9333ea;
+            stroke: #9333ea;
+        }
+
+        #click-horizontal-3.active .guide-text {
+            fill: #ffffff;
+        }
+
+        /* === 左/右分割小标签样式 === */
+        .liquid-label-inner-small {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.75rem;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            height: 100%;
+            white-space: nowrap;
+        }
+
+        /* === 隐藏卡片 === */
+        .step-card-hidden {
+            display: none !important;
+        }
+
+        .choice-wrapper {
+            display: flex !important;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.25rem;
+            align-items: center;
+            padding: 1.25rem;
+        }
+
+        .choice-btn {
+            width: 100%;
+            padding: 1rem 0.5rem;
+            font-size: 1.5rem;
+            color: #fff;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .choice-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .choice-btn-fill {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+
+        .choice-btn-drink {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .choice-btn-half {
+            background: linear-gradient(135deg, #9333ea, #a855f7);
+            box-shadow: 0 4px 10px rgba(147, 51, 234, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 共享 SVG 渐变和裁切模板定义 -->
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" version="1.1"
+        xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <!-- 纯果汁（橙色） -->
+            <linearGradient id="juiceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffa500" />
+                <stop offset="100%" stop-color="#ff6d00" />
+            </linearGradient>
+            <!-- 纯水（蓝色） -->
+            <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#a0e0ff" />
+                <stop offset="100%" stop-color="#00a2ff" />
+            </linearGradient>
+            <!-- 混合果汁（淡一些的果汁橙色） -->
+            <linearGradient id="mixedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffd59a" />
+                <stop offset="100%" stop-color="#ffb37b" />
+            </linearGradient>
+            <!-- 裁切 -->
+            <clipPath id="cupClip">
+                <rect x="30" y="20" width="100" height="140" />
+            </clipPath>
+        </defs>
+    </svg>
+
+    <header>
+        <h1 class="gradient-title">喝果汁问题</h1>
+        <div id="global-hint">💡 点击卡片展开步骤，开始互动吧！</div>
+        <div class="header-btns" style="display: flex; gap: 1rem;">
+            <button class="top-btn" id="toggle-fill-btn" onclick="toggleFillCards()">隐藏加水</button>
+            <button class="top-btn" onclick="resetAll()">重置</button>
+        </div>
+    </header>
+
+    <!-- 横向滚动卡片总容器 -->
+    <main class="slider-container">
+
+        <!-- 左切换箭头 -->
+        <button class="slider-btn left" id="slider-prev" onclick="moveSlider(-1)" disabled>
+            <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+
+        <!-- 视口容器 -->
+        <div class="slider-viewport" id="slider-viewport">
+            <div class="slider-track" id="slider-track">
+
+                <!-- 第一卡片：第一步（喝半杯） -->
+                <section class="step-card" data-step="1" id="card-1">
+                    <span class="step-badge badge-drink" onclick="expandStep(1)">第一步</span>
+                    <h2 class="step-action">喝半杯</h2>
+
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-1" class="liquid-rect" x="30" y="160" width="100" height="0"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-1" class="liquid-rect" x="30" y="20" width="100" height="140"
+                                    fill="url(#juiceGrad)" />
+
+                                <foreignObject id="juice-label-1" class="liquid-label" x="30" y="75" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                                <foreignObject id="water-label-1" class="liquid-label" x="30" y="145" width="100"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner"></div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <!-- 第一步可拖动的表面 -->
+                            <g id="surface-group-1" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-1" x1="30" y1="20" x2="130" y2="20" stroke="#ea580c"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-1" x="65" y="15" width="30" height="10" rx="5" fill="#ea580c"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                            <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="78" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display: flex; align-items: center; justify-content: flex-start; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                    <div class="fraction-box" style="margin: 0; font-weight: 600;"><span
+                                            class="fraction-num" style="border-bottom-width: 1px;">1</span><span
+                                            class="fraction-denom">2</span></div>
+                                </div>
+                            </foreignObject>
+                        </svg>
+                    </div>
+
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-1" onclick="revealIndividual('j-1')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-1" onclick="revealIndividual('w-1')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 第二卡片：第二步（加满水） -->
+                <section class="step-card collapsed fill-card" data-step="2" id="card-2" onclick="expandStep(2)">
+                    <span class="step-badge badge-fill">第二步</span>
+                    <h2 class="step-action">加满水</h2>
+
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-2" class="liquid-rect" x="30" y="20" width="100" height="0"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-mixed-2" class="liquid-rect" x="30" y="20" width="100" height="140"
+                                    fill="url(#mixedGrad)" />
+                                <rect id="juice-2" class="liquid-rect" x="30" y="20" width="100" height="140"
+                                    fill="url(#juiceGrad)" opacity="0" />
+
+                                <foreignObject id="mixed-label-2" class="liquid-label" x="30" y="90" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">混合果汁</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-2" class="liquid-label" x="30" y="110" width="100"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                                <foreignObject id="water-label-2" class="liquid-label" x="30" y="75" width="100"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">
+                                        <div class="fraction-box"><span class="fraction-num">1</span><span
+                                                class="fraction-denom">2</span></div>水
+                                    </div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <!-- 可拖动的渗透膜 -->
+                            <g id="membrane-group-2" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="membrane-line-2" x1="30" y1="20" x2="130" y2="20" stroke="#475569"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="membrane-handle-2" x="65" y="15" width="30" height="10" rx="5" fill="#1e293b"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#94a3b8" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#94a3b8" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#94a3b8" stroke-width="1.5" />
+                            </g>
+                            <!-- 第二步可拖动的水位表面（加水） -->
+                            <g id="water-group-2" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="water-line-2" x1="30" y1="20" x2="130" y2="20" stroke="#00a2ff"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="water-handle-2" x="65" y="15" width="30" height="10" rx="5" fill="#00a2ff"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                            <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="78" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display: flex; align-items: center; justify-content: flex-start; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                    <div class="fraction-box"><span class="fraction-num"
+                                            style="border-bottom-width: 1px;">1</span><span
+                                            class="fraction-denom">2</span></div>
+                                </div>
+                            </foreignObject>
+                        </svg>
+                    </div>
+
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 加水：</span>
+                            <button class="answer-badge" id="ans-add-w-2"
+                                onclick="revealIndividual('add-w-2')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 第三卡片：第三步（又喝半杯） -->
+                <section class="step-card collapsed" data-step="3" id="card-3" onclick="expandStep(3)">
+                    <span class="step-badge badge-drink">第三步</span>
+                    <h2 class="step-action">又喝半杯</h2>
+
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+
+                                <!-- 左半侧液体 -->
+                                <rect id="water-3-L" class="liquid-rect" x="30" y="20" width="51" height="70"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-3-L" class="liquid-rect" x="30" y="90" width="51" height="70"
+                                    fill="url(#mixedGrad)" />
+                                <rect id="juice-pure-3-L" class="liquid-rect" x="30" y="90" width="51" height="70"
+                                    fill="url(#juiceGrad)" opacity="0" />
+
+                                <!-- 右半侧液体 -->
+                                <rect id="water-3-R" class="liquid-rect" x="80" y="20" width="50" height="70"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-3-R" class="liquid-rect" x="80" y="90" width="50" height="70"
+                                    fill="url(#mixedGrad)" />
+                                <rect id="juice-pure-3-R" class="liquid-rect" x="80" y="90" width="50" height="70"
+                                    fill="url(#juiceGrad)" opacity="0" />
+
+                                <!-- 中间居中标签 -->
+                                <foreignObject id="mixed-label-3-C" class="liquid-label" x="30" y="75" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">混合果汁</div>
+                                </foreignObject>
+                                <foreignObject id="water-label-3-C" class="liquid-label" x="30" y="40" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-3-C" class="liquid-label" x="30" y="110" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+
+                                <!-- 左右分割小标签 -->
+                                <foreignObject id="water-label-3-L" class="liquid-label" x="30" y="40" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">
+                                        <div class="fraction-box"><span class="fraction-num">1</span><span
+                                                class="fraction-denom">4</span></div>水
+                                    </div>
+                                </foreignObject>
+                                <foreignObject id="water-label-3-R" class="liquid-label" x="80" y="40" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">
+                                        <div class="fraction-box"><span class="fraction-num">1</span><span
+                                                class="fraction-denom">4</span></div>水
+                                    </div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-3-L" class="liquid-label" x="30" y="110" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">
+                                        <div class="fraction-box"><span class="fraction-num">1</span><span
+                                                class="fraction-denom">4</span></div>果汁
+                                    </div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-3-R" class="liquid-label" x="80" y="110" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">
+                                        <div class="fraction-box"><span class="fraction-num">1</span><span
+                                                class="fraction-denom">4</span></div>果汁
+                                    </div>
+                                </foreignObject>
+
+                                <!-- 垂直平分线与中间水平虚线 -->
+                                <line id="vertical-split-line-3" x1="80" y1="20" x2="80" y2="160"
+                                    stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-dasharray="4,4"
+                                    opacity="0" style="transition: opacity 0.3s;" />
+
+                                <!-- 底部垂直平分刻度 (默认显示) -->
+                                <g id="default-vertical-tick-3" style="pointer-events: none;">
+                                    <line x1="80" y1="160" x2="80" y2="165" stroke="#94a3b8" stroke-width="2" />
+                                    <foreignObject x="70" y="165" width="20" height="24">
+                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                            style="display: flex; align-items: center; justify-content: center; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                            <div class="fraction-box"><span class="fraction-num"
+                                                    style="border-bottom-width: 1px;">1</span><span
+                                                    class="fraction-denom">2</span></div>
+                                        </div>
+                                    </foreignObject>
+                                </g>
+
+                                <line id="middle-h-line-3" x1="30" y1="90" x2="130" y2="90"
+                                    stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-dasharray="4,4"
+                                    opacity="0" style="transition: opacity 0.3s;" />
+
+                                <!-- 4等分虚线 (1/4 和 3/4) -->
+                                <g id="division-lines-3" class="quarter-lines" opacity="0"
+                                    style="transition: opacity 0.3s;">
+                                    <line x1="30" y1="125" x2="130" y2="125" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                    <line x1="30" y1="55" x2="130" y2="55" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                </g>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+
+                            <!-- 右侧隐藏点击区域（支持1/2垂直平分和水平均分） -->
+                            <g id="click-vertical-3" class="side-click-area" style="cursor: pointer;"
+                                onclick="toggleSplit3('vertical', event)">
+                                <rect id="vertical-click-box-3" x="65" y="165" width="30" height="10" rx="5"
+                                    fill="transparent" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2,3"
+                                    stroke-linecap="round" style="transition: opacity 0.3s;" />
+                            </g>
+                            <g id="default-horizontal-tick-3">
+                                <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="78" width="20" height="24" style="pointer-events: none;">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display: flex; align-items: center; justify-content: flex-start; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                        <div class="fraction-box" style="margin: 0; font-weight: 600;"><span
+                                                id="horizontal-label-num-3" class="fraction-num"
+                                                style="border-bottom-width: 1px;">1</span><span
+                                                id="horizontal-label-denom-3" class="fraction-denom">2</span></div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+                            <g id="click-horizontal-3" class="side-click-area" style="cursor: pointer;"
+                                onclick="toggleSplit3('horizontal', event)">
+                                <rect x="132" y="75" width="28" height="30" fill="transparent" />
+                            </g>
+
+                            <!-- 右侧点击后的四分之一刻度 -->
+                            <g id="horizontal-ticks-3" opacity="0"
+                                style="transition: opacity 0.3s; pointer-events: none;">
+                                <!-- 3/4 -->
+                                <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="43" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display: flex; align-items: center; justify-content: flex-start; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                        <div class="fraction-box" style="margin: 0; font-weight: 600;"><span
+                                                class="fraction-num" style="border-bottom-width: 1px;">3</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                                <!-- 1/4 -->
+                                <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="113" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display: flex; align-items: center; justify-content: flex-start; color: #64748b; font-family: inherit; font-size: 10px; font-weight: 600; line-height: 1; height: 100%;">
+                                        <div class="fraction-box" style="margin: 0; font-weight: 600;"><span
+                                                class="fraction-num" style="border-bottom-width: 1px;">1</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+
+                            <!-- 第三步可拖动的表面 (全宽) -->
+                            <g id="surface-group-3-Full" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-3-Full" x1="30" y1="20" x2="130" y2="20" stroke="#9333ea"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-3-Full" x="65" y="15" width="30" height="10" rx="5"
+                                    fill="#9333ea" stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+
+                            <!-- 第三步可拖动的表面 (仅右半侧) -->
+                            <g id="surface-group-3-R" style="cursor: grab; display: none;">
+                                <rect x="115" y="20" width="30" height="140" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-3-R" x1="130" y1="20" x2="130" y2="160" stroke="#9333ea"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-3-R" x="125" y="77" width="10" height="26" rx="5"
+                                    fill="#9333ea" stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="128" y1="86" x2="132" y2="86" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="128" y1="89" x2="132" y2="89" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="128" y1="92" x2="132" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-3" onclick="revealIndividual('j-3')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-3" onclick="revealIndividual('w-3')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 第四步：选择卡片 ===== -->
+                <section class="step-card step-card-hidden" id="card-4-choice" data-step="4">
+                    <span class="step-badge badge-drink">第四步</span>
+                    <h2 class="step-action">下一步？</h2>
+                    <div class="cup-wrapper choice-wrapper">
+                        <button class="choice-btn choice-btn-fill"
+                            onclick="makeStep4Choice('fill', event)">再加满水？</button>
+                        <button class="choice-btn choice-btn-drink"
+                            onclick="makeStep4Choice('drink_all', event)">直接喝完？</button>
+                    </div>
+                </section>
+
+                <!-- ===== 第四步：加满水 ===== -->
+                <section class="step-card step-card-hidden fill-card" id="card-4-fill" data-step="4">
+                    <span class="step-badge badge-fill">第四步</span>
+                    <button class="reselect-btn" onclick="reselectStep(4)">重选</button>
+                    <h2 class="step-action">加满水</h2>
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-4f" class="liquid-rect" x="30" y="90" width="100" height="35"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-4f" class="liquid-rect" x="30" y="125" width="100" height="35"
+                                    fill="url(#juiceGrad)" />
+                                <foreignObject id="water-label-4f" class="liquid-label" x="30" y="92" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-4f" class="liquid-label" x="30" y="127" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="78" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                    <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                            class="fraction-num" style="border-bottom-width:1px;">2</span><span
+                                            class="fraction-denom">4</span></div>
+                                </div>
+                            </foreignObject>
+                            <g id="horizontal-ticks-4f" style="pointer-events: none;">
+                                <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="43" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">3</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="113" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">1</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+                            <!-- 加水手柄 -->
+                            <g id="water-group-4f" style="cursor: grab; display: none;">
+                                <rect x="20" y="75" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="water-line-4f" x1="30" y1="90" x2="130" y2="90" stroke="#00a2ff"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="water-handle-4f" x="65" y="85" width="30" height="10" rx="5" fill="#00a2ff"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="88" x2="77" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="88" x2="80" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="88" x2="83" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 加水：</span>
+                            <button class="answer-badge" id="ans-add-w-4"
+                                onclick="revealIndividual('add-w-4')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 第四步：直接喝完 ===== -->
+                <section class="step-card step-card-hidden" id="card-4-drink" data-step="4" data-ended="true">
+                    <span class="step-badge badge-drink">第四步</span>
+                    <button class="reselect-btn" onclick="reselectStep(4)">重选</button>
+                    <h2 class="step-action">全部喝完</h2>
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-4d" class="liquid-rect" x="30" y="90" width="100" height="35"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-4d" class="liquid-rect" x="30" y="125" width="100" height="35"
+                                    fill="url(#juiceGrad)" />
+                                <foreignObject id="water-label-4d" class="liquid-label" x="30" y="92" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-4d" class="liquid-label" x="30" y="127" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="78" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                    <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                            class="fraction-num" style="border-bottom-width:1px;">1</span><span
+                                            class="fraction-denom">2</span></div>
+                                </div>
+                            </foreignObject>
+                            <g id="surface-group-4d" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-4d" x1="30" y1="20" x2="130" y2="20" stroke="#ea580c"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-4d" x="65" y="15" width="30" height="10" rx="5" fill="#ea580c"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-4" onclick="revealIndividual('j-4')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-4" onclick="revealIndividual('w-4')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 第五步：选择卡片 ===== -->
+                <section class="step-card step-card-hidden" id="card-5-choice" data-step="5">
+                    <span class="step-badge badge-drink">第五步</span>
+                    <h2 class="step-action">下一步？</h2>
+                    <div class="cup-wrapper choice-wrapper">
+                        <button class="choice-btn choice-btn-half"
+                            onclick="makeStep5Choice('drink_half', event)">再喝半杯？</button>
+                        <button class="choice-btn choice-btn-drink"
+                            onclick="makeStep5Choice('drink_all', event)">直接喝完？</button>
+                    </div>
+                </section>
+
+                <!-- ===== 第五步：直接喝完 ===== -->
+                <section class="step-card step-card-hidden" id="card-5-drink-all" data-step="5" data-ended="true">
+                    <span class="step-badge badge-drink">第五步</span>
+                    <button class="reselect-btn" onclick="reselectStep(5)">重选</button>
+                    <h2 class="step-action">全部喝完</h2>
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-5a" class="liquid-rect" x="30" y="20" width="100" height="105"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-5a" class="liquid-rect" x="30" y="125" width="100" height="35"
+                                    fill="url(#juiceGrad)" />
+                                <foreignObject id="water-label-5a" class="liquid-label" x="30" y="57" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-5a" class="liquid-label" x="30" y="127" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="113" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                    <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                            class="fraction-num" style="border-bottom-width:1px;">1</span><span
+                                            class="fraction-denom">4</span></div>
+                                </div>
+                            </foreignObject>
+                            <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="78" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                    <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                            class="fraction-num" style="border-bottom-width:1px;">2</span><span
+                                            class="fraction-denom">4</span></div>
+                                </div>
+                            </foreignObject>
+                            <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                            <foreignObject x="144" y="43" width="20" height="24">
+                                <div xmlns="http://www.w3.org/1999/xhtml"
+                                    style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                    <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                            class="fraction-num" style="border-bottom-width:1px;">3</span><span
+                                            class="fraction-denom">4</span></div>
+                                </div>
+                            </foreignObject>
+                            <g id="surface-group-5a" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-5a" x1="30" y1="20" x2="130" y2="20" stroke="#ea580c"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-5a" x="65" y="15" width="30" height="10" rx="5" fill="#ea580c"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-5a" onclick="revealIndividual('j-5a')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-5a" onclick="revealIndividual('w-5a')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 第五步：再喝半杯 ===== -->
+                <section class="step-card step-card-hidden" id="card-5-drink-half" data-step="5">
+                    <span class="step-badge badge-drink">第五步</span>
+                    <button class="reselect-btn" onclick="reselectStep(5)">重选</button>
+                    <h2 class="step-action">再喝半杯</h2>
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <!-- 左半侧液体 -->
+                                <rect id="water-5h-L" class="liquid-rect" x="30" y="20" width="51" height="105"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-5h-L" class="liquid-rect" x="30" y="125" width="51" height="35"
+                                    fill="url(#juiceGrad)" />
+                                <!-- 右半侧液体 -->
+                                <rect id="water-5h-R" class="liquid-rect" x="80" y="20" width="50" height="105"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-5h-R" class="liquid-rect" x="80" y="125" width="50" height="35"
+                                    fill="url(#juiceGrad)" />
+                                <!-- 中心标签 -->
+                                <foreignObject id="water-label-5h-C" class="liquid-label" x="30" y="57" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-5h-C" class="liquid-label" x="30" y="127" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                                <!-- 左右分割小标签 -->
+                                <foreignObject id="water-label-5h-L" class="liquid-label" x="30" y="57" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">水</div>
+                                </foreignObject>
+                                <foreignObject id="water-label-5h-R" class="liquid-label" x="80" y="57" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-5h-L" class="liquid-label" x="30" y="135" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">果汁</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-5h-R" class="liquid-label" x="80" y="135" width="50"
+                                    height="30" opacity="0">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner-small">果汁</div>
+                                </foreignObject>
+                                <!-- 垂直平分线 -->
+                                <line id="vertical-split-line-5h" x1="80" y1="20" x2="80" y2="160"
+                                    stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-dasharray="4,4"
+                                    opacity="0" style="transition: opacity 0.3s;" />
+                                <!-- 中间水平线 -->
+                                <line id="middle-h-line-5h" x1="30" y1="90" x2="130" y2="90"
+                                    stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-dasharray="4,4"
+                                    opacity="0" style="transition: opacity 0.3s;" />
+                                <!-- 4等分虚线 -->
+                                <g id="division-lines-quarters-5h" class="quarter-lines" opacity="0"
+                                    style="transition: opacity 0.3s;">
+                                    <line x1="30" y1="125" x2="130" y2="125" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                    <line x1="30" y1="55" x2="130" y2="55" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                </g>
+                                <!-- 8等分独有虚线 -->
+                                <g id="division-lines-eighths-5h" class="quarter-lines" opacity="0"
+                                    style="transition: opacity 0.3s;">
+                                    <line x1="30" y1="142.5" x2="130" y2="142.5" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                    <line x1="30" y1="107.5" x2="130" y2="107.5" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                    <line x1="30" y1="72.5" x2="130" y2="72.5" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                    <line x1="30" y1="37.5" x2="130" y2="37.5" stroke="rgba(255,255,255,0.85)"
+                                        stroke-width="1.5" stroke-dasharray="4,4" />
+                                </g>
+                                <!-- 底部垂直平分刻度 -->
+                                <g id="default-vertical-tick-5h" style="pointer-events: none;">
+                                    <line x1="80" y1="160" x2="80" y2="165" stroke="#94a3b8" stroke-width="2" />
+                                    <foreignObject x="70" y="165" width="20" height="24">
+                                        <div xmlns="http://www.w3.org/1999/xhtml"
+                                            style="display:flex;align-items:center;justify-content:center;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                            <div class="fraction-box"><span class="fraction-num"
+                                                    style="border-bottom-width:1px;">1</span><span
+                                                    class="fraction-denom">2</span></div>
+                                        </div>
+                                    </foreignObject>
+                                </g>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+                            <!-- 垂直切分点击区域 -->
+                            <g id="click-vertical-5h" class="side-click-area" style="cursor: pointer;"
+                                onclick="toggleSplit5('vertical', event)">
+                                <rect id="vertical-click-box-5h" x="65" y="165" width="30" height="10" rx="5"
+                                    fill="transparent" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2,3"
+                                    stroke-linecap="round" style="transition: opacity 0.3s;" />
+                            </g>
+                            <!-- 右侧四分之一刻度 -->
+                            <g id="ticks-quarters-5h" style="pointer-events: none; transition: opacity 0.3s;">
+                                <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="43" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">3</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="78" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">2</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="113" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">1</span><span
+                                                class="fraction-denom">4</span></div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+                            <g id="click-horizontal-5h" class="side-click-area" style="cursor: pointer;"
+                                onclick="toggleSplit5('horizontal', event)">
+                                <rect x="132" y="75" width="28" height="30" fill="transparent" />
+                            </g>
+                            <!-- 右侧八分之一刻度 -->
+                            <g id="ticks-eighths-5h" opacity="0"
+                                style="pointer-events: none; transition: opacity 0.3s;">
+                                <line x1="130" y1="37.5" x2="138" y2="37.5" stroke="#94a3b8" stroke-width="2" />
+                                <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="43" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">6</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="72.5" x2="138" y2="72.5" stroke="#94a3b8" stroke-width="2" />
+                                <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="78" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">4</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="107.5" x2="138" y2="107.5" stroke="#94a3b8" stroke-width="2" />
+                                <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="113" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">2</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="142.5" x2="138" y2="142.5" stroke="#94a3b8" stroke-width="2" />
+                            </g>
+                            <!-- 全宽拖动手柄 -->
+                            <g id="surface-group-5h-Full" style="cursor: grab; display: none;">
+                                <rect x="20" y="5" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-5h-Full" x1="30" y1="20" x2="130" y2="20" stroke="#9333ea"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-5h-Full" x="65" y="15" width="30" height="10" rx="5"
+                                    fill="#9333ea" stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="18" x2="77" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="18" x2="80" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="18" x2="83" y2="22" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                            <!-- 右半侧拖动手柄 -->
+                            <g id="surface-group-5h-R" style="cursor: grab; display: none;">
+                                <rect x="115" y="20" width="30" height="140" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-5h-R" x1="130" y1="20" x2="130" y2="160" stroke="#9333ea"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-5h-R" x="125" y="77" width="10" height="26" rx="5"
+                                    fill="#9333ea" stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="128" y1="86" x2="132" y2="86" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="128" y1="89" x2="132" y2="89" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="128" y1="92" x2="132" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-5h" onclick="revealIndividual('j-5h')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-5h" onclick="revealIndividual('w-5h')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 第六步：默认全部喝完 ===== -->
+                <section class="step-card step-card-hidden" id="card-6-drink-all" data-step="6" data-ended="true">
+                    <span class="step-badge badge-drink">第六步</span>
+                    <h2 class="step-action">全部喝完</h2>
+                    <div class="cup-wrapper">
+                        <svg viewBox="0 0 160 195" width="100%" height="100%">
+                            <g clip-path="url(#cupClip)">
+                                <rect x="30" y="20" width="100" height="140" fill="#f8fafc" opacity="0.6" />
+                                <rect id="water-6" class="liquid-rect" x="30" y="90" width="100" height="52.5"
+                                    fill="url(#waterGrad)" />
+                                <rect id="juice-6" class="liquid-rect" x="30" y="142.5" width="100" height="17.5"
+                                    fill="url(#juiceGrad)" />
+                                <foreignObject id="water-label-6" class="liquid-label" x="30" y="101" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">水</div>
+                                </foreignObject>
+                                <foreignObject id="juice-label-6" class="liquid-label" x="30" y="136" width="100"
+                                    height="30">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="liquid-label-inner">果汁</div>
+                                </foreignObject>
+                            </g>
+                            <rect x="30" y="20" width="100" height="140" fill="none" stroke="#94a3b8"
+                                stroke-width="2" />
+
+                            <!-- 8分之几刻度 (仅显示2/8 4/8 6/8) -->
+                            <g style="pointer-events: none;">
+                                <line x1="130" y1="55" x2="138" y2="55" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="43" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">6</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="90" x2="138" y2="90" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="78" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">4</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                                <line x1="130" y1="125" x2="138" y2="125" stroke="#94a3b8" stroke-width="2" />
+                                <foreignObject x="144" y="113" width="20" height="24">
+                                    <div xmlns="http://www.w3.org/1999/xhtml"
+                                        style="display:flex;align-items:center;justify-content:flex-start;color:#64748b;font-family:inherit;font-size:10px;font-weight:600;line-height:1;height:100%;">
+                                        <div class="fraction-box" style="margin:0;font-weight:600;"><span
+                                                class="fraction-num" style="border-bottom-width:1px;">2</span><span
+                                                class="fraction-denom">8</span></div>
+                                    </div>
+                                </foreignObject>
+                            </g>
+
+                            <g id="surface-group-6" style="cursor: grab; display: none;">
+                                <rect x="20" y="75" width="120" height="30" fill="transparent" style="cursor: grab;" />
+                                <line id="surface-line-6" x1="30" y1="90" x2="130" y2="90" stroke="#ea580c"
+                                    stroke-width="2" stroke-dasharray="6 2" />
+                                <rect id="surface-handle-6" x="65" y="85" width="30" height="10" rx="5" fill="#ea580c"
+                                    stroke="#cbd5e1" stroke-width="1.5" />
+                                <line x1="77" y1="88" x2="77" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="80" y1="88" x2="80" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="83" y1="88" x2="83" y2="92" stroke="#ffffff" stroke-width="1.5" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="questions-container" onclick="event.stopPropagation()">
+                        <div class="question-row question-juice">
+                            <span class="question-label"><span class="dot dot-juice"></span> 喝掉果汁：</span>
+                            <button class="answer-badge" id="ans-j-6" onclick="revealIndividual('j-6')">？</button>
+                        </div>
+                        <div class="question-row question-water">
+                            <span class="question-label"><span class="dot dot-water"></span> 喝掉水：</span>
+                            <button class="answer-badge" id="ans-w-6" onclick="revealIndividual('w-6')">？</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- 右切换箭头 -->
+        <button class="slider-btn right" id="slider-next" onclick="moveSlider(1)">
+            <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+
+    </main>
+
+    <script>
+        // === 辅助函数：将分数字符串格式化为纵向分数形式 ===
+        function getFractionLabelHtml(text, isSmall = false) {
+            if (!text) return '';
+            // 将 1/2 替换为 HTML 纵向分数
+            let html = text.replace(/1\/2/g, '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">2</span></div>');
+            // 将 1/4 替换为 HTML 纵向分数
+            html = html.replace(/1\/4/g, '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div>');
+            const innerClass = isSmall ? 'liquid-label-inner-small' : 'liquid-label-inner';
+            return `<div xmlns="http://www.w3.org/1999/xhtml" class="${innerClass}">${html}</div>`;
+        }
+
+        function setLabel(el, targetY, text, opacity = '1') {
+            if (!el) return;
+            el.setAttribute('y', (targetY - 15).toString());
+            el.setAttribute('opacity', opacity);
+            if (text !== undefined) {
+                const isSmall = el.id.endsWith('-L') || el.id.endsWith('-R');
+                el.innerHTML = getFractionLabelHtml(text, isSmall);
+            }
+        }
+
+        // === 状态管理 ===
+        const state = {
+            step1: false,
+            step2: false,
+            step3: false
+        };
+
+        const revealed = {
+            'j-1': false, 'w-1': false,
+            'add-w-2': false,
+            'j-3': false, 'w-3': false,
+            'j-4': false, 'w-4': false,
+            'add-w-4': false,
+            'j-5a': false, 'w-5a': false,
+            'j-5h': false, 'w-5h': false,
+            'j-6': false, 'w-6': false
+        };
+
+        // 卡片展开状态管理
+        let cardExpanded = {
+            1: true,
+            2: false,
+            3: false
+        };
+
+        // 按钮交互控制变量
+        let step2Stage = 1;
+        let waterProgress2 = 0;
+        let dragProgress1 = 0;
+        let separationProgress2 = 0;
+        let dragProgress3 = 0;
+        let showVerticalSplit3 = false;
+        let showHorizontalSplit3 = false;
+
+        // === 第四步状态 ===
+        let step4Visible = false;
+        let step4Choice = null;       // null | 'fill' | 'drink_all'
+        let step4Stage = 1;           // 1=加水, 2=分离
+        let waterProgress4 = 0;       // 加水进度 0→1
+        let separationProgress4 = 0;  // 分离进度 0→1
+        let dragProgress4 = 0;        // 喝完进度 0→1
+
+        // === 第五步状态 ===
+        let step5Visible = false;
+        let step5Choice = null;       // null | 'drink_all' | 'drink_half'
+        let dragProgress5 = 0;
+        let showVerticalSplit5 = false;
+        let showHorizontalSplit5 = false;
+
+        // === 第六步状态 ===
+        let step6Visible = false;
+        let dragProgress6 = 0;
+
+        // 统一求出的分数 HTML 代码
+        const answersHtml = {
+            'j-1': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">2</span></div> 杯',
+            'w-1': '0 杯',
+            'add-w-2': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">2</span></div> 杯',
+            'j-3': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div> 杯',
+            'w-3': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div> 杯',
+            'j-4': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div> 杯',
+            'w-4': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div> 杯',
+            'add-w-4': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">2</span></div> 杯',
+            'j-5a': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">4</span></div> 杯',
+            'w-5a': '<div class="fraction-box"><span class="fraction-num">3</span><span class="fraction-denom">4</span></div> 杯',
+            'j-5h': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">8</span></div> 杯',
+            'w-5h': '<div class="fraction-box"><span class="fraction-num">3</span><span class="fraction-denom">8</span></div> 杯',
+            'j-6': '<div class="fraction-box"><span class="fraction-num">1</span><span class="fraction-denom">8</span></div> 杯',
+            'w-6': '<div class="fraction-box"><span class="fraction-num">3</span><span class="fraction-denom">8</span></div> 杯'
+        };
+
+        // === 横向滑块交互逻辑 ===
+        let sliderIndex = 0;
+
+        function getSliderParams() {
+            const width = window.innerWidth;
+            let visibleCards = 3;
+            if (width < 768) {
+                visibleCards = 1;
+            } else if (width < 1024) {
+                visibleCards = 2;
+            }
+            const cardsCount = document.querySelectorAll('.step-card:not(.step-card-hidden)').length;
+            const maxIndex = Math.max(0, cardsCount - visibleCards);
+            return { visibleCards, maxIndex };
+        }
+
+        function moveSlider(direction) {
+            let { maxIndex } = getSliderParams();
+
+            if (direction === 1 && sliderIndex >= maxIndex) {
+                // 尝试展示下一步
+                if (!step4Visible) {
+                    step4Visible = true;
+                    render();
+                    maxIndex = getSliderParams().maxIndex;
+                } else if (step4Choice === 'fill' && !step5Visible) {
+                    step5Visible = true;
+                    render();
+                    maxIndex = getSliderParams().maxIndex;
+                } else if (step5Choice === 'drink_half' && !step6Visible) {
+                    step6Visible = true;
+                    render();
+                    initDragStep6();
+                    maxIndex = getSliderParams().maxIndex;
+                }
+            }
+
+            sliderIndex = Math.max(0, Math.min(maxIndex, sliderIndex + direction));
+            scrollSlider();
+        }
+
+        // === 选择函数 ===
+        function makeStep4Choice(type, event) {
+            if (event) event.stopPropagation();
+            step4Choice = type;
+            if (type === 'fill') {
+                step4Stage = 1;
+                waterProgress4 = 0;
+                separationProgress4 = 0;
+            } else {
+                dragProgress4 = 0;
+            }
+            render();
+            initDragStep4();
+            setTimeout(() => scrollSlider(), 100);
+        }
+
+        function makeStep5Choice(type, event) {
+            if (event) event.stopPropagation();
+            step5Choice = type;
+            dragProgress5 = 0;
+            showVerticalSplit5 = false;
+            showHorizontalSplit5 = false;
+            render();
+            initDragStep5();
+            setTimeout(() => scrollSlider(), 100);
+        }
+
+        // === 重选逻辑 ===
+        function reselectStep(stepNum) {
+            if (stepNum === 4) {
+                step4Choice = null;
+                step5Visible = false;
+                step5Choice = null;
+                step6Visible = false;
+                step4Stage = 1;
+                waterProgress4 = 0;
+                separationProgress4 = 0;
+                dragProgress4 = 0;
+            } else if (stepNum === 5) {
+                step5Choice = null;
+                step6Visible = false;
+                dragProgress5 = 0;
+                showVerticalSplit5 = false;
+                showHorizontalSplit5 = false;
+            }
+            render();
+            setTimeout(() => {
+                const { maxIndex } = getSliderParams();
+                sliderIndex = Math.min(sliderIndex, maxIndex);
+                scrollSlider();
+            }, 100);
+        }
+
+        // === 分割切换 ===
+        function toggleSplit3(type, event) {
+            if (event) event.stopPropagation();
+            if (type === 'vertical') {
+                if (showVerticalSplit3) {
+                    showVerticalSplit3 = false;
+                } else {
+                    showVerticalSplit3 = true;
+                    showHorizontalSplit3 = false;
+                }
+            } else if (type === 'horizontal') {
+                if (showHorizontalSplit3) {
+                    showHorizontalSplit3 = false;
+                } else {
+                    showHorizontalSplit3 = true;
+                    showVerticalSplit3 = false;
+                }
+            }
+            dragProgress3 = 0;
+            render();
+        }
+
+        function toggleSplit5(type, event) {
+            if (event) event.stopPropagation();
+            if (type === 'vertical') {
+                if (showVerticalSplit5) {
+                    showVerticalSplit5 = false;
+                } else {
+                    showVerticalSplit5 = true;
+                    showHorizontalSplit5 = false;
+                }
+            } else if (type === 'horizontal') {
+                if (showHorizontalSplit5) {
+                    showHorizontalSplit5 = false;
+                } else {
+                    showHorizontalSplit5 = true;
+                    showVerticalSplit5 = false;
+                }
+            }
+            dragProgress5 = 0;
+            render();
+        }
+
+        function revealIndividual(id) {
+            revealed[id] = true;
+            render();
+        }
+
+        // === 卡片可见性切换 ===
+        function toggleCardVisible(id, visible) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('step-card-hidden', !visible);
+        }
+
+        let hideFillCards = false;
+        function toggleFillCards() {
+            hideFillCards = !hideFillCards;
+            const btn = document.getElementById('toggle-fill-btn');
+            if (hideFillCards) {
+                btn.innerText = '恢复显示';
+            } else {
+                btn.innerText = '隐藏加水';
+            }
+            render();
+            setTimeout(() => {
+                const { maxIndex } = getSliderParams();
+                sliderIndex = Math.min(sliderIndex, maxIndex);
+                scrollSlider();
+            }, 100);
+        }
+
+        function updateCardVisibility() {
+            toggleCardVisible('card-2', !hideFillCards);
+
+            toggleCardVisible('card-4-choice', step4Visible && step4Choice === null);
+            toggleCardVisible('card-4-fill', step4Choice === 'fill' && !hideFillCards);
+            toggleCardVisible('card-4-drink', step4Choice === 'drink_all');
+
+            const show5 = step4Choice === 'fill';
+            toggleCardVisible('card-5-choice', show5 && step5Visible && step5Choice === null);
+            toggleCardVisible('card-5-drink-all', show5 && step5Choice === 'drink_all');
+            toggleCardVisible('card-5-drink-half', show5 && step5Choice === 'drink_half');
+
+            const show6 = step5Choice === 'drink_half';
+            toggleCardVisible('card-6-drink-all', show6 && step6Visible);
+        }
+
+        // === 滚动和布局 ===
+        function scrollSlider() {
+            const viewport = document.getElementById('slider-viewport');
+            const track = document.getElementById('slider-track');
+            const cards = document.querySelectorAll('.step-card:not(.step-card-hidden)');
+            if (cards.length === 0 || !viewport) return;
+
+            const { maxIndex } = getSliderParams();
+            sliderIndex = Math.min(sliderIndex, maxIndex);
+
+            const cardWidth = cards[0].getBoundingClientRect().width;
+            const gap = parseFloat(getComputedStyle(track).gap) || 16;
+
+            viewport.scrollTo({
+                left: sliderIndex * (cardWidth + gap),
+                behavior: 'smooth'
+            });
+
+            document.getElementById('slider-prev').disabled = (sliderIndex === 0);
+
+            // 右按钮：如果还没到最后的"结束"卡片就可以继续
+            let canAddMore = false;
+            if (!step4Visible) {
+                canAddMore = true;
+            } else if (step4Choice === 'fill' && !step5Visible) {
+                canAddMore = true;
+            } else if (step5Choice === 'drink_half' && !step6Visible) {
+                canAddMore = true;
+            }
+            document.getElementById('slider-next').disabled = (sliderIndex === maxIndex && !canAddMore);
+        }
+
+        window.addEventListener('resize', () => {
+            scrollSlider();
+        });
+
+        // === 步骤折叠与展开逻辑 ===
+        function expandStep(stepNum) {
+            if (cardExpanded[stepNum]) return;
+            cardExpanded[stepNum] = true;
+            render();
+            setTimeout(() => {
+                const { maxIndex } = getSliderParams();
+                if (sliderIndex < maxIndex) {
+                    sliderIndex = maxIndex;
+                    scrollSlider();
+                }
+            }, 100);
+        }
+
+        // === 眼睛交互切换逻辑 ===
+        function toggleSeparated(stepNum, event) {
+            event.stopPropagation();
+            if (stepNum === 2) {
+                showSeparated2 = !showSeparated2;
+            } else if (stepNum === 3) {
+                showLines3 = !showLines3;
+            }
+            render();
+        }
+
+        // === 重置所有状态 ===
+        function resetAll() {
+            for (let key in state) state[key] = false;
+            for (let key in revealed) revealed[key] = false;
+
+            dragProgress1 = 0;
+            separationProgress2 = 0;
+            dragProgress3 = 0;
+            showVerticalSplit3 = false;
+            showHorizontalSplit3 = false;
+            step2Stage = 1;
+            waterProgress2 = 0;
+
+            // 重置第四步
+            step4Visible = false;
+            step4Choice = null;
+            step4Stage = 1;
+            waterProgress4 = 0;
+            separationProgress4 = 0;
+            dragProgress4 = 0;
+
+            // 重置第五步
+            step5Visible = false;
+            step5Choice = null;
+            dragProgress5 = 0;
+            showVerticalSplit5 = false;
+            showHorizontalSplit5 = false;
+
+            cardExpanded = { 1: true, 2: false, 3: false };
+            sliderIndex = 0;
+
+            render();
+            scrollSlider();
+        }
+
+        // === 渲染逻辑 ===
+        function render() {
+            // 卡片可见性
+            updateCardVisibility();
+
+            // 渲染卡片展开与收回样式 (步骤 1-3)
+            for (let i = 1; i <= 3; i++) {
+                const card = document.getElementById(`card-${i}`);
+                if (card) {
+                    if (cardExpanded[i]) {
+                        card.classList.remove('collapsed');
+                    } else {
+                        card.classList.add('collapsed');
+                    }
+                }
+            }
+
+            // --- 第一步杯子渲染 与 拖动表面控制 ---
+            const juice1 = document.getElementById('juice-1');
+            const water1 = document.getElementById('water-1');
+            const jL1 = document.getElementById('juice-label-1');
+            const wL1 = document.getElementById('water-label-1');
+            const surface1 = document.getElementById('surface-group-1');
+
+            if (cardExpanded[1]) {
+                surface1.style.display = 'block';
+                const yVal = 20 + 70 * dragProgress1;
+                surface1.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                juice1.setAttribute('y', yVal.toString());
+                juice1.setAttribute('height', (160 - yVal).toString());
+
+                water1.setAttribute('y', '160');
+                water1.setAttribute('height', '0');
+
+                if (dragProgress1 >= 1) {
+                    setLabel(jL1, 90 + 35, '果汁', '1');
+                    setLabel(wL1, 160, '', '0');
+                } else {
+                    setLabel(jL1, yVal + (160 - yVal) / 2, '果汁', '1');
+                    setLabel(wL1, 160, '', '0');
+                }
+            } else {
+                surface1.style.display = 'none';
+                juice1.setAttribute('y', '20');
+                juice1.setAttribute('height', '140');
+                water1.setAttribute('y', '160');
+                water1.setAttribute('height', '0');
+                setLabel(jL1, 90, '果汁', '1');
+                setLabel(wL1, 160, '', '0');
+                dragProgress1 = 0;
+            }
+
+            // --- 第二步杯子渲染 ---
+            const juice2 = document.getElementById('juice-2');
+            const water2 = document.getElementById('water-2');
+            const jL2 = document.getElementById('juice-label-2');
+            const wL2 = document.getElementById('water-label-2');
+            const mixed2 = document.getElementById('juice-mixed-2');
+            const mL2 = document.getElementById('mixed-label-2');
+            const waterGroup2 = document.getElementById('water-group-2');
+            const membrane2 = document.getElementById('membrane-group-2');
+
+            if (cardExpanded[2]) {
+                if (step2Stage === 1) {
+                    waterGroup2.style.display = 'block';
+                    membrane2.style.display = 'none';
+
+                    const yVal = 90 - 70 * waterProgress2;
+                    waterGroup2.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    mixed2.setAttribute('y', yVal.toString());
+                    mixed2.setAttribute('height', (160 - yVal).toString());
+                    mixed2.setAttribute('opacity', '1');
+
+                    juice2.setAttribute('y', yVal.toString());
+                    juice2.setAttribute('height', (160 - yVal).toString());
+                    juice2.setAttribute('opacity', (1 - waterProgress2).toString());
+
+                    water2.setAttribute('height', '0');
+                    jL2.setAttribute('opacity', '0');
+                    wL2.setAttribute('opacity', '0');
+
+                    if (waterProgress2 === 0) {
+                        setLabel(mL2, yVal + (160 - yVal) / 2, '果汁', '1');
+                    } else {
+                        setLabel(mL2, yVal + (160 - yVal) / 2, '混合果汁', '1');
+                    }
+                } else {
+                    waterGroup2.style.display = 'none';
+                    membrane2.style.display = 'block';
+
+                    const p = separationProgress2;
+                    const yVal = 20 + 70 * p;
+                    membrane2.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    water2.setAttribute('y', '20');
+                    water2.setAttribute('height', Math.max(0, yVal - 20).toString());
+                    water2.setAttribute('opacity', p.toString());
+
+                    mixed2.setAttribute('y', yVal.toString());
+                    mixed2.setAttribute('height', (160 - yVal).toString());
+                    mixed2.setAttribute('opacity', (1 - p).toString());
+
+                    juice2.setAttribute('y', yVal.toString());
+                    juice2.setAttribute('height', (160 - yVal).toString());
+                    juice2.setAttribute('opacity', p.toString());
+
+                    if (p > 0.5) {
+                        setLabel(wL2, 20 + (yVal - 20) / 2, '水', '1');
+                        setLabel(jL2, yVal + (160 - yVal) / 2, '果汁', '1');
+                        setLabel(mL2, 90, '', '0');
+                    } else {
+                        setLabel(wL2, 90, '', '0');
+                        setLabel(jL2, 90, '', '0');
+                        setLabel(mL2, yVal + (160 - yVal) / 2, '混合果汁', '1');
+                    }
+                }
+            } else {
+                waterGroup2.style.display = 'none';
+                membrane2.style.display = 'none';
+                mixed2.setAttribute('y', '90');
+                mixed2.setAttribute('height', '70');
+                mixed2.setAttribute('opacity', '1');
+                juice2.setAttribute('y', '90');
+                juice2.setAttribute('height', '70');
+                juice2.setAttribute('opacity', '1');
+                water2.setAttribute('height', '0');
+                jL2.setAttribute('opacity', '0');
+                wL2.setAttribute('opacity', '0');
+                setLabel(mL2, 125, '果汁', '1');
+                separationProgress2 = 0;
+                waterProgress2 = 0;
+                step2Stage = 1;
+            }
+
+            // --- 第三步杯子渲染 ---
+            const water3L = document.getElementById('water-3-L');
+            const juice3L = document.getElementById('juice-3-L');
+            const juicePure3L = document.getElementById('juice-pure-3-L');
+            const water3R = document.getElementById('water-3-R');
+            const juice3R = document.getElementById('juice-3-R');
+            const juicePure3R = document.getElementById('juice-pure-3-R');
+
+            const wL3C = document.getElementById('water-label-3-C');
+            const jL3C = document.getElementById('juice-label-3-C');
+            const mL3C = document.getElementById('mixed-label-3-C');
+            const wL3L = document.getElementById('water-label-3-L');
+            const jL3L = document.getElementById('juice-label-3-L');
+            const wL3R = document.getElementById('water-label-3-R');
+            const jL3R = document.getElementById('juice-label-3-R');
+
+            const verticalLine3 = document.getElementById('vertical-split-line-3');
+            const middleLine3 = document.getElementById('middle-h-line-3');
+            const divisionLines3 = document.getElementById('division-lines-3');
+            const verticalTick3 = document.getElementById('default-vertical-tick-3');
+            const horizontalTick3 = document.getElementById('default-horizontal-tick-3');
+            const horizontalTicks3 = document.getElementById('horizontal-ticks-3');
+            const horizontalLabelNum3 = document.getElementById('horizontal-label-num-3');
+            const horizontalLabelDenom3 = document.getElementById('horizontal-label-denom-3');
+            const clickVertical3 = document.getElementById('click-vertical-3');
+            const clickHorizontal3 = document.getElementById('click-horizontal-3');
+
+            const surface3Full = document.getElementById('surface-group-3-Full');
+            const surface3R = document.getElementById('surface-group-3-R');
+
+            if (cardExpanded[3]) {
+                let p = separationProgress2;
+                if (showVerticalSplit3 || showHorizontalSplit3) {
+                    p = 1;
+                }
+                const waterBottom = 20 + 70 * p;
+
+                if (showVerticalSplit3) {
+                    verticalLine3.setAttribute('opacity', '1');
+                    middleLine3.setAttribute('opacity', '1');
+                    divisionLines3.setAttribute('opacity', '0');
+                    horizontalTicks3.setAttribute('opacity', '0');
+                    horizontalLabelNum3.textContent = '1';
+                    horizontalLabelDenom3.textContent = '2';
+
+                    surface3Full.style.display = 'none';
+                    surface3R.style.display = 'block';
+
+                    const xVal = 130 - 50 * dragProgress3;
+                    surface3R.setAttribute('transform', `translate(${xVal - 130}, 0)`);
+
+                    // 左半侧
+                    water3L.setAttribute('x', '30');
+                    water3L.setAttribute('width', '51');
+                    water3L.setAttribute('y', '20');
+                    water3L.setAttribute('height', Math.max(0, waterBottom - 20).toString());
+                    water3L.setAttribute('opacity', p > 0 ? '1' : '0');
+
+                    juice3L.setAttribute('x', '30');
+                    juice3L.setAttribute('width', '51');
+                    juice3L.setAttribute('y', waterBottom.toString());
+                    juice3L.setAttribute('height', (160 - waterBottom).toString());
+                    juice3L.setAttribute('opacity', (1 - p).toString());
+
+                    juicePure3L.setAttribute('x', '30');
+                    juicePure3L.setAttribute('width', '51');
+                    juicePure3L.setAttribute('y', waterBottom.toString());
+                    juicePure3L.setAttribute('height', (160 - waterBottom).toString());
+                    juicePure3L.setAttribute('opacity', p.toString());
+
+                    // 右半侧
+                    const rightW = Math.max(0, xVal - 80);
+                    water3R.setAttribute('x', '80');
+                    water3R.setAttribute('width', rightW.toString());
+                    water3R.setAttribute('y', '20');
+                    water3R.setAttribute('height', Math.max(0, waterBottom - 20).toString());
+                    water3R.setAttribute('opacity', p > 0 ? '1' : '0');
+
+                    juice3R.setAttribute('x', '80');
+                    juice3R.setAttribute('width', rightW.toString());
+                    juice3R.setAttribute('y', waterBottom.toString());
+                    juice3R.setAttribute('height', (160 - waterBottom).toString());
+                    juice3R.setAttribute('opacity', (1 - p).toString());
+
+                    juicePure3R.setAttribute('x', '80');
+                    juicePure3R.setAttribute('width', rightW.toString());
+                    juicePure3R.setAttribute('y', waterBottom.toString());
+                    juicePure3R.setAttribute('height', (160 - waterBottom).toString());
+                    juicePure3R.setAttribute('opacity', p.toString());
+
+                    // 标签
+                    setLabel(wL3L, 55, '', '0');
+                    setLabel(jL3L, 125, '', '0');
+                    setLabel(wL3R, 55, '', '0');
+                    setLabel(jL3R, 125, '', '0');
+
+                    const totalW = 51 + rightW;
+                    wL3C.setAttribute('width', totalW.toString());
+                    jL3C.setAttribute('width', totalW.toString());
+
+                    if (p > 0.5) {
+                        setLabel(wL3C, 20 + (waterBottom - 20) / 2, '水', '1');
+                        setLabel(jL3C, waterBottom + (160 - waterBottom) / 2, '果汁', '1');
+                        setLabel(mL3C, 90, '', '0');
+                    } else {
+                        setLabel(wL3C, 90, '', '0');
+                        setLabel(jL3C, 90, '', '0');
+                        mL3C.setAttribute('width', totalW.toString());
+                        setLabel(mL3C, 20 + (waterBottom - 20) / 2, '混合果汁', '1');
+                    }
+                } else if (showHorizontalSplit3) {
+                    verticalLine3.setAttribute('opacity', '0');
+                    middleLine3.setAttribute('opacity', '1');
+                    divisionLines3.setAttribute('opacity', '1');
+                    horizontalTicks3.setAttribute('opacity', '1');
+                    horizontalLabelNum3.textContent = '2';
+                    horizontalLabelDenom3.textContent = '4';
+
+                    surface3Full.style.display = 'block';
+                    surface3R.style.display = 'none';
+
+                    const yVal = 20 + 70 * dragProgress3;
+                    surface3Full.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    const waterH = 70 - 35 * dragProgress3;
+                    const juiceH = 70 - 35 * dragProgress3;
+
+                    water3L.setAttribute('x', '30');
+                    water3L.setAttribute('width', '100');
+                    water3L.setAttribute('y', yVal.toString());
+                    water3L.setAttribute('height', waterH.toString());
+                    water3L.setAttribute('opacity', p > 0 ? '1' : '0');
+
+                    juice3L.setAttribute('x', '30');
+                    juice3L.setAttribute('width', '100');
+                    juice3L.setAttribute('y', (yVal + waterH).toString());
+                    juice3L.setAttribute('height', juiceH.toString());
+                    juice3L.setAttribute('opacity', (1 - p).toString());
+
+                    juicePure3L.setAttribute('x', '30');
+                    juicePure3L.setAttribute('width', '100');
+                    juicePure3L.setAttribute('y', (yVal + waterH).toString());
+                    juicePure3L.setAttribute('height', juiceH.toString());
+                    juicePure3L.setAttribute('opacity', p.toString());
+
+                    water3R.setAttribute('height', '0');
+                    juice3R.setAttribute('height', '0');
+                    juicePure3R.setAttribute('height', '0');
+
+                    // 标签
+                    setLabel(wL3L, 55, '', '0');
+                    setLabel(jL3L, 125, '', '0');
+                    setLabel(wL3R, 55, '', '0');
+                    setLabel(jL3R, 125, '', '0');
+
+                    wL3C.setAttribute('width', '100');
+                    jL3C.setAttribute('width', '100');
+                    if (p > 0.5) {
+                        setLabel(wL3C, yVal + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                        setLabel(jL3C, yVal + waterH + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+                        setLabel(mL3C, 90, '', '0');
+                    } else {
+                        setLabel(wL3C, 90, '', '0');
+                        setLabel(jL3C, 90, '', '0');
+                        setLabel(mL3C, yVal + (waterH + juiceH) / 2, '混合果汁', (waterH + juiceH) > 10 ? '1' : '0');
+                    }
+                } else {
+                    // 默认模式（无分割）
+                    verticalLine3.setAttribute('opacity', '0');
+                    middleLine3.setAttribute('opacity', '0');
+                    divisionLines3.setAttribute('opacity', '0');
+                    horizontalTicks3.setAttribute('opacity', '0');
+                    horizontalLabelNum3.textContent = '1';
+                    horizontalLabelDenom3.textContent = '2';
+
+                    surface3Full.style.display = 'block';
+                    surface3R.style.display = 'none';
+
+                    const yVal = 20 + 70 * dragProgress3;
+                    surface3Full.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    water3L.setAttribute('x', '30');
+                    water3L.setAttribute('width', '100');
+                    water3L.setAttribute('y', yVal.toString());
+                    water3L.setAttribute('height', Math.max(0, waterBottom - yVal).toString());
+                    water3L.setAttribute('opacity', p > 0 ? '1' : '0');
+
+                    juice3L.setAttribute('x', '30');
+                    juice3L.setAttribute('width', '100');
+                    juice3L.setAttribute('y', Math.max(yVal, waterBottom).toString());
+                    juice3L.setAttribute('height', (160 - Math.max(yVal, waterBottom)).toString());
+                    juice3L.setAttribute('opacity', (1 - p).toString());
+
+                    juicePure3L.setAttribute('x', '30');
+                    juicePure3L.setAttribute('width', '100');
+                    juicePure3L.setAttribute('y', Math.max(yVal, waterBottom).toString());
+                    juicePure3L.setAttribute('height', (160 - Math.max(yVal, waterBottom)).toString());
+                    juicePure3L.setAttribute('opacity', p.toString());
+
+                    water3R.setAttribute('height', '0');
+                    juice3R.setAttribute('height', '0');
+                    juicePure3R.setAttribute('height', '0');
+
+                    // 标签
+                    setLabel(wL3L, 55, '', '0');
+                    setLabel(jL3L, 125, '', '0');
+                    setLabel(wL3R, 55, '', '0');
+                    setLabel(jL3R, 125, '', '0');
+
+                    wL3C.setAttribute('width', '100');
+                    jL3C.setAttribute('width', '100');
+                    if (p > 0.5) {
+                        setLabel(wL3C, yVal + (Math.max(0, waterBottom - yVal)) / 2, '水', (yVal < waterBottom) ? '1' : '0');
+                        setLabel(jL3C, Math.max(yVal, waterBottom) + (160 - Math.max(yVal, waterBottom)) / 2, '果汁', (yVal < 160) ? '1' : '0');
+                        setLabel(mL3C, 90, '', '0');
+                    } else {
+                        setLabel(wL3C, 90, '', '0');
+                        setLabel(jL3C, 90, '', '0');
+                        setLabel(mL3C, yVal + (160 - yVal) / 2, '混合果汁', (yVal < 160) ? '1' : '0');
+                    }
+                }
+            }
+
+            // --- 第四步：加满水渲染 ---
+            if (step4Choice === 'fill') {
+                const water4f = document.getElementById('water-4f');
+                const juice4f = document.getElementById('juice-4f');
+                const jLabel4f = document.getElementById('juice-label-4f');
+                const wLabel4f = document.getElementById('water-label-4f');
+                const waterGroup4f = document.getElementById('water-group-4f');
+
+                waterGroup4f.style.display = 'block';
+
+                const yVal = 90 - 70 * waterProgress4;
+                waterGroup4f.setAttribute('transform', `translate(0, ${yVal - 90})`);
+
+                water4f.setAttribute('y', yVal.toString());
+                water4f.setAttribute('height', (125 - yVal).toString());
+
+                setLabel(jLabel4f, 125 + 35 / 2, '果汁', '1');
+                setLabel(wLabel4f, yVal + (125 - yVal) / 2, '水', '1');
+            }
+
+            // --- 第四步：直接喝完渲染 ---
+            if (step4Choice === 'drink_all') {
+                const water4d = document.getElementById('water-4d');
+                const juice4d = document.getElementById('juice-4d');
+                const wLabel4d = document.getElementById('water-label-4d');
+                const jLabel4d = document.getElementById('juice-label-4d');
+                const surface4d = document.getElementById('surface-group-4d');
+
+                surface4d.style.display = 'block';
+
+                // 液面从 y=90 下降到 y=160
+                const surfaceY = 90 + 70 * dragProgress4;
+                surface4d.setAttribute('transform', `translate(0, ${surfaceY - 20})`);
+
+                // 水在上 (y=90 到 y=125), 果汁在下 (y=125 到 y=160)
+                const waterY = Math.max(surfaceY, 90);
+                const waterH = Math.max(0, Math.min(35, 125 - surfaceY));
+                const juiceY = Math.max(surfaceY, 125);
+                const juiceH = Math.max(0, 160 - juiceY);
+
+                water4d.setAttribute('y', waterY.toString());
+                water4d.setAttribute('height', waterH.toString());
+                juice4d.setAttribute('y', juiceY.toString());
+                juice4d.setAttribute('height', juiceH.toString());
+
+                setLabel(wLabel4d, waterY + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                setLabel(jLabel4d, juiceY + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+            }
+
+            // --- 第五步：直接喝完渲染 ---
+            if (step5Choice === 'drink_all') {
+                const water5a = document.getElementById('water-5a');
+                const juice5a = document.getElementById('juice-5a');
+                const wLabel5a = document.getElementById('water-label-5a');
+                const jLabel5a = document.getElementById('juice-label-5a');
+                const surface5a = document.getElementById('surface-group-5a');
+
+                surface5a.style.display = 'block';
+
+                // 液面从 y=20 下降到 y=160
+                const surfaceY = 20 + 140 * dragProgress5;
+                surface5a.setAttribute('transform', `translate(0, ${surfaceY - 20})`);
+
+                // 水在上 (y=20 到 y=125), 果汁在下 (y=125 到 y=160)
+                const waterY = Math.max(surfaceY, 20);
+                const waterH = Math.max(0, Math.min(105, 125 - surfaceY));
+                const juiceY = Math.max(surfaceY, 125);
+                const juiceH = Math.max(0, 160 - juiceY);
+
+                water5a.setAttribute('y', waterY.toString());
+                water5a.setAttribute('height', waterH.toString());
+                juice5a.setAttribute('y', juiceY.toString());
+                juice5a.setAttribute('height', juiceH.toString());
+
+                setLabel(wLabel5a, waterY + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                setLabel(jLabel5a, juiceY + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+            }
+
+            // --- 第五步：再喝半杯渲染 ---
+            if (step5Choice === 'drink_half') {
+                const water5hL = document.getElementById('water-5h-L');
+                const juice5hL = document.getElementById('juice-5h-L');
+                const water5hR = document.getElementById('water-5h-R');
+                const juice5hR = document.getElementById('juice-5h-R');
+
+                const wL5hC = document.getElementById('water-label-5h-C');
+                const jL5hC = document.getElementById('juice-label-5h-C');
+                const wL5hL = document.getElementById('water-label-5h-L');
+                const jL5hL = document.getElementById('juice-label-5h-L');
+                const wL5hR = document.getElementById('water-label-5h-R');
+                const jL5hR = document.getElementById('juice-label-5h-R');
+
+                const verticalLine5h = document.getElementById('vertical-split-line-5h');
+                const middleLine5h = document.getElementById('middle-h-line-5h');
+                const divisionLinesQuarters5h = document.getElementById('division-lines-quarters-5h');
+                const divisionLinesEighths5h = document.getElementById('division-lines-eighths-5h');
+                const quarters = document.getElementById('ticks-quarters-5h');
+                const eighths = document.getElementById('ticks-eighths-5h');
+
+                const surface5hFull = document.getElementById('surface-group-5h-Full');
+                const surface5hR = document.getElementById('surface-group-5h-R');
+
+                // 初始：水 3/4 (h=105, y=20), 果汁 1/4 (h=35, y=125)
+                if (showVerticalSplit5) {
+                    verticalLine5h.setAttribute('opacity', '1');
+                    middleLine5h.setAttribute('opacity', '1');
+                    if (divisionLinesQuarters5h) divisionLinesQuarters5h.setAttribute('opacity', '1');
+                    if (divisionLinesEighths5h) divisionLinesEighths5h.setAttribute('opacity', '0');
+                    if (quarters) quarters.setAttribute('opacity', '1');
+                    if (eighths) eighths.setAttribute('opacity', '0');
+
+                    surface5hFull.style.display = 'none';
+                    surface5hR.style.display = 'block';
+
+                    const xVal = 130 - 50 * dragProgress5;
+                    surface5hR.setAttribute('transform', `translate(${xVal - 130}, 0)`);
+
+                    const rightW = Math.max(0, xVal - 80);
+
+                    // 左半侧 - 不变
+                    water5hL.setAttribute('x', '30');
+                    water5hL.setAttribute('width', '51');
+                    water5hL.setAttribute('y', '20');
+                    water5hL.setAttribute('height', '105');
+
+                    juice5hL.setAttribute('x', '30');
+                    juice5hL.setAttribute('width', '51');
+                    juice5hL.setAttribute('y', '125');
+                    juice5hL.setAttribute('height', '35');
+
+                    // 右半侧 - 缩小
+                    water5hR.setAttribute('x', '80');
+                    water5hR.setAttribute('width', rightW.toString());
+                    water5hR.setAttribute('y', '20');
+                    water5hR.setAttribute('height', '105');
+
+                    juice5hR.setAttribute('x', '80');
+                    juice5hR.setAttribute('width', rightW.toString());
+                    juice5hR.setAttribute('y', '125');
+                    juice5hR.setAttribute('height', '35');
+
+                    // 标签
+                    setLabel(wL5hL, 72, '', '0');
+                    setLabel(jL5hL, 142, '', '0');
+                    setLabel(wL5hR, 72, '', '0');
+                    setLabel(jL5hR, 142, '', '0');
+
+                    const totalW = 51 + rightW;
+                    wL5hC.setAttribute('width', totalW.toString());
+                    jL5hC.setAttribute('width', totalW.toString());
+                    setLabel(wL5hC, 72, '水', '1');
+                    setLabel(jL5hC, 142, '果汁', '1');
+                } else if (showHorizontalSplit5) {
+                    verticalLine5h.setAttribute('opacity', '0');
+                    middleLine5h.setAttribute('opacity', '1');
+                    if (divisionLinesQuarters5h) divisionLinesQuarters5h.setAttribute('opacity', '1');
+                    if (divisionLinesEighths5h) divisionLinesEighths5h.setAttribute('opacity', '1');
+                    if (quarters) quarters.setAttribute('opacity', '0');
+                    if (eighths) eighths.setAttribute('opacity', '1');
+
+                    surface5hFull.style.display = 'block';
+                    surface5hR.style.display = 'none';
+
+                    const yVal = 20 + 70 * dragProgress5;
+                    surface5hFull.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    // 等比缩小
+                    const waterH = 105 * (1 - dragProgress5 / 2);
+                    const juiceH = 35 * (1 - dragProgress5 / 2);
+
+                    water5hL.setAttribute('x', '30');
+                    water5hL.setAttribute('width', '100');
+                    water5hL.setAttribute('y', yVal.toString());
+                    water5hL.setAttribute('height', waterH.toString());
+
+                    juice5hL.setAttribute('x', '30');
+                    juice5hL.setAttribute('width', '100');
+                    juice5hL.setAttribute('y', (yVal + waterH).toString());
+                    juice5hL.setAttribute('height', juiceH.toString());
+
+                    water5hR.setAttribute('height', '0');
+                    juice5hR.setAttribute('height', '0');
+
+                    setLabel(wL5hL, 90, '', '0');
+                    setLabel(jL5hL, 90, '', '0');
+                    setLabel(wL5hR, 90, '', '0');
+                    setLabel(jL5hR, 90, '', '0');
+
+                    wL5hC.setAttribute('width', '100');
+                    jL5hC.setAttribute('width', '100');
+                    setLabel(wL5hC, yVal + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                    setLabel(jL5hC, yVal + waterH + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+                } else {
+                    // 默认模式
+                    verticalLine5h.setAttribute('opacity', '0');
+                    middleLine5h.setAttribute('opacity', '0');
+                    if (divisionLinesQuarters5h) divisionLinesQuarters5h.setAttribute('opacity', '0');
+                    if (divisionLinesEighths5h) divisionLinesEighths5h.setAttribute('opacity', '0');
+                    if (quarters) quarters.setAttribute('opacity', '1');
+                    if (eighths) eighths.setAttribute('opacity', '0');
+
+                    surface5hFull.style.display = 'block';
+                    surface5hR.style.display = 'none';
+
+                    const yVal = 20 + 70 * dragProgress5;
+                    surface5hFull.setAttribute('transform', `translate(0, ${yVal - 20})`);
+
+                    const waterH = 105 * (1 - dragProgress5 / 2);
+                    const juiceH = 35 * (1 - dragProgress5 / 2);
+
+                    water5hL.setAttribute('x', '30');
+                    water5hL.setAttribute('width', '100');
+                    water5hL.setAttribute('y', yVal.toString());
+                    water5hL.setAttribute('height', waterH.toString());
+
+                    juice5hL.setAttribute('x', '30');
+                    juice5hL.setAttribute('width', '100');
+                    juice5hL.setAttribute('y', (yVal + waterH).toString());
+                    juice5hL.setAttribute('height', juiceH.toString());
+
+                    water5hR.setAttribute('height', '0');
+                    juice5hR.setAttribute('height', '0');
+
+                    setLabel(wL5hL, 90, '', '0');
+                    setLabel(jL5hL, 90, '', '0');
+                    setLabel(wL5hR, 90, '', '0');
+                    setLabel(jL5hR, 90, '', '0');
+
+                    wL5hC.setAttribute('width', '100');
+                    jL5hC.setAttribute('width', '100');
+                    setLabel(wL5hC, yVal + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                    setLabel(jL5hC, yVal + waterH + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+                }
+            }
+
+            // --- 第六步：全部喝完渲染 ---
+            const card6 = document.getElementById('card-6-drink-all');
+            if (card6 && !card6.classList.contains('step-card-hidden')) {
+                const water6 = document.getElementById('water-6');
+                const juice6 = document.getElementById('juice-6');
+                const wL6 = document.getElementById('water-label-6');
+                const jL6 = document.getElementById('juice-label-6');
+                const surface6 = document.getElementById('surface-group-6');
+
+                if (surface6) {
+                    surface6.style.display = 'block';
+
+                    const yVal = 90 + 70 * dragProgress6; // 90 to 160
+                    surface6.setAttribute('transform', `translate(0, ${yVal - 90})`);
+
+                    const ratio = 1 - dragProgress6;
+                    const waterH = 52.5 * ratio;
+                    const juiceH = 17.5 * ratio;
+
+                    water6.setAttribute('y', yVal.toString());
+                    water6.setAttribute('height', waterH.toString());
+
+                    juice6.setAttribute('y', (yVal + waterH).toString());
+                    juice6.setAttribute('height', juiceH.toString());
+
+                    setLabel(wL6, yVal + waterH / 2, '水', waterH > 10 ? '1' : '0');
+                    setLabel(jL6, yVal + waterH + juiceH / 2, '果汁', juiceH > 10 ? '1' : '0');
+                }
+            }
+
+            // --- 更新全局操作提示 ---
+            const globalHint = document.getElementById('global-hint');
+            let hintText = '💡 点击卡片展开步骤，开始互动吧！';
+
+            if (step6Visible) {
+                if (dragProgress6 === 0) {
+                    hintText = '💡 向下拖动，把最后剩下的全部喝完吧！';
+                } else if (dragProgress6 < 1) {
+                    hintText = '💡 继续向下拖动，直到喝完';
+                } else {
+                    hintText = '💡 思考：最后全部喝完，喝掉了多少水和果汁？';
+                }
+            } else if (step5Choice === 'drink_half') {
+                if (!showVerticalSplit5 && !showHorizontalSplit5) {
+                    hintText = '💡 点击杯子右侧的 1/2 或底部的切分按钮查看不同的等分均分模型';
+                } else if (dragProgress5 === 0) {
+                    hintText = showVerticalSplit5 ? '💡 按住右侧紫色竖条向左拖动，表示喝掉半杯' : '💡 按住杯子顶部的紫色横条向下拖动，表示喝掉半杯';
+                } else if (dragProgress5 < 1) {
+                    hintText = '💡 继续拖动，直到喝完半杯';
+                } else {
+                    hintText = '💡 思考：又喝了半杯，喝掉了多少果汁和水？';
+                }
+            } else if (step5Choice === 'drink_all') {
+                if (dragProgress5 === 0) {
+                    hintText = '💡 按住橙色横条向下拖动，把剩下的全部喝完吧！';
+                } else if (dragProgress5 < 1) {
+                    hintText = '💡 继续向下拖动，直到喝完';
+                } else {
+                    hintText = '💡 思考：全部喝完了，共喝掉了多少果汁和水？';
+                }
+            } else if (step5Visible && step5Choice === null && step4Choice === 'fill') {
+                hintText = '💡 选择下一步：直接喝完还是再喝半杯？';
+            } else if (step4Choice === 'fill') {
+                if (step4Stage === 1) {
+                    if (waterProgress4 === 0) {
+                        hintText = '💡 按住蓝色横条往上拖动，加满水';
+                    } else if (waterProgress4 < 1) {
+                        hintText = '💡 继续向上拖动，直到杯子加满';
+                    }
+                } else {
+                    if (separationProgress4 === 0) {
+                        hintText = '💡 按住顶部的灰色横条向下拖动，分离水和果汁';
+                    } else if (separationProgress4 < 1) {
+                        hintText = '💡 继续向下拖动，直到完全分离';
+                    } else {
+                        hintText = '💡 思考：加满水后杯中各有多少？';
+                    }
+                }
+            } else if (step4Choice === 'drink_all') {
+                if (dragProgress4 === 0) {
+                    hintText = '💡 按住橙色横条向下拖动，把剩下的全部喝完吧！';
+                } else if (dragProgress4 < 1) {
+                    hintText = '💡 继续向下拖动，直到喝完';
+                } else {
+                    hintText = '💡 思考：全部喝完了，共喝掉了多少果汁和水？';
+                }
+            } else if (step4Visible && step4Choice === null) {
+                hintText = '💡 选择下一步：加满水还是直接喝完？';
+            } else if (cardExpanded[3]) {
+                if (!showVerticalSplit3 && !showHorizontalSplit3) {
+                    hintText = '💡 点击杯子右侧的 1/2 或 1/4 标签查看不同的等分均分模型';
+                } else if (dragProgress3 === 0) {
+                    hintText = showVerticalSplit3 ? '💡 按住右侧半杯的紫色横条向下拖动，表示喝掉半杯' : '💡 按住杯子顶部的紫色横条向下拖动，表示喝掉半杯';
+                } else if (dragProgress3 > 0 && dragProgress3 < 1) {
+                    hintText = '💡 继续向下拖动，直到喝完半杯';
+                } else {
+                    hintText = '💡 思考：又喝了半杯，喝掉了多少果汁和水？';
+                }
+            } else if (cardExpanded[2]) {
+                if (step2Stage === 1) {
+                    if (waterProgress2 === 0) {
+                        hintText = '💡 按住杯子中间 的 蓝色横条往上拖动，加满水';
+                    } else if (waterProgress2 > 0 && waterProgress2 < 1) {
+                        hintText = '💡 继续向上拖动，直到杯子加满';
+                    }
+                } else {
+                    if (separationProgress2 === 0) {
+                        hintText = '💡 按住杯子顶部的灰色横条向下拖动，分离水和果汁';
+                    } else if (separationProgress2 > 0 && separationProgress2 < 1) {
+                        hintText = '💡 继续向下拖动，直到完全分离';
+                    } else {
+                        hintText = '💡 思考：加满水又分离开，喝掉了多少果汁和水？';
+                    }
+                }
+            } else if (cardExpanded[1]) {
+                if (dragProgress1 === 0) {
+                    hintText = '💡 按住杯子顶部的橙色表面横条向下拖动，喝掉半杯果汁';
+                } else if (dragProgress1 > 0 && dragProgress1 < 1) {
+                    hintText = '💡 继续向下拖动，直到 1/2 刻度';
+                } else {
+                    hintText = '💡 思考：喝掉了多少果汁和水？';
+                }
+            }
+
+            globalHint.innerHTML = hintText;
+
+            // --- 答案按键渲染 ---
+            for (let id in revealed) {
+                const btn = document.getElementById(`ans-${id}`);
+                if (btn) {
+                    if (revealed[id]) {
+                        btn.classList.add('revealed');
+                        btn.innerHTML = answersHtml[id];
+                    } else {
+                        btn.classList.remove('revealed');
+                        btn.innerHTML = '？';
+                    }
+                }
+            }
+        }
+
+        // === 拖拽事件初始化 (步骤 1-3) ===
+        let isDraggingMembrane1 = false;
+        let isDraggingMembrane2 = false;
+        let isDraggingMembrane3Full = false;
+        let isDraggingMembrane3R = false;
+
+        function initDrag() {
+            let svg1Rect = null;
+            let svg2Rect = null;
+            let svg3Rect = null;
+
+            // --- 第一步拖拽事件 ---
+            const handle1 = document.getElementById('surface-group-1');
+            const svg1 = handle1.closest('svg');
+
+            handle1.addEventListener('pointerdown', (e) => {
+                isDraggingMembrane1 = true;
+                handle1.setPointerCapture(e.pointerId);
+                svg1Rect = svg1.getBoundingClientRect();
+                updateDrag1(e);
+                e.stopPropagation();
+            });
+
+            handle1.addEventListener('pointermove', (e) => {
+                if (!isDraggingMembrane1) return;
+                updateDrag1(e);
+                e.stopPropagation();
+            });
+
+            const onPointerUp1 = (e) => {
+                if (!isDraggingMembrane1) return;
+                isDraggingMembrane1 = false;
+                svg1Rect = null;
+                handle1.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            handle1.addEventListener('pointerup', onPointerUp1);
+            handle1.addEventListener('pointercancel', onPointerUp1);
+
+            function updateDrag1(e) {
+                if (!svg1Rect) svg1Rect = svg1.getBoundingClientRect();
+                const rect = svg1Rect;
+                const clientY = e.clientY;
+                const svgY = (clientY - rect.top) * (180 / rect.height);
+
+                let yVal = Math.max(20, Math.min(90, svgY));
+                dragProgress1 = (yVal - 20) / 70;
+
+                state.step1 = (dragProgress1 > 0.1);
+                render();
+            }
+
+            // --- 第二步拖拽事件 (膜) ---
+            const membrane = document.getElementById('membrane-group-2');
+            const svg2 = membrane.closest('svg');
+
+            membrane.addEventListener('pointerdown', (e) => {
+                isDraggingMembrane2 = true;
+                membrane.setPointerCapture(e.pointerId);
+                svg2Rect = svg2.getBoundingClientRect();
+                updateDrag2(e);
+                e.stopPropagation();
+            });
+
+            membrane.addEventListener('pointermove', (e) => {
+                if (!isDraggingMembrane2) return;
+                updateDrag2(e);
+                e.stopPropagation();
+            });
+
+            const onPointerUp2 = (e) => {
+                if (!isDraggingMembrane2) return;
+                isDraggingMembrane2 = false;
+                svg2Rect = null;
+                membrane.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            membrane.addEventListener('pointerup', onPointerUp2);
+            membrane.addEventListener('pointercancel', onPointerUp2);
+
+            function updateDrag2(e) {
+                if (!svg2Rect) svg2Rect = svg2.getBoundingClientRect();
+                const rect = svg2Rect;
+                const clientY = e.clientY;
+                const svgY = (clientY - rect.top) * (180 / rect.height);
+
+                let yVal = Math.max(20, Math.min(90, svgY));
+                separationProgress2 = (yVal - 20) / 70;
+
+                state.step2 = (separationProgress2 > 0.1);
+                render();
+            }
+
+            // --- 第二步加水拖拽事件 ---
+            const waterGroup2El = document.getElementById('water-group-2');
+            let isDraggingWater2 = false;
+
+            waterGroup2El.addEventListener('pointerdown', (e) => {
+                isDraggingWater2 = true;
+                waterGroup2El.setPointerCapture(e.pointerId);
+                svg2Rect = svg2.getBoundingClientRect();
+                updateDragWater2(e);
+                e.stopPropagation();
+            });
+
+            waterGroup2El.addEventListener('pointermove', (e) => {
+                if (!isDraggingWater2) return;
+                updateDragWater2(e);
+                e.stopPropagation();
+            });
+
+            const onPointerUpWater2 = (e) => {
+                if (!isDraggingWater2) return;
+                isDraggingWater2 = false;
+                svg2Rect = null;
+                waterGroup2El.releasePointerCapture(e.pointerId);
+                if (waterProgress2 >= 0.95) {
+                    waterProgress2 = 1;
+                    step2Stage = 2;
+                    render();
+                }
+                e.stopPropagation();
+            };
+            waterGroup2El.addEventListener('pointerup', onPointerUpWater2);
+            waterGroup2El.addEventListener('pointercancel', onPointerUpWater2);
+
+            function updateDragWater2(e) {
+                if (!svg2Rect) svg2Rect = svg2.getBoundingClientRect();
+                const rect = svg2Rect;
+                const clientY = e.clientY;
+                const svgY = (clientY - rect.top) * (180 / rect.height);
+
+                let yVal = Math.max(20, Math.min(90, svgY));
+                waterProgress2 = (90 - yVal) / 70;
+
+                if (waterProgress2 >= 0.95) {
+                    waterProgress2 = 1;
+                }
+                render();
+            }
+
+            // --- 第三步全宽拖拽事件 ---
+            const handle3Full = document.getElementById('surface-group-3-Full');
+            const svg3 = handle3Full.closest('svg');
+
+            handle3Full.addEventListener('pointerdown', (e) => {
+                isDraggingMembrane3Full = true;
+                handle3Full.setPointerCapture(e.pointerId);
+                svg3Rect = svg3.getBoundingClientRect();
+                updateDrag3Full(e);
+                e.stopPropagation();
+            });
+
+            handle3Full.addEventListener('pointermove', (e) => {
+                if (!isDraggingMembrane3Full) return;
+                updateDrag3Full(e);
+                e.stopPropagation();
+            });
+
+            const onPointerUp3Full = (e) => {
+                if (!isDraggingMembrane3Full) return;
+                isDraggingMembrane3Full = false;
+                svg3Rect = null;
+                handle3Full.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            handle3Full.addEventListener('pointerup', onPointerUp3Full);
+            handle3Full.addEventListener('pointercancel', onPointerUp3Full);
+
+            function updateDrag3Full(e) {
+                if (!svg3Rect) svg3Rect = svg3.getBoundingClientRect();
+                const rect = svg3Rect;
+                const clientY = e.clientY;
+                const svgY = (clientY - rect.top) * (180 / rect.height);
+
+                let yVal = Math.max(20, Math.min(90, svgY));
+                dragProgress3 = (yVal - 20) / 70;
+
+                state.step3 = (dragProgress3 > 0.1);
+                render();
+            }
+
+            // --- 第三步右半侧拖拽事件 ---
+            const handle3R = document.getElementById('surface-group-3-R');
+
+            handle3R.addEventListener('pointerdown', (e) => {
+                isDraggingMembrane3R = true;
+                handle3R.setPointerCapture(e.pointerId);
+                svg3Rect = svg3.getBoundingClientRect();
+                updateDrag3R(e);
+                e.stopPropagation();
+            });
+
+            handle3R.addEventListener('pointermove', (e) => {
+                if (!isDraggingMembrane3R) return;
+                updateDrag3R(e);
+                e.stopPropagation();
+            });
+
+            const onPointerUp3R = (e) => {
+                if (!isDraggingMembrane3R) return;
+                isDraggingMembrane3R = false;
+                svg3Rect = null;
+                handle3R.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            handle3R.addEventListener('pointerup', onPointerUp3R);
+            handle3R.addEventListener('pointercancel', onPointerUp3R);
+
+            function updateDrag3R(e) {
+                if (!svg3Rect) svg3Rect = svg3.getBoundingClientRect();
+                const rect = svg3Rect;
+                const clientX = e.clientX;
+                const svgX = (clientX - rect.left) * (160 / rect.width);
+
+                let xVal = Math.max(80, Math.min(130, svgX));
+                dragProgress3 = (130 - xVal) / 50;
+
+                state.step3 = (dragProgress3 > 0.1);
+                render();
+            }
+        } // initDrag 结束
+
+        // === 第四步拖拽初始化 (按需调用) ===
+        function initDragStep4() {
+            if (step4Choice === 'fill') {
+                // 加水手柄
+                const waterGroup4f = document.getElementById('water-group-4f');
+                const svg4f = waterGroup4f.closest('svg');
+                let isDragging4W = false;
+                let svg4fRect = null;
+
+                waterGroup4f.addEventListener('pointerdown', (e) => {
+                    isDragging4W = true;
+                    waterGroup4f.setPointerCapture(e.pointerId);
+                    svg4fRect = svg4f.getBoundingClientRect();
+                    updateDrag4Water(e);
+                    e.stopPropagation();
+                });
+                waterGroup4f.addEventListener('pointermove', (e) => {
+                    if (!isDragging4W) return;
+                    updateDrag4Water(e);
+                    e.stopPropagation();
+                });
+                const up4W = (e) => {
+                    if (!isDragging4W) return;
+                    isDragging4W = false;
+                    svg4fRect = null;
+                    waterGroup4f.releasePointerCapture(e.pointerId);
+                    if (waterProgress4 >= 0.95) {
+                        waterProgress4 = 1;
+                        render();
+                    }
+                    e.stopPropagation();
+                };
+                waterGroup4f.addEventListener('pointerup', up4W);
+                waterGroup4f.addEventListener('pointercancel', up4W);
+
+                function updateDrag4Water(e) {
+                    if (!svg4fRect) svg4fRect = svg4f.getBoundingClientRect();
+                    const svgY = (e.clientY - svg4fRect.top) * (180 / svg4fRect.height);
+                    let yVal = Math.max(20, Math.min(90, svgY));
+                    waterProgress4 = (90 - yVal) / 70;
+                    if (waterProgress4 >= 0.95) waterProgress4 = 1;
+                    render();
+                }
+            } else if (step4Choice === 'drink_all') {
+                // 喝完手柄
+                const surface4d = document.getElementById('surface-group-4d');
+                const svg4d = surface4d.closest('svg');
+                let isDragging4D = false;
+                let svg4dRect = null;
+
+                surface4d.addEventListener('pointerdown', (e) => {
+                    isDragging4D = true;
+                    surface4d.setPointerCapture(e.pointerId);
+                    svg4dRect = svg4d.getBoundingClientRect();
+                    updateDrag4Drink(e);
+                    e.stopPropagation();
+                });
+                surface4d.addEventListener('pointermove', (e) => {
+                    if (!isDragging4D) return;
+                    updateDrag4Drink(e);
+                    e.stopPropagation();
+                });
+                const up4D = (e) => {
+                    if (!isDragging4D) return;
+                    isDragging4D = false;
+                    svg4dRect = null;
+                    surface4d.releasePointerCapture(e.pointerId);
+                    e.stopPropagation();
+                };
+                surface4d.addEventListener('pointerup', up4D);
+                surface4d.addEventListener('pointercancel', up4D);
+
+                function updateDrag4Drink(e) {
+                    if (!svg4dRect) svg4dRect = svg4d.getBoundingClientRect();
+                    const svgY = (e.clientY - svg4dRect.top) * (180 / svg4dRect.height);
+                    // 液面从 y=90 到 y=160
+                    let yVal = Math.max(90, Math.min(160, svgY));
+                    dragProgress4 = (yVal - 90) / 70;
+                    render();
+                }
+            }
+        }
+
+        // 第四步膜拖拽 (分离阶段)
+        function initDragStep4Membrane() {
+            const membrane4f = document.getElementById('membrane-group-4f');
+            const svg4f = membrane4f.closest('svg');
+            let isDragging4M = false;
+            let svg4fRect = null;
+
+            membrane4f.addEventListener('pointerdown', (e) => {
+                isDragging4M = true;
+                membrane4f.setPointerCapture(e.pointerId);
+                svg4fRect = svg4f.getBoundingClientRect();
+                updateDrag4Membrane(e);
+                e.stopPropagation();
+            });
+            membrane4f.addEventListener('pointermove', (e) => {
+                if (!isDragging4M) return;
+                updateDrag4Membrane(e);
+                e.stopPropagation();
+            });
+            const up4M = (e) => {
+                if (!isDragging4M) return;
+                isDragging4M = false;
+                svg4fRect = null;
+                membrane4f.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            membrane4f.addEventListener('pointerup', up4M);
+            membrane4f.addEventListener('pointercancel', up4M);
+
+            function updateDrag4Membrane(e) {
+                if (!svg4fRect) svg4fRect = svg4f.getBoundingClientRect();
+                const svgY = (e.clientY - svg4fRect.top) * (180 / svg4fRect.height);
+                // 膜从 y=20 到 y=125 (水占3/4=105px)
+                let yVal = Math.max(20, Math.min(125, svgY));
+                separationProgress4 = (yVal - 20) / 105;
+                render();
+            }
+        }
+
+        // === 第五步拖拽初始化 (按需调用) ===
+        function initDragStep5() {
+            if (step5Choice === 'drink_all') {
+                const surface5a = document.getElementById('surface-group-5a');
+                const svg5a = surface5a.closest('svg');
+                let isDragging5A = false;
+                let svg5aRect = null;
+
+                surface5a.addEventListener('pointerdown', (e) => {
+                    isDragging5A = true;
+                    surface5a.setPointerCapture(e.pointerId);
+                    svg5aRect = svg5a.getBoundingClientRect();
+                    updateDrag5A(e);
+                    e.stopPropagation();
+                });
+                surface5a.addEventListener('pointermove', (e) => {
+                    if (!isDragging5A) return;
+                    updateDrag5A(e);
+                    e.stopPropagation();
+                });
+                const up5A = (e) => {
+                    if (!isDragging5A) return;
+                    isDragging5A = false;
+                    svg5aRect = null;
+                    surface5a.releasePointerCapture(e.pointerId);
+                    e.stopPropagation();
+                };
+                surface5a.addEventListener('pointerup', up5A);
+                surface5a.addEventListener('pointercancel', up5A);
+
+                function updateDrag5A(e) {
+                    if (!svg5aRect) svg5aRect = svg5a.getBoundingClientRect();
+                    const svgY = (e.clientY - svg5aRect.top) * (180 / svg5aRect.height);
+                    let yVal = Math.max(20, Math.min(160, svgY));
+                    dragProgress5 = (yVal - 20) / 140;
+                    render();
+                }
+            } else if (step5Choice === 'drink_half') {
+                // 全宽拖拽
+                const handle5hFull = document.getElementById('surface-group-5h-Full');
+                const svg5h = handle5hFull.closest('svg');
+                let isDragging5hFull = false;
+                let svg5hRect = null;
+
+                handle5hFull.addEventListener('pointerdown', (e) => {
+                    isDragging5hFull = true;
+                    handle5hFull.setPointerCapture(e.pointerId);
+                    svg5hRect = svg5h.getBoundingClientRect();
+                    updateDrag5hFull(e);
+                    e.stopPropagation();
+                });
+                handle5hFull.addEventListener('pointermove', (e) => {
+                    if (!isDragging5hFull) return;
+                    updateDrag5hFull(e);
+                    e.stopPropagation();
+                });
+                const up5hFull = (e) => {
+                    if (!isDragging5hFull) return;
+                    isDragging5hFull = false;
+                    svg5hRect = null;
+                    handle5hFull.releasePointerCapture(e.pointerId);
+                    e.stopPropagation();
+                };
+                handle5hFull.addEventListener('pointerup', up5hFull);
+                handle5hFull.addEventListener('pointercancel', up5hFull);
+
+                function updateDrag5hFull(e) {
+                    if (!svg5hRect) svg5hRect = svg5h.getBoundingClientRect();
+                    const svgY = (e.clientY - svg5hRect.top) * (180 / svg5hRect.height);
+                    let yVal = Math.max(20, Math.min(90, svgY));
+                    dragProgress5 = (yVal - 20) / 70;
+                    render();
+                }
+
+                // 右侧拖拽
+                const handle5hR = document.getElementById('surface-group-5h-R');
+                let isDragging5hR = false;
+
+                handle5hR.addEventListener('pointerdown', (e) => {
+                    isDragging5hR = true;
+                    handle5hR.setPointerCapture(e.pointerId);
+                    svg5hRect = svg5h.getBoundingClientRect();
+                    updateDrag5hR(e);
+                    e.stopPropagation();
+                });
+                handle5hR.addEventListener('pointermove', (e) => {
+                    if (!isDragging5hR) return;
+                    updateDrag5hR(e);
+                    e.stopPropagation();
+                });
+                const up5hR = (e) => {
+                    if (!isDragging5hR) return;
+                    isDragging5hR = false;
+                    svg5hRect = null;
+                    handle5hR.releasePointerCapture(e.pointerId);
+                    e.stopPropagation();
+                };
+                handle5hR.addEventListener('pointerup', up5hR);
+                handle5hR.addEventListener('pointercancel', up5hR);
+
+                function updateDrag5hR(e) {
+                    if (!svg5hRect) svg5hRect = svg5h.getBoundingClientRect();
+                    const svgX = (e.clientX - svg5hRect.left) * (160 / svg5hRect.width);
+                    let xVal = Math.max(80, Math.min(130, svgX));
+                    dragProgress5 = (130 - xVal) / 50;
+                    render();
+                }
+            }
+        }
+
+        // === 第六步拖拽初始化 ===
+        function initDragStep6() {
+            const surface6 = document.getElementById('surface-group-6');
+            if (!surface6) return;
+            const svg6 = surface6.closest('svg');
+            let isDragging6 = false;
+            let svg6Rect = null;
+
+            surface6.addEventListener('pointerdown', (e) => {
+                isDragging6 = true;
+                surface6.setPointerCapture(e.pointerId);
+                svg6Rect = svg6.getBoundingClientRect();
+                updateDrag6(e);
+                e.stopPropagation();
+            });
+            surface6.addEventListener('pointermove', (e) => {
+                if (!isDragging6) return;
+                updateDrag6(e);
+                e.stopPropagation();
+            });
+            const up6 = (e) => {
+                if (!isDragging6) return;
+                isDragging6 = false;
+                svg6Rect = null;
+                surface6.releasePointerCapture(e.pointerId);
+                e.stopPropagation();
+            };
+            surface6.addEventListener('pointerup', up6);
+            surface6.addEventListener('pointercancel', up6);
+
+            function updateDrag6(e) {
+                if (!svg6Rect) svg6Rect = svg6.getBoundingClientRect();
+                const svgY = (e.clientY - svg6Rect.top) * (180 / svg6Rect.height);
+                let yVal = Math.max(90, Math.min(160, svgY));
+                dragProgress6 = (yVal - 90) / 70;
+                render();
+            }
+        }
+
+        // 初始化首次渲染与滑块计算
+        initDrag();
+        render();
+        setTimeout(scrollSlider, 200);
+
+    </script>
+</body>
+
+</html>

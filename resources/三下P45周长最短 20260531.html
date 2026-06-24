@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>16 个正方形，周长最短</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: linear-gradient(#aaa 1px, transparent 1px),
+                linear-gradient(90deg, #aaa 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        .container {
+            flex: 1;
+            position: relative;
+            touch-action: none;
+        }
+
+        #draw-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .draggable {
+            position: absolute;
+            cursor: move;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            will-change: transform;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .draggable.outline-mode {
+            border-width: 4px;
+            border-style: solid;
+        }
+
+        .draggable.blue,
+        .source.blue.active {
+            border-color: #357abd;
+        }
+
+        .draggable.orange,
+        .source.orange.active {
+            border-color: #d48a1b;
+        }
+
+        .draggable.red,
+        .source.red.active {
+            border-color: #b00217;
+        }
+
+        .draggable.green,
+        .source.green.active {
+            border-color: #68ad1d;
+        }
+
+        .draggable.blue.outline-mode {
+            background-color: rgba(74, 144, 226, 0.2) !important;
+        }
+
+        .draggable.orange.outline-mode {
+            background-color: rgba(245, 166, 35, 0.2) !important;
+        }
+
+        .draggable.red.outline-mode {
+            background-color: rgba(208, 2, 27, 0.2) !important;
+        }
+
+        .draggable.green.outline-mode {
+            background-color: rgba(126, 211, 33, 0.2) !important;
+        }
+
+        .source-container {
+            padding: 15px 20px;
+            background: #fdfdfd;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 60;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-left: auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .tool-group {
+            display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .button {
+            height: 48px;
+            background: #222;
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            white-space: nowrap;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .button.tool-btn {
+            padding: 0 12px;
+            opacity: 0.6;
+        }
+
+        .button.active {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .button.circle {
+            width: 48px;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .size-control input {
+            width: 100px;
+            height: 20px;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        .size-control input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+
+        .size-control input::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .source {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            opacity: 0.4;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .source.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .blue {
+            background-color: #4a90e2;
+        }
+
+        .orange {
+            background-color: #f5a623;
+        }
+
+        .red {
+            background-color: #d0021b;
+        }
+
+        .green {
+            background-color: #7ed321;
+        }
+
+        /* Macaron colors for specific buttons */
+        #outline-btn {
+            background-color: #bae1ff;
+        }
+
+        /* Light blue */
+        #clear-btn {
+            background-color: #ffb3ba;
+        }
+
+        /* Light pink */
+        #hand-btn {
+            background-color: #e5e5e5;
+        }
+
+        #hand-btn.active {
+            box-shadow: inset 0 0 0 3px #999, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #pen-btn {
+            background-color: #ffffba;
+        }
+
+        #pen-btn.active {
+            box-shadow: inset 0 0 0 3px #c4c40b, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #eraser-btn {
+            background-color: #baffc9;
+        }
+
+        #eraser-btn.active {
+            box-shadow: inset 0 0 0 3px #6eb381, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #modify-btn {
+            background-color: #ffdfba;
+        }
+
+        /* Virtual Keyboard Styles */
+        .keyboard-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 90px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 100;
+            width: 240px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            font-family: system-ui, -apple-system, sans-serif;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(10px);
+            opacity: 0;
+            user-select: none;
+        }
+
+        .keyboard-panel.show {
+            display: flex;
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .keyboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .keyboard-limit-hint {
+            color: #e07a5f;
+            font-size: 11px;
+            background: rgba(224, 122, 95, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .keyboard-display {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 20px;
+            font-size: 28px;
+            font-weight: 700;
+            color: #222;
+            letter-spacing: 1px;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        .keyboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .keyboard-key {
+            height: 48px;
+            border: none;
+            border-radius: 12px;
+            background: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .keyboard-key:hover {
+            background: #fdfdfd;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .keyboard-key:active {
+            background: #f0f0f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transform: translateY(1px);
+        }
+
+        .keyboard-key.action-key {
+            background: #f5f5f7;
+            font-size: 16px;
+            color: #555;
+        }
+
+        .keyboard-key.action-key:hover {
+            background: #eeeeee;
+        }
+
+        .keyboard-confirm-btn {
+            height: 48px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #a2d2ff, #bae1ff);
+            font-size: 16px;
+            font-weight: bold;
+            color: #385a7c;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(186, 225, 255, 0.4);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .keyboard-confirm-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(186, 225, 255, 0.6);
+        }
+
+        .keyboard-confirm-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(186, 225, 255, 0.3);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .keyboard-display.shake {
+            animation: shake 0.3s ease-in-out;
+            border-color: #ffb3ba;
+            background: rgba(255, 179, 186, 0.15);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+        <canvas id="draw-canvas"></canvas>
+    </div>
+    <div class="source-container">
+        <div class="source blue active" id="source-blue" data-color="blue">16</div>
+        <div class="source orange" id="source-orange" data-color="orange">16</div>
+        <div class="source red" id="source-red" data-color="red">16</div>
+        <div class="source green" id="source-green" data-color="green">16</div>
+        <div class="controls">
+            <div class="tool-group">
+                <button class="button tool-btn active" id="hand-btn">手</button>
+                <button class="button tool-btn" id="pen-btn">笔</button>
+                <button class="button tool-btn" id="eraser-btn">橡皮</button>
+            </div>
+            <div class="size-control">
+                <label>大小:</label>
+                <input type="range" id="size-input" value="90" min="20" max="250" step="2">
+            </div>
+            <button class="button" id="outline-btn">周长模式</button>
+            <button class="button circle" id="modify-btn">改</button>
+            <button class="button circle" id="clear-btn">清</button>
+        </div>
+    </div>
+
+    <!-- Virtual Keyboard for Modifying Block Count -->
+    <div class="keyboard-panel" id="keyboard-panel">
+        <div class="keyboard-header">
+            <span>修改数量</span>
+            <span class="keyboard-limit-hint">最多30个</span>
+        </div>
+        <div class="keyboard-display" id="keyboard-display">16</div>
+        <div class="keyboard-grid">
+            <button class="keyboard-key" data-key="1">1</button>
+            <button class="keyboard-key" data-key="2">2</button>
+            <button class="keyboard-key" data-key="3">3</button>
+            <button class="keyboard-key" data-key="4">4</button>
+            <button class="keyboard-key" data-key="5">5</button>
+            <button class="keyboard-key" data-key="6">6</button>
+            <button class="keyboard-key" data-key="7">7</button>
+            <button class="keyboard-key" data-key="8">8</button>
+            <button class="keyboard-key" data-key="9">9</button>
+            <button class="keyboard-key action-key" data-key="clear">清空</button>
+            <button class="keyboard-key" data-key="0">0</button>
+            <button class="keyboard-key action-key" data-key="backspace">←</button>
+        </div>
+        <button class="keyboard-confirm-btn" id="keyboard-confirm-btn">确定</button>
+    </div>
+
+    <script>
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        // Block and grid are now identical size to leave no gaps
+        let gridSize = Math.max(18, Math.floor(window.innerWidth / 18));
+        let blockSize = gridSize;
+
+        let totalBlocks = 16;
+        let blockCounts = {
+            blue: 0,
+            orange: 0,
+            red: 0,
+            green: 0
+        };
+
+        let activeColor = 'blue';
+        let isOutlineMode = false;
+
+        document.documentElement.style.setProperty('--grid-size', gridSize + 'px');
+        const container = document.getElementById('container');
+        const sources = document.querySelectorAll('.source');
+        const clearBtn = document.getElementById('clear-btn');
+        const outlineBtn = document.getElementById('outline-btn');
+        const sizeInput = document.getElementById('size-input');
+        sizeInput.value = gridSize;
+
+        // Drawing Canvas logic
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+        let currentTool = 'hand'; // 'hand', 'pen', 'eraser'
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const handBtn = document.getElementById('hand-btn');
+        const penBtn = document.getElementById('pen-btn');
+        const eraserBtn = document.getElementById('eraser-btn');
+
+        function setTool(tool) {
+            currentTool = tool;
+            canvas.style.pointerEvents = tool === 'hand' ? 'none' : 'auto';
+            handBtn.classList.toggle('active', tool === 'hand');
+            penBtn.classList.toggle('active', tool === 'pen');
+            eraserBtn.classList.toggle('active', tool === 'eraser');
+        }
+
+        handBtn.addEventListener('click', () => setTool('hand'));
+        penBtn.addEventListener('click', () => setTool('pen'));
+        eraserBtn.addEventListener('click', () => setTool('eraser'));
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDraw(e) {
+            if (currentTool === 'hand') return;
+            isDrawing = true;
+            const pos = getCanvasPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+            e.preventDefault();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getCanvasPos(e);
+            ctx.beginPath();
+            if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.arc(pos.x, pos.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#f5a623'; // Mark color
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        window.addEventListener('touchend', stopDraw);
+
+        // Core Block Logic
+        function updateSourceUI() {
+            sources.forEach(s => {
+                const c = s.dataset.color;
+                const isAct = c === activeColor;
+                s.classList.toggle('active', isAct);
+
+                const remaining = totalBlocks - blockCounts[c];
+                s.textContent = Math.max(0, remaining);
+
+                if (isAct) {
+                    s.style.opacity = remaining > 0 ? '1' : '0.5';
+                } else {
+                    s.style.opacity = remaining > 0 ? '0.4' : '0.2';
+                }
+            });
+            updatePerimeterDisplay();
+        }
+
+        sources.forEach(source => {
+            source.addEventListener('click', () => {
+                if (!source.classList.contains('active')) {
+                    activeColor = source.dataset.color;
+                    updateSourceUI();
+                }
+            });
+
+            const startSourceDrag = (e) => {
+                if (blockCounts[activeColor] >= totalBlocks) return;
+                const clickedColor = source.dataset.color;
+                if (!source.classList.contains('active')) {
+                    activeColor = clickedColor;
+                    updateSourceUI();
+                }
+                if (blockCounts[activeColor] >= totalBlocks) return;
+                
+                e.preventDefault();
+                const rect = source.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const point = e.touches ? e.touches[0] : e;
+                const x = point.clientX - containerRect.left - rect.width / 2;
+                const y = point.clientY - containerRect.top - rect.height / 2;
+
+                draggedElement = createDraggable(x, y);
+                draggedElement.dataset.isNew = 'true';
+                draggedElement.dataset.startX = point.clientX;
+                draggedElement.dataset.startY = point.clientY;
+                offsetX = rect.width / 2;
+                offsetY = rect.height / 2;
+                draggedElement.style.transition = 'none';
+
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', stopDragging);
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('touchend', stopDragging);
+            };
+
+            source.addEventListener('mousedown', startSourceDrag);
+            source.addEventListener('touchstart', startSourceDrag, { passive: false });
+        });
+
+        container.addEventListener('click', (e) => {
+            if (currentTool !== 'hand') return;
+            if (e.target !== container) return;
+            if (blockCounts[activeColor] >= totalBlocks) return;
+
+            const rect = container.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            let gx = Math.floor(clickX / gridSize);
+            let gy = Math.floor(clickY / gridSize);
+            gx = Math.max(0, gx);
+            gy = Math.max(0, gy);
+
+            const existing = Array.from(document.querySelectorAll('.draggable'));
+            const occupied = new Set(existing.map(d => `${d.dataset.gx},${d.dataset.gy}`));
+
+            if (!occupied.has(`${gx},${gy}`)) {
+                const snappedX = gx * gridSize;
+                const snappedY = gy * gridSize;
+                createDraggable(snappedX, snappedY);
+                updatePerimeterDisplay();
+            }
+        });
+
+        function createDraggable(x, y) {
+            const draggable = document.createElement('div');
+            draggable.className = `draggable ${activeColor}`;
+            draggable.dataset.color = activeColor;
+            if (isOutlineMode) draggable.classList.add('outline-mode');
+            draggable.style.transform = `translate(${x}px, ${y}px)`;
+            draggable.style.width = blockSize + 'px';
+            draggable.style.height = blockSize + 'px';
+
+            draggable.dataset.gx = Math.round(x / gridSize);
+            draggable.dataset.gy = Math.round(y / gridSize);
+
+            container.appendChild(draggable);
+            blockCounts[activeColor]++;
+            updateSourceUI();
+
+            draggable.addEventListener('mousedown', startDragging);
+            draggable.addEventListener('touchstart', startDragging, { passive: false });
+            return draggable;
+        }
+
+        function startDragging(e) {
+            if (currentTool !== 'hand') return;
+            if (isOutlineMode) return;
+            e.preventDefault();
+            draggedElement = e.target;
+            const transform = getComputedStyle(draggedElement).transform;
+            const matrix = new DOMMatrix(transform);
+            const point = e.touches ? e.touches[0] : e;
+            offsetX = point.clientX - matrix.m41;
+            offsetY = point.clientY - matrix.m42;
+
+            draggedElement.style.transition = 'none';
+            draggedElement.style.zIndex = '20';
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDragging);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', stopDragging);
+        }
+
+        function onDrag(e) {
+            e.preventDefault();
+            if (!draggedElement) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const point = e.touches ? e.touches[0] : e;
+            let x = point.clientX - containerRect.left - offsetX;
+            let y = point.clientY - containerRect.top - offsetY;
+
+            draggedElement.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function stopDragging(e) {
+            if (!draggedElement) return;
+
+            if (draggedElement.dataset.isNew === 'true' && e) {
+                const point = e.changedTouches ? e.changedTouches[0] : e;
+                const startX = parseFloat(draggedElement.dataset.startX);
+                const startY = parseFloat(draggedElement.dataset.startY);
+                if (Math.abs(point.clientX - startX) < 5 && Math.abs(point.clientY - startY) < 5) {
+                    draggedElement.remove();
+                    blockCounts[draggedElement.dataset.color]--;
+                    updateSourceUI();
+                    
+                    draggedElement = null;
+                    document.removeEventListener('mousemove', onDrag);
+                    document.removeEventListener('mouseup', stopDragging);
+                    document.removeEventListener('touchmove', onDrag);
+                    document.removeEventListener('touchend', stopDragging);
+                    updatePerimeterDisplay();
+                    return;
+                }
+                delete draggedElement.dataset.isNew;
+            }
+
+            const transform = getComputedStyle(draggedElement).transform;
+            const matrix = new DOMMatrix(transform);
+            const x = matrix.m41;
+            const y = matrix.m42;
+
+            let gx = Math.round(x / gridSize);
+            let gy = Math.round(y / gridSize);
+
+            gx = Math.max(0, gx);
+            gy = Math.max(0, gy);
+
+            const snappedX = gx * gridSize;
+            const snappedY = gy * gridSize;
+
+            draggedElement.style.transition = 'transform 0.2s ease';
+            draggedElement.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
+            draggedElement.style.zIndex = '10';
+
+            draggedElement.dataset.gx = gx;
+            draggedElement.dataset.gy = gy;
+
+            draggedElement = null;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDragging);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDragging);
+
+            updatePerimeterDisplay();
+        }
+
+        clearBtn.addEventListener('click', () => {
+            const elements = document.querySelectorAll('.draggable');
+            elements.forEach(el => el.remove());
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            blockCounts = { blue: 0, orange: 0, red: 0, green: 0 };
+            updateSourceUI();
+        });
+
+        sizeInput.addEventListener('input', (e) => {
+            blockSize = parseInt(e.target.value);
+            gridSize = blockSize;
+            document.documentElement.style.setProperty('--grid-size', gridSize + 'px');
+
+            document.querySelectorAll('.draggable').forEach(draggable => {
+                draggable.style.width = blockSize + 'px';
+                draggable.style.height = blockSize + 'px';
+                let gx = parseInt(draggable.dataset.gx || 0);
+                let gy = parseInt(draggable.dataset.gy || 0);
+                draggable.style.transform = `translate(${gx * gridSize}px, ${gy * gridSize}px)`;
+            });
+            updatePerimeterDisplay();
+        });
+
+        outlineBtn.addEventListener('click', () => {
+            isOutlineMode = !isOutlineMode;
+            outlineBtn.style.opacity = isOutlineMode ? '0.6' : '1';
+
+            document.querySelectorAll('.draggable').forEach(d => {
+                d.classList.toggle('outline-mode', isOutlineMode);
+            });
+            updatePerimeterDisplay();
+        });
+
+        function updatePerimeterDisplay() {
+            const blocks = Array.from(document.querySelectorAll('.draggable'));
+            if (!isOutlineMode) {
+                blocks.forEach(b => {
+                    b.style.borderTop = '';
+                    b.style.borderRight = '';
+                    b.style.borderBottom = '';
+                    b.style.borderLeft = '';
+                });
+                return;
+            }
+
+            const gridMap = new Set();
+            blocks.forEach(b => gridMap.add(`${b.dataset.gx},${b.dataset.gy}`));
+
+            blocks.forEach(b => {
+                let gx = parseInt(b.dataset.gx);
+                let gy = parseInt(b.dataset.gy);
+
+                if (gridMap.has(`${gx},${gy - 1}`)) b.style.borderTop = 'none';
+                else b.style.borderTop = '';
+
+                if (gridMap.has(`${gx + 1},${gy}`)) b.style.borderRight = 'none';
+                else b.style.borderRight = '';
+
+                if (gridMap.has(`${gx},${gy + 1}`)) b.style.borderBottom = 'none';
+                else b.style.borderBottom = '';
+
+                if (gridMap.has(`${gx - 1},${gy}`)) b.style.borderLeft = 'none';
+                else b.style.borderLeft = '';
+            });
+        }
+
+        // Virtual Keyboard JavaScript Logic
+        const modifyBtn = document.getElementById('modify-btn');
+        const keyboardPanel = document.getElementById('keyboard-panel');
+        const keyboardDisplay = document.getElementById('keyboard-display');
+        const keyboardConfirmBtn = document.getElementById('keyboard-confirm-btn');
+        const keyboardKeys = document.querySelectorAll('.keyboard-key');
+
+        let currentInput = '16';
+        let replaceOnFirstKey = true;
+
+        function showKeyboard() {
+            if (keyboardPanel.classList.contains('show')) return;
+            
+            keyboardDisplay.classList.remove('shake');
+            currentInput = totalBlocks.toString();
+            keyboardDisplay.textContent = currentInput;
+            replaceOnFirstKey = true;
+
+            keyboardPanel.style.display = 'flex';
+            // Force a reflow
+            void keyboardPanel.offsetWidth;
+            keyboardPanel.classList.add('show');
+        }
+
+        function hideKeyboard() {
+            if (!keyboardPanel.classList.contains('show')) return;
+            
+            keyboardPanel.classList.remove('show');
+            // Wait for CSS transition (0.3s) before setting display: none
+            setTimeout(() => {
+                if (!keyboardPanel.classList.contains('show')) {
+                    keyboardPanel.style.display = 'none';
+                }
+            }, 300);
+        }
+
+        modifyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (keyboardPanel.classList.contains('show')) {
+                hideKeyboard();
+            } else {
+                showKeyboard();
+            }
+        });
+
+        // Prevent click event inside panel from closing it
+        keyboardPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Key click handling
+        keyboardKeys.forEach(key => {
+            key.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const keyVal = key.dataset.key;
+
+                if (keyVal === 'clear') {
+                    currentInput = '0';
+                    keyboardDisplay.textContent = currentInput;
+                    replaceOnFirstKey = false;
+                } else if (keyVal === 'backspace') {
+                    if (replaceOnFirstKey) {
+                        currentInput = '0';
+                        replaceOnFirstKey = false;
+                    } else {
+                        currentInput = currentInput.slice(0, -1);
+                        if (currentInput === '') {
+                            currentInput = '0';
+                        }
+                    }
+                    keyboardDisplay.textContent = currentInput;
+                } else {
+                    // Digit 0-9
+                    let tempInput = replaceOnFirstKey ? keyVal : (currentInput === '0' ? keyVal : currentInput + keyVal);
+                    let val = parseInt(tempInput);
+                    if (val <= 30) {
+                        currentInput = tempInput;
+                        keyboardDisplay.textContent = currentInput;
+                        replaceOnFirstKey = false;
+                    } else {
+                        // Shake feedback for exceeding limit
+                        keyboardDisplay.classList.remove('shake');
+                        void keyboardDisplay.offsetWidth; // trigger reflow
+                        keyboardDisplay.classList.add('shake');
+                    }
+                }
+            });
+        });
+
+        // Confirm button action
+        keyboardConfirmBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            let val = parseInt(currentInput);
+            if (isNaN(val) || val < 1) {
+                val = 1;
+            }
+            if (val > 30) {
+                val = 30;
+            }
+            totalBlocks = val;
+            updateSourceUI();
+            document.title = `${totalBlocks} 个正方形，周长最短`;
+            hideKeyboard();
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (keyboardPanel.classList.contains('show')) {
+                if (!keyboardPanel.contains(e.target) && !modifyBtn.contains(e.target)) {
+                    hideKeyboard();
+                }
+            }
+        });
+
+        // Physical Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (!keyboardPanel.classList.contains('show')) return;
+
+            if (e.key >= '0' && e.key <= '9') {
+                const digit = e.key;
+                let tempInput = replaceOnFirstKey ? digit : (currentInput === '0' ? digit : currentInput + digit);
+                let val = parseInt(tempInput);
+                if (val <= 30) {
+                    currentInput = tempInput;
+                    keyboardDisplay.textContent = currentInput;
+                    replaceOnFirstKey = false;
+                } else {
+                    keyboardDisplay.classList.remove('shake');
+                    void keyboardDisplay.offsetWidth; // trigger reflow
+                    keyboardDisplay.classList.add('shake');
+                }
+            } else if (e.key === 'Backspace') {
+                if (replaceOnFirstKey) {
+                    currentInput = '0';
+                    replaceOnFirstKey = false;
+                } else {
+                    currentInput = currentInput.slice(0, -1);
+                    if (currentInput === '') {
+                        currentInput = '0';
+                    }
+                }
+                keyboardDisplay.textContent = currentInput;
+            } else if (e.key === 'Escape') {
+                hideKeyboard();
+            } else if (e.key === 'Enter') {
+                keyboardConfirmBtn.click();
+            }
+        });
+
+        // Call updateSourceUI once initially to ensure page title and source states are initialized correctly
+        updateSourceUI();
+    </script>
+</body>
+
+</html>

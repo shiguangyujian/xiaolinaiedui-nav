@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB0PSIxNzQyNzk2MzU5ODE0IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE4NzY4IiB3aWR0aD0iMzIiIGhlaWdodD0iMzIiPjxwYXRoIGQ9Ik04NTMuMzMzMzMzIDQyLjY2NjY2N2ExMjggMTI4IDAgMCAxIDEyOCAxMjh2NjgyLjY2NjY2NmExMjggMTI4IDAgMCAxLTEyOCAxMjhIMTcwLjY2NjY2N2ExMjggMTI4IDAgMCAxLTEyOC0xMjhWMTcwLjY2NjY2N2ExMjggMTI4IDAgMCAxIDEyOC0xMjh6IG0tMzg0IDUxMS45NTczMzNIMTI4Vjg1My4zMzMzMzNhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMCAzNy42NzQ2NjcgNDIuMzY4TDE3MC42NjY2NjcgODk2aDI5OC42NjY2NjZ2LTM0MS4zNzZ6IG00MjYuNjY2NjY3IDBoLTM0MS4zMzMzMzNWODk2aDI5OC42NjY2NjZhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMCA0Mi4zNjgtMzcuNjc0NjY3TDg5NiA4NTMuMzMzMzMzdi0yOTguNzA5MzMzek00NjkuMzMzMzMzIDEyOEgxNzAuNjY2NjY3YTQyLjY2NjY2NyA0Mi42NjY2NjcgMCAwIDAtNDIuNjY2NjY3IDQyLjY2NjY2N3YyOTguNjI0aDM0MS4zMzMzMzNWMTI4eiBtMzg0IDBoLTI5OC42NjY2NjZ2MzQxLjI5MDY2N2gzNDEuMzMzMzMzVjE3MC42NjY2NjdhNDIuNjY2NjY3IDQyLjY2NjY2NyAwIDAgMC0zNy42NzQ2NjctNDIuMzY4TDg1My4zMzMzMzMgMTI4eiIgcC1pZD0iMTg3NjkiIGZpbGw9IiM3MDcwNzAiPjwvcGF0aD48L3N2Zz4=">
+    <title>极简格子</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: linear-gradient(#aaa 1px, transparent 1px),
+                linear-gradient(90deg, #aaa 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        .container {
+            flex: 1;
+            position: relative;
+            touch-action: none;
+        }
+
+        #draw-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .draggable {
+            position: absolute;
+            cursor: move;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            will-change: transform;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .draggable.outline-mode {
+            border-width: 4px;
+            border-style: solid;
+        }
+
+        .draggable.blue,
+        .source.blue.active {
+            border-color: #357abd;
+        }
+
+        .draggable.orange,
+        .source.orange.active {
+            border-color: #d48a1b;
+        }
+
+        .draggable.red,
+        .source.red.active {
+            border-color: #b00217;
+        }
+
+        .draggable.green,
+        .source.green.active {
+            border-color: #68ad1d;
+        }
+
+        .draggable.blue.outline-mode {
+            background-color: rgba(74, 144, 226, 0.2) !important;
+        }
+
+        .draggable.orange.outline-mode {
+            background-color: rgba(245, 166, 35, 0.2) !important;
+        }
+
+        .draggable.red.outline-mode {
+            background-color: rgba(208, 2, 27, 0.2) !important;
+        }
+
+        .draggable.green.outline-mode {
+            background-color: rgba(126, 211, 33, 0.2) !important;
+        }
+
+        .source-container {
+            padding: 15px 20px;
+            background: #fdfdfd;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 60;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-left: auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .tool-group {
+            display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .button {
+            height: 48px;
+            background: #222;
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            white-space: nowrap;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .button.tool-btn {
+            padding: 0 12px;
+            opacity: 0.6;
+        }
+
+        .button.active {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .button.circle {
+            width: 48px;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .size-control input {
+            width: 100px;
+            height: 20px;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        .size-control input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+
+        .size-control input::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .source {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            opacity: 0.4;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .source.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .blue {
+            background-color: #4a90e2;
+        }
+
+        .orange {
+            background-color: #f5a623;
+        }
+
+        .red {
+            background-color: #d0021b;
+        }
+
+        .green {
+            background-color: #7ed321;
+        }
+
+        /* Macaron colors for specific buttons */
+        #outline-btn {
+            background-color: #bae1ff;
+        }
+
+        /* Light blue */
+        #clear-btn {
+            background-color: #ffb3ba;
+        }
+
+        /* Light pink */
+        #hand-btn {
+            background-color: #e5e5e5;
+        }
+
+        #hand-btn.active {
+            box-shadow: inset 0 0 0 3px #999, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #pen-btn {
+            background-color: #ffffba;
+        }
+
+        #pen-btn.active {
+            box-shadow: inset 0 0 0 3px #c4c40b, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #eraser-btn {
+            background-color: #baffc9;
+        }
+
+        #eraser-btn.active {
+            box-shadow: inset 0 0 0 3px #6eb381, 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="container">
+        <canvas id="draw-canvas"></canvas>
+    </div>
+    <div class="source-container">
+        <div class="source blue active" id="source-blue" data-color="blue">16</div>
+        <div class="source orange" id="source-orange" data-color="orange">16</div>
+        <div class="source red" id="source-red" data-color="red">16</div>
+        <div class="source green" id="source-green" data-color="green">16</div>
+        <div class="controls">
+            <div class="tool-group">
+                <button class="button tool-btn active" id="hand-btn">手</button>
+                <button class="button tool-btn" id="pen-btn">笔</button>
+                <button class="button tool-btn" id="eraser-btn">橡皮</button>
+            </div>
+            <div class="size-control">
+                <label>大小:</label>
+                <input type="range" id="size-input" value="90" min="20" max="250" step="2">
+            </div>
+            <button class="button" id="outline-btn">周长模式</button>
+            <button class="button circle" id="clear-btn">清</button>
+        </div>
+    </div>
+
+    <script>
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        // Block and grid are now identical size to leave no gaps
+        let gridSize = Math.max(18, Math.floor(window.innerWidth / 18));
+        let blockSize = gridSize;
+
+        let totalBlocks = 16;
+        let blockCounts = {
+            blue: 0,
+            orange: 0,
+            red: 0,
+            green: 0
+        };
+
+        let activeColor = 'blue';
+        let isOutlineMode = false;
+
+        document.documentElement.style.setProperty('--grid-size', gridSize + 'px');
+        const container = document.getElementById('container');
+        const sources = document.querySelectorAll('.source');
+        const clearBtn = document.getElementById('clear-btn');
+        const outlineBtn = document.getElementById('outline-btn');
+        const sizeInput = document.getElementById('size-input');
+        sizeInput.value = gridSize;
+
+        // Drawing Canvas logic
+        const canvas = document.getElementById('draw-canvas');
+        const ctx = canvas.getContext('2d');
+        let currentTool = 'hand'; // 'hand', 'pen', 'eraser'
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const handBtn = document.getElementById('hand-btn');
+        const penBtn = document.getElementById('pen-btn');
+        const eraserBtn = document.getElementById('eraser-btn');
+
+        function setTool(tool) {
+            currentTool = tool;
+            canvas.style.pointerEvents = tool === 'hand' ? 'none' : 'auto';
+            handBtn.classList.toggle('active', tool === 'hand');
+            penBtn.classList.toggle('active', tool === 'pen');
+            eraserBtn.classList.toggle('active', tool === 'eraser');
+        }
+
+        handBtn.addEventListener('click', () => setTool('hand'));
+        penBtn.addEventListener('click', () => setTool('pen'));
+        eraserBtn.addEventListener('click', () => setTool('eraser'));
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDraw(e) {
+            if (currentTool === 'hand') return;
+            isDrawing = true;
+            const pos = getCanvasPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+            e.preventDefault();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getCanvasPos(e);
+            ctx.beginPath();
+            if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.arc(pos.x, pos.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#f5a623'; // Mark color
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        window.addEventListener('touchend', stopDraw);
+
+        // Core Block Logic
+        function updateSourceUI() {
+            sources.forEach(s => {
+                const c = s.dataset.color;
+                const isAct = c === activeColor;
+                s.classList.toggle('active', isAct);
+
+                const remaining = totalBlocks - blockCounts[c];
+                s.textContent = remaining;
+
+                if (isAct) {
+                    s.style.opacity = remaining > 0 ? '1' : '0.5';
+                } else {
+                    s.style.opacity = remaining > 0 ? '0.4' : '0.2';
+                }
+            });
+            updatePerimeterDisplay();
+        }
+
+        sources.forEach(source => {
+            source.addEventListener('click', () => {
+                if (!source.classList.contains('active')) {
+                    activeColor = source.dataset.color;
+                    updateSourceUI();
+                }
+            });
+
+            const startSourceDrag = (e) => {
+                if (blockCounts[activeColor] >= totalBlocks) return;
+                const clickedColor = source.dataset.color;
+                if (!source.classList.contains('active')) {
+                    activeColor = clickedColor;
+                    updateSourceUI();
+                }
+                if (blockCounts[activeColor] >= totalBlocks) return;
+                
+                e.preventDefault();
+                const rect = source.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const point = e.touches ? e.touches[0] : e;
+                const x = point.clientX - containerRect.left - rect.width / 2;
+                const y = point.clientY - containerRect.top - rect.height / 2;
+
+                draggedElement = createDraggable(x, y);
+                draggedElement.dataset.isNew = 'true';
+                draggedElement.dataset.startX = point.clientX;
+                draggedElement.dataset.startY = point.clientY;
+                offsetX = rect.width / 2;
+                offsetY = rect.height / 2;
+                draggedElement.style.transition = 'none';
+
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', stopDragging);
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('touchend', stopDragging);
+            };
+
+            source.addEventListener('mousedown', startSourceDrag);
+            source.addEventListener('touchstart', startSourceDrag, { passive: false });
+        });
+
+        container.addEventListener('click', (e) => {
+            if (currentTool !== 'hand') return;
+            if (e.target !== container) return;
+            if (blockCounts[activeColor] >= totalBlocks) return;
+
+            const rect = container.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            let gx = Math.floor(clickX / gridSize);
+            let gy = Math.floor(clickY / gridSize);
+            gx = Math.max(0, gx);
+            gy = Math.max(0, gy);
+
+            const existing = Array.from(document.querySelectorAll('.draggable'));
+            const occupied = new Set(existing.map(d => `${d.dataset.gx},${d.dataset.gy}`));
+
+            if (!occupied.has(`${gx},${gy}`)) {
+                const snappedX = gx * gridSize;
+                const snappedY = gy * gridSize;
+                createDraggable(snappedX, snappedY);
+                updatePerimeterDisplay();
+            }
+        });
+
+        function createDraggable(x, y) {
+            const draggable = document.createElement('div');
+            draggable.className = `draggable ${activeColor}`;
+            draggable.dataset.color = activeColor;
+            if (isOutlineMode) draggable.classList.add('outline-mode');
+            draggable.style.transform = `translate(${x}px, ${y}px)`;
+            draggable.style.width = blockSize + 'px';
+            draggable.style.height = blockSize + 'px';
+
+            draggable.dataset.gx = Math.round(x / gridSize);
+            draggable.dataset.gy = Math.round(y / gridSize);
+
+            container.appendChild(draggable);
+            blockCounts[activeColor]++;
+            updateSourceUI();
+
+            draggable.addEventListener('mousedown', startDragging);
+            draggable.addEventListener('touchstart', startDragging, { passive: false });
+            return draggable;
+        }
+
+        function startDragging(e) {
+            if (currentTool !== 'hand') return;
+            if (isOutlineMode) return;
+            e.preventDefault();
+            draggedElement = e.target;
+            const transform = getComputedStyle(draggedElement).transform;
+            const matrix = new DOMMatrix(transform);
+            const point = e.touches ? e.touches[0] : e;
+            offsetX = point.clientX - matrix.m41;
+            offsetY = point.clientY - matrix.m42;
+
+            draggedElement.style.transition = 'none';
+            draggedElement.style.zIndex = '20';
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDragging);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', stopDragging);
+        }
+
+        function onDrag(e) {
+            e.preventDefault();
+            if (!draggedElement) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const point = e.touches ? e.touches[0] : e;
+            let x = point.clientX - containerRect.left - offsetX;
+            let y = point.clientY - containerRect.top - offsetY;
+
+            draggedElement.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function stopDragging(e) {
+            if (!draggedElement) return;
+
+            if (draggedElement.dataset.isNew === 'true' && e) {
+                const point = e.changedTouches ? e.changedTouches[0] : e;
+                const startX = parseFloat(draggedElement.dataset.startX);
+                const startY = parseFloat(draggedElement.dataset.startY);
+                if (Math.abs(point.clientX - startX) < 5 && Math.abs(point.clientY - startY) < 5) {
+                    draggedElement.remove();
+                    blockCounts[draggedElement.dataset.color]--;
+                    updateSourceUI();
+                    
+                    draggedElement = null;
+                    document.removeEventListener('mousemove', onDrag);
+                    document.removeEventListener('mouseup', stopDragging);
+                    document.removeEventListener('touchmove', onDrag);
+                    document.removeEventListener('touchend', stopDragging);
+                    updatePerimeterDisplay();
+                    return;
+                }
+                delete draggedElement.dataset.isNew;
+            }
+
+            const transform = getComputedStyle(draggedElement).transform;
+            const matrix = new DOMMatrix(transform);
+            const x = matrix.m41;
+            const y = matrix.m42;
+
+            let gx = Math.round(x / gridSize);
+            let gy = Math.round(y / gridSize);
+
+            gx = Math.max(0, gx);
+            gy = Math.max(0, gy);
+
+            const snappedX = gx * gridSize;
+            const snappedY = gy * gridSize;
+
+            draggedElement.style.transition = 'transform 0.2s ease';
+            draggedElement.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
+            draggedElement.style.zIndex = '10';
+
+            draggedElement.dataset.gx = gx;
+            draggedElement.dataset.gy = gy;
+
+            draggedElement = null;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDragging);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDragging);
+
+            updatePerimeterDisplay();
+        }
+
+        clearBtn.addEventListener('click', () => {
+            const elements = document.querySelectorAll('.draggable');
+            elements.forEach(el => el.remove());
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            blockCounts = { blue: 0, orange: 0, red: 0, green: 0 };
+            updateSourceUI();
+        });
+
+        sizeInput.addEventListener('input', (e) => {
+            blockSize = parseInt(e.target.value);
+            gridSize = blockSize;
+            document.documentElement.style.setProperty('--grid-size', gridSize + 'px');
+
+            document.querySelectorAll('.draggable').forEach(draggable => {
+                draggable.style.width = blockSize + 'px';
+                draggable.style.height = blockSize + 'px';
+                let gx = parseInt(draggable.dataset.gx || 0);
+                let gy = parseInt(draggable.dataset.gy || 0);
+                draggable.style.transform = `translate(${gx * gridSize}px, ${gy * gridSize}px)`;
+            });
+            updatePerimeterDisplay();
+        });
+
+        outlineBtn.addEventListener('click', () => {
+            isOutlineMode = !isOutlineMode;
+            outlineBtn.style.opacity = isOutlineMode ? '0.6' : '1';
+
+            document.querySelectorAll('.draggable').forEach(d => {
+                d.classList.toggle('outline-mode', isOutlineMode);
+            });
+            updatePerimeterDisplay();
+        });
+
+        function updatePerimeterDisplay() {
+            const blocks = Array.from(document.querySelectorAll('.draggable'));
+            if (!isOutlineMode) {
+                blocks.forEach(b => {
+                    b.style.borderTop = '';
+                    b.style.borderRight = '';
+                    b.style.borderBottom = '';
+                    b.style.borderLeft = '';
+                });
+                return;
+            }
+
+            const gridMap = new Set();
+            blocks.forEach(b => gridMap.add(`${b.dataset.gx},${b.dataset.gy}`));
+
+            blocks.forEach(b => {
+                let gx = parseInt(b.dataset.gx);
+                let gy = parseInt(b.dataset.gy);
+
+                if (gridMap.has(`${gx},${gy - 1}`)) b.style.borderTop = 'none';
+                else b.style.borderTop = '';
+
+                if (gridMap.has(`${gx + 1},${gy}`)) b.style.borderRight = 'none';
+                else b.style.borderRight = '';
+
+                if (gridMap.has(`${gx},${gy + 1}`)) b.style.borderBottom = 'none';
+                else b.style.borderBottom = '';
+
+                if (gridMap.has(`${gx - 1},${gy}`)) b.style.borderLeft = 'none';
+                else b.style.borderLeft = '';
+            });
+        }
+    </script>
+</body>
+
+</html>

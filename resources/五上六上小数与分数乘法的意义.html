@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小数与分数乘法的意义</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-color: #F4F3EC;
+            --panel-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --grid-line: #cbd5e1;
+            --grid-border: #475569;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .formula-card {
+            padding: 20px;
+            background: transparent;
+            z-index: 10;
+        }
+
+        .formula-main {
+            font-size: 2rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .clickable-term {
+            cursor: pointer;
+            padding: 6px 12px;
+            min-width: 80px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+        }
+
+        .clickable-term:hover {
+            background: #e2e8f0;
+        }
+
+        .clickable-term.hidden-term {
+            border: 2px dashed #cbd5e1;
+            background-color: rgba(248, 250, 252, 0.6);
+            color: transparent !important;
+            position: relative;
+            box-shadow: none !important;
+        }
+
+        .clickable-term.hidden-term * {
+            visibility: hidden !important;
+        }
+
+        .clickable-term.hidden-term::after {
+            content: '?';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e2e8f0;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .clickable-term.hidden-term:hover {
+            border-color: var(--primary);
+            background-color: rgba(59, 130, 246, 0.08);
+            transform: scale(1.05);
+        }
+
+        .svg-placeholder-col {
+            fill: rgba(96, 165, 250, 0.08);
+            stroke: rgba(96, 165, 250, 0.3);
+            stroke-width: 1.5px;
+            stroke-dasharray: 4 3;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto !important;
+        }
+
+        .svg-placeholder-col:hover {
+            fill: rgba(96, 165, 250, 0.2);
+            stroke: rgba(96, 165, 250, 0.5);
+        }
+
+        .svg-placeholder-row {
+            fill: rgba(250, 204, 21, 0.08);
+            stroke: rgba(250, 204, 21, 0.3);
+            stroke-width: 1.5px;
+            stroke-dasharray: 4 3;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto !important;
+        }
+
+        .svg-placeholder-row:hover {
+            fill: rgba(250, 204, 21, 0.2);
+            stroke: rgba(250, 204, 21, 0.5);
+        }
+
+        .svg-placeholder-unit {
+            fill: rgba(148, 163, 184, 0.08);
+            stroke: rgba(148, 163, 184, 0.3);
+            stroke-width: 1.5px;
+            stroke-dasharray: 4 3;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto !important;
+        }
+
+        .svg-placeholder-unit:hover {
+            fill: rgba(148, 163, 184, 0.2);
+            stroke: rgba(148, 163, 184, 0.5);
+        }
+
+        #brackets-group g[onclick] {
+            pointer-events: auto !important;
+        }
+
+        .clickable-term.active {
+            background: #dbeafe;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+
+        .frac {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 4px;
+            font-size: 30px;
+        }
+
+        .frac span:first-child {
+            border-bottom: 3px solid currentColor;
+            padding: 0 6px;
+            line-height: 1.1;
+        }
+
+        .frac span:last-child {
+            padding: 0 6px;
+            line-height: 1.1;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            position: relative;
+            z-index: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .floating-controls {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background: transparent;
+            padding: 0;
+            z-index: 20;
+            width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .floating-controls label:not(.checkbox-label),
+        .floating-controls .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            font-size: 14px;
+            font-weight: 500;
+            background: transparent;
+            padding: 0;
+            border: none;
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .floating-controls label {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .val-display {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 0;
+            border-radius: 4px;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .val-display:hover {
+            background: #eff6ff;
+        }
+
+        .stepper-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--text-main);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .stepper-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .stepper-btn:active {
+            background: #cbd5e1;
+        }
+
+        .checkbox-label {
+            display: flex;
+            flex-direction: row !important;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .checkbox-label input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 800px;
+            filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.05));
+        }
+
+        /* SVG Element Styles */
+        .grid-bg {
+            fill: #ffffff;
+            stroke: var(--grid-border);
+            stroke-width: 2px;
+        }
+
+        .grid-line {
+            stroke: var(--grid-line);
+            stroke-width: 1.5px;
+        }
+
+        .area-v {
+            fill: rgba(250, 204, 21, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        /* Yellow */
+        .area-h {
+            fill: rgba(96, 165, 250, 0.25);
+            transition: all 0.3s ease;
+        }
+
+        /* Blue */
+        .area-intersect {
+            fill: rgba(74, 222, 128, 0.55);
+            transition: all 0.3s ease;
+        }
+
+        /* Green */
+
+        /* Highlight Classes */
+        .highlight-h {
+            fill: rgba(96, 165, 250, 0.7) !important;
+            stroke: #2563eb;
+            stroke-width: 3px;
+        }
+
+        .highlight-v {
+            fill: rgba(250, 204, 21, 0.7) !important;
+            stroke: #ca8a04;
+            stroke-width: 3px;
+        }
+
+        .highlight-i {
+            fill: rgba(74, 222, 128, 0.8) !important;
+            stroke: #16a34a;
+            stroke-width: 3px;
+        }
+
+        .dimmed {
+            opacity: 0.1 !important;
+        }
+
+        .handle {
+            fill: white;
+            stroke: var(--primary);
+            stroke-width: 3px;
+            cursor: nwse-resize;
+        }
+
+        .handle:hover {
+            fill: #eff6ff;
+            stroke-width: 4px;
+        }
+
+        .handle-hitbox {
+            fill: transparent;
+            cursor: nwse-resize;
+        }
+
+        .interactive-layer {
+            fill: transparent;
+            cursor: pointer;
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+
+            70% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .demo-block {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: center;
+            transform-box: fill-box;
+        }
+
+        #rect-unit:hover {
+            fill: rgba(234, 88, 12, 0.3);
+            stroke-width: 3px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .virtual-keypad {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            z-index: 1000;
+            width: 260px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid var(--border);
+            animation: slideUp 0.2s ease-out forwards;
+        }
+
+        .virtual-keypad-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 999;
+            display: none;
+        }
+
+        .keypad-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+
+        .keypad-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            line-height: 1;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0 4px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .keypad-display {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: right;
+            color: var(--primary);
+            min-height: 34px;
+        }
+
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .keypad-grid button {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 0;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--text-main);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s;
+            outline: none;
+            user-select: none;
+        }
+
+        .keypad-grid button:active {
+            background: #e2e8f0;
+        }
+
+        .keypad-grid button.action {
+            font-size: 16px;
+            background: #f1f5f9;
+        }
+
+        .keypad-grid button.confirm {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .keypad-grid button.confirm:active {
+            background: var(--primary-hover);
+        }
+
+        @media (max-width: 768px) {
+            .formula-card {
+                margin-top: 20px;
+                padding: 10px;
+            }
+
+            .formula-main {
+                font-size: 24px;
+                gap: 6px;
+            }
+
+            .frac {
+                font-size: 22px;
+            }
+
+            .floating-controls {
+                bottom: 20px;
+                right: 50%;
+                transform: translateX(50%);
+                width: 90%;
+                padding: 16px;
+            }
+
+            .main-content {
+                padding-bottom: 150px;
+                /* Space for controls */
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <div class="formula-card">
+            <div class="formula-main" id="formula-expr">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <div class="main-content">
+            <svg id="svg-canvas" viewBox="0 0 740 740" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <pattern id="hatch" width="8" height="8" patternTransform="rotate(45 0 0)"
+                        patternUnits="userSpaceOnUse">
+                        <line x1="0" y1="0" x2="0" y2="8" stroke="#64748b" stroke-width="2" opacity="0.5" />
+                    </pattern>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#475569" />
+                    </marker>
+                </defs>
+
+                <g transform="translate(130, 130)" id="main-group">
+                    <rect class="grid-bg" width="500" height="500" />
+                    <g id="grid-lines"></g>
+
+                    <rect id="rect-h" class="area-h" x="0" y="0" />
+                    <rect id="rect-v" class="area-v" x="0" y="0" />
+                    <rect id="rect-intersect" class="area-intersect" x="0" y="0" />
+
+                    <rect id="interactive-layer" class="interactive-layer" width="500" height="500" />
+
+                    <g id="demo-layer" pointer-events="none"></g>
+                    <text id="demo-counter-text" x="250" y="250" font-size="64" font-weight="bold" fill="#ea580c"
+                        text-anchor="middle" dominant-baseline="central" pointer-events="none" opacity="0"></text>
+
+                    <rect id="rect-unit" x="0" y="0" fill="url(#hatch)" stroke="#ea580c" stroke-width="2"
+                        cursor="pointer" />
+
+                    <g id="brackets-group" pointer-events="none">
+                        <path id="bracket-top" stroke="#475569" stroke-width="2" fill="none" stroke-linejoin="round" />
+                        <g id="label-top-group"></g>
+
+                        <path id="bracket-left" stroke="#475569" stroke-width="2" fill="none" stroke-linejoin="round" />
+                        <g id="label-left-group"></g>
+
+                        <text x="250" y="560" font-size="40" text-anchor="middle" fill="#475569"
+                            font-weight="bold">1</text>
+                        <text x="560" y="250" font-size="40" alignment-baseline="middle" dominant-baseline="central"
+                            fill="#475569" font-weight="bold">1</text>
+
+                        <path id="arrow-unit" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"
+                            fill="none" />
+                        <g id="label-unit-group"></g>
+                    </g>
+
+                    <g id="handle-xy-group">
+                        <circle id="handle-xy" class="handle" r="12" />
+                        <circle id="handle-xy-hitbox" class="handle-hitbox" r="35" />
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <div class="floating-controls">
+            <div class="control-group">
+                <span style="margin-bottom: 4px;">列数:</span>
+                <div class="row-flex" style="display:flex; width:100%; align-items:center; gap:8px;">
+                    <button class="stepper-btn" id="cols-minus">-</button>
+                    <span class="val-display" id="cols-val" title="点击输入">10</span>
+                    <button class="stepper-btn" id="cols-plus">+</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span style="margin-bottom: 4px;">行数:</span>
+                <div class="row-flex" style="display:flex; width:100%; align-items:center; gap:8px;">
+                    <button class="stepper-btn" id="rows-minus">-</button>
+                    <span class="val-display" id="rows-val" title="点击输入">10</span>
+                    <button class="stepper-btn" id="rows-plus">+</button>
+                </div>
+            </div>
+            <label class="checkbox-label">
+                <input type="checkbox" id="force-fraction">
+                保持分数形式
+            </label>
+            <label class="checkbox-label" style="margin-top: 4px;">
+                <input type="checkbox" id="keep-formula-displayed">
+                保持算式显示
+            </label>
+        </div>
+
+        <div id="virtual-keypad-overlay" class="virtual-keypad-overlay"></div>
+        <div id="virtual-keypad" class="virtual-keypad">
+            <div class="keypad-header">
+                <span id="keypad-target-name">设置数值</span>
+                <button id="keypad-close" class="keypad-close">×</button>
+            </div>
+            <div class="keypad-display" id="keypad-display">10</div>
+            <div class="keypad-grid">
+                <button class="key">1</button>
+                <button class="key">2</button>
+                <button class="key">3</button>
+                <button class="key">4</button>
+                <button class="key">5</button>
+                <button class="key">6</button>
+                <button class="key">7</button>
+                <button class="key">8</button>
+                <button class="key">9</button>
+                <button class="key action" id="keypad-clear">清除</button>
+                <button class="key">0</button>
+                <button class="key action confirm" id="keypad-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            cols: 10,
+            rows: 10,
+            selCols: 3,
+            selRows: 2,
+            size: 500,
+            highlight: null, // 'col', 'row', 'prod', or null
+            keepDisplayed: false,
+            revealed: {
+                colFormula: false,
+                rowFormula: false,
+                prodFormula: false,
+                colSvg: false,
+                rowSvg: false,
+                unitSvg: false
+            }
+        };
+
+        function resetRevealed() {
+            state.revealed.colFormula = false;
+            state.revealed.rowFormula = false;
+            state.revealed.prodFormula = false;
+            state.revealed.colSvg = false;
+            state.revealed.rowSvg = false;
+            state.revealed.unitSvg = false;
+        }
+
+        window.handleFormulaClick = function (type, event) {
+            if (!state.keepDisplayed) {
+                const key = type === 'col' ? 'colFormula' : (type === 'row' ? 'rowFormula' : 'prodFormula');
+                if (!state.revealed[key]) {
+                    state.revealed[key] = true;
+                    if (type === 'col') state.revealed.colSvg = true;
+                    if (type === 'row') state.revealed.rowSvg = true;
+                    updateUI();
+                    if (state.highlight !== type) {
+                        state.highlight = type;
+                        applyHighlight();
+                    }
+                    return;
+                }
+            }
+            toggleHighlight(type);
+        };
+
+        window.revealSvg = function (type) {
+            if (type === 'col') {
+                state.revealed.colSvg = true;
+                state.revealed.colFormula = true;
+            }
+            if (type === 'row') {
+                state.revealed.rowSvg = true;
+                state.revealed.rowFormula = true;
+            }
+            if (type === 'unit') {
+                state.revealed.unitSvg = true;
+            }
+            updateUI();
+        };
+
+        const svg = document.getElementById('svg-canvas');
+        const gridLines = document.getElementById('grid-lines');
+        const rectH = document.getElementById('rect-h');
+        const rectV = document.getElementById('rect-v');
+        const rectIntersect = document.getElementById('rect-intersect');
+        const rectUnit = document.getElementById('rect-unit');
+        const bracketTop = document.getElementById('bracket-top');
+        const bracketLeft = document.getElementById('bracket-left');
+        const labelTopGroup = document.getElementById('label-top-group');
+        const labelLeftGroup = document.getElementById('label-left-group');
+        const arrowUnit = document.getElementById('arrow-unit');
+        const labelUnitGroup = document.getElementById('label-unit-group');
+        const handleXY = document.getElementById('handle-xy');
+        const handleXYHitbox = document.getElementById('handle-xy-hitbox');
+        const interactiveLayer = document.getElementById('interactive-layer');
+        const demoLayer = document.getElementById('demo-layer');
+        const demoCounterText = document.getElementById('demo-counter-text');
+
+        const colsMinus = document.getElementById('cols-minus');
+        const colsPlus = document.getElementById('cols-plus');
+        const rowsMinus = document.getElementById('rows-minus');
+        const rowsPlus = document.getElementById('rows-plus');
+        const rowsVal = document.getElementById('rows-val');
+        const colsVal = document.getElementById('cols-val');
+        const forceFractionCheckbox = document.getElementById('force-fraction');
+        const formulaExpr = document.getElementById('formula-expr');
+
+        function drawTopBracket(x1, x2, y, h) {
+            let w = x2 - x1;
+            if (w <= 0) return '';
+            let rx = Math.min(15, w / 4);
+            let midX = x1 + w / 2;
+            return `M ${x1} ${y} ` +
+                `Q ${x1} ${y - h} ${x1 + rx} ${y - h} ` +
+                `L ${midX - rx} ${y - h} ` +
+                `Q ${midX} ${y - h} ${midX} ${y - h * 2} ` +
+                `Q ${midX} ${y - h} ${midX + rx} ${y - h} ` +
+                `L ${x2 - rx} ${y - h} ` +
+                `Q ${x2} ${y - h} ${x2} ${y}`;
+        }
+        function drawLeftBracket(x, y1, y2, w) {
+            let h = y2 - y1;
+            if (h <= 0) return '';
+            let ry = Math.min(15, h / 4);
+            let midY = y1 + h / 2;
+            return `M ${x} ${y1} ` +
+                `Q ${x - w} ${y1} ${x - w} ${y1 + ry} ` +
+                `L ${x - w} ${midY - ry} ` +
+                `Q ${x - w} ${midY} ${x - w * 2} ${midY} ` +
+                `Q ${x - w} ${midY} ${x - w} ${midY + ry} ` +
+                `L ${x - w} ${y2 - ry} ` +
+                `Q ${x - w} ${y2} ${x} ${y2}`;
+        }
+        function createSvgFractionText(num, den, x, y, color = "#0f172a", fontSize = 28) {
+            return `
+            <text x="${x}" y="${y - 8}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${color}">${num}</text>
+            <line x1="${x - 18}" y1="${y}" x2="${x + 18}" y2="${y}" stroke="${color}" stroke-width="3" />
+            <text x="${x}" y="${y + 26}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${color}">${den}</text>
+        `;
+        }
+
+        function isDecimalMode() {
+            return state.cols === 10 && state.rows === 10 && !forceFractionCheckbox.checked;
+        }
+
+        window.toggleHighlight = function (type) {
+            if (state.highlight === type) {
+                state.highlight = null;
+            } else {
+                state.highlight = type;
+            }
+            applyHighlight();
+        };
+
+        let demoTimeout = null;
+
+        function clearDemo() {
+            if (demoTimeout) clearTimeout(demoTimeout);
+            if (demoLayer) demoLayer.innerHTML = '';
+            if (demoCounterText) {
+                demoCounterText.innerHTML = '';
+                demoCounterText.style.opacity = '0';
+            }
+        }
+
+        function startDemoCounting() {
+            clearDemo();
+            const dx = state.size / state.cols;
+            const dy = state.size / state.rows;
+            const total = state.selCols * state.selRows;
+            let count = 0;
+
+            demoCounterText.style.opacity = '0.8';
+
+            const normalInterval = 180;
+            const maxTotalTime = 3000;
+            const tFirstRow = state.selCols * normalInterval;
+            const remainingBlocks = total - state.selCols;
+
+            let fastInterval = normalInterval;
+            if (remainingBlocks > 0) {
+                const remainingTime = Math.max(500, maxTotalTime - tFirstRow);
+                fastInterval = Math.min(normalInterval, remainingTime / remainingBlocks);
+            }
+
+            function nextBlock() {
+                if (count >= total) {
+                    demoTimeout = setTimeout(() => {
+                        demoCounterText.style.opacity = '0';
+                    }, 1500);
+                    return;
+                }
+
+                let c = count % state.selCols;
+                let r = Math.floor(count / state.selCols);
+
+                let rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute('x', c * dx);
+                rect.setAttribute('y', r * dy);
+                rect.setAttribute('width', dx);
+                rect.setAttribute('height', dy);
+                rect.setAttribute('fill', 'url(#hatch)');
+                rect.setAttribute('stroke', '#ea580c');
+                rect.setAttribute('stroke-width', '2');
+                rect.setAttribute('class', 'demo-block');
+
+                demoLayer.appendChild(rect);
+
+                count++;
+                demoCounterText.innerHTML = count;
+
+                let nextDelay = (r === 0) ? normalInterval : fastInterval;
+                demoTimeout = setTimeout(nextBlock, nextDelay);
+            }
+
+            nextBlock();
+        }
+
+        rectUnit.addEventListener('click', startDemoCounting);
+
+        function applyHighlight() {
+            // Reset visually
+            rectH.classList.remove('highlight-h', 'dimmed');
+            rectV.classList.remove('highlight-v', 'dimmed');
+            rectIntersect.classList.remove('highlight-i', 'dimmed');
+
+            document.querySelectorAll('.clickable-term').forEach(el => el.classList.remove('active'));
+
+            if (state.highlight === 'col') {
+                rectH.classList.add('highlight-h');
+                rectV.classList.add('dimmed');
+                rectIntersect.classList.add('dimmed');
+                const term = document.querySelector('.term-col');
+                if (term) term.classList.add('active');
+            } else if (state.highlight === 'row') {
+                rectV.classList.add('highlight-v');
+                rectH.classList.add('dimmed');
+                rectIntersect.classList.add('dimmed');
+                const term = document.querySelector('.term-row');
+                if (term) term.classList.add('active');
+            } else if (state.highlight === 'prod') {
+                rectIntersect.classList.add('highlight-i');
+                rectH.classList.add('dimmed');
+                rectV.classList.add('dimmed');
+                const term = document.querySelector('.term-prod');
+                if (term) term.classList.add('active');
+            }
+        }
+
+        function updateUI() {
+            const dx = state.size / state.cols;
+            const dy = state.size / state.rows;
+
+            if (state.selCols > state.cols) state.selCols = state.cols;
+            if (state.selRows > state.rows) state.selRows = state.rows;
+            if (state.selCols < 1) state.selCols = 1;
+            if (state.selRows < 1) state.selRows = 1;
+
+            let linesHTML = '';
+            for (let i = 1; i < state.cols; i++) {
+                linesHTML += `<line class="grid-line" x1="${i * dx}" y1="0" x2="${i * dx}" y2="${state.size}" />`;
+            }
+            for (let i = 1; i < state.rows; i++) {
+                linesHTML += `<line class="grid-line" x1="0" y1="${i * dy}" x2="${state.size}" y2="${i * dy}" />`;
+            }
+            gridLines.innerHTML = linesHTML;
+
+            // Note: rectH spans state.selCols columns but full height.
+            rectH.setAttribute('width', state.selCols * dx);
+            rectH.setAttribute('height', state.size);
+
+            // Note: rectV spans full width but state.selRows rows.
+            rectV.setAttribute('width', state.size);
+            rectV.setAttribute('height', state.selRows * dy);
+
+            rectIntersect.setAttribute('width', state.selCols * dx);
+            rectIntersect.setAttribute('height', state.selRows * dy);
+
+            rectUnit.setAttribute('width', dx);
+            rectUnit.setAttribute('height', dy);
+
+            handleXY.setAttribute('cx', state.selCols * dx);
+            handleXY.setAttribute('cy', state.selRows * dy);
+            handleXYHitbox.setAttribute('cx', state.selCols * dx);
+            handleXYHitbox.setAttribute('cy', state.selRows * dy);
+
+            bracketTop.setAttribute('d', drawTopBracket(0, state.selCols * dx, -10, 8));
+            bracketLeft.setAttribute('d', drawLeftBracket(-10, 0, state.selRows * dy, 8));
+
+            const arrowStartX = -50;
+            const arrowStartY = -50;
+            const arrowEndX = dx / 2 - 8;
+            const arrowEndY = dy / 2 - 8;
+            arrowUnit.setAttribute('d', `M ${arrowStartX} ${arrowStartY} L ${arrowEndX} ${arrowEndY}`);
+
+            labelTopGroup.innerHTML = '';
+            labelLeftGroup.innerHTML = '';
+            labelUnitGroup.innerHTML = '';
+
+            const labelTopX = (state.selCols * dx) / 2;
+            const labelTopY = -55;
+            const labelLeftX = -50;
+            const labelLeftY = (state.selRows * dy) / 2;
+
+            if (isDecimalMode()) {
+                const valCol = (state.selCols / 10).toFixed(1);
+                const valRow = (state.selRows / 10).toFixed(1);
+                const valProd = ((state.selCols * state.selRows) / 100).toFixed(2);
+
+                if (state.keepDisplayed || state.revealed.colSvg) {
+                    labelTopGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('col', event)" cursor="pointer">
+                            <text x="${labelTopX}" y="${labelTopY}" text-anchor="middle" dominant-baseline="central" font-size="32" font-weight="bold" fill="#2563eb">${valCol}</text>
+                        </g>
+                    `;
+                } else {
+                    labelTopGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('col', event)" cursor="pointer">
+                            <rect class="svg-placeholder-col" x="${labelTopX - 35}" y="${labelTopY - 18}" width="70" height="36" rx="6" ry="6" />
+                            <text x="${labelTopX}" y="${labelTopY}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                if (state.keepDisplayed || state.revealed.rowSvg) {
+                    labelLeftGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('row', event)" cursor="pointer">
+                            <text x="${labelLeftX}" y="${labelLeftY}" text-anchor="end" dominant-baseline="central" font-size="32" font-weight="bold" fill="#ca8a04">${valRow}</text>
+                        </g>
+                    `;
+                } else {
+                    labelLeftGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('row', event)" cursor="pointer">
+                            <rect class="svg-placeholder-row" x="${-75 - 35}" y="${labelLeftY - 18}" width="70" height="36" rx="6" ry="6" />
+                            <text x="${-75}" y="${labelLeftY}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                if (state.keepDisplayed || state.revealed.unitSvg) {
+                    labelUnitGroup.innerHTML = `<text x="${arrowStartX - 10}" y="${arrowStartY}" text-anchor="end" dominant-baseline="central" font-size="28" font-weight="bold" fill="#0f172a">0.01</text>`;
+                } else {
+                    labelUnitGroup.innerHTML = `
+                        <g onclick="revealSvg('unit')" cursor="pointer">
+                            <rect class="svg-placeholder-unit" x="${-90 - 35}" y="${-50 - 18}" width="70" height="36" rx="6" ry="6" />
+                            <text x="${-90}" y="${-50}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                const colClass = (state.keepDisplayed || state.revealed.colFormula) ? "clickable-term term-col" : "clickable-term term-col hidden-term";
+                const rowClass = (state.keepDisplayed || state.revealed.rowFormula) ? "clickable-term term-row" : "clickable-term term-row hidden-term";
+                const prodClass = (state.keepDisplayed || state.revealed.prodFormula) ? "clickable-term term-prod" : "clickable-term term-prod hidden-term";
+
+                formulaExpr.innerHTML = `
+                    <span class="${colClass}" onclick="handleFormulaClick('col', event)">${valCol}</span>
+                    <span>×</span>
+                    <span class="${rowClass}" onclick="handleFormulaClick('row', event)">${valRow}</span>
+                    <span>=</span>
+                    <span class="${prodClass}" onclick="handleFormulaClick('prod', event)">${valProd}</span>
+                `;
+            } else {
+                if (state.keepDisplayed || state.revealed.colSvg) {
+                    labelTopGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('col', event)" cursor="pointer">
+                            ${createSvgFractionText(state.selCols, state.cols, labelTopX, labelTopY - 5, '#2563eb')}
+                        </g>
+                    `;
+                } else {
+                    labelTopGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('col', event)" cursor="pointer">
+                            <rect class="svg-placeholder-col" x="${labelTopX - 35}" y="${labelTopY - 5 - 38}" width="70" height="76" rx="6" ry="6" />
+                            <text x="${labelTopX}" y="${labelTopY - 5}" text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                if (state.keepDisplayed || state.revealed.rowSvg) {
+                    labelLeftGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('row', event)" cursor="pointer">
+                            ${createSvgFractionText(state.selRows, state.rows, labelLeftX - 5, labelLeftY, '#ca8a04')}
+                        </g>
+                    `;
+                } else {
+                    labelLeftGroup.innerHTML = `
+                        <g onclick="handleFormulaClick('row', event)" cursor="pointer">
+                            <rect class="svg-placeholder-row" x="${-55 - 35}" y="${labelLeftY - 38}" width="70" height="76" rx="6" ry="6" />
+                            <text x="${-55}" y="${labelLeftY}" text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                if (state.keepDisplayed || state.revealed.unitSvg) {
+                    labelUnitGroup.innerHTML = createSvgFractionText(1, state.cols * state.rows, arrowStartX - 25, arrowStartY - 10, '#0f172a');
+                } else {
+                    labelUnitGroup.innerHTML = `
+                        <g onclick="revealSvg('unit')" cursor="pointer">
+                            <rect class="svg-placeholder-unit" x="${-75 - 35}" y="${-60 - 38}" width="70" height="76" rx="6" ry="6" />
+                            <text x="${-75}" y="${-60}" text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="bold" fill="#e2e8f0">?</text>
+                        </g>
+                    `;
+                }
+
+                const colClass = (state.keepDisplayed || state.revealed.colFormula) ? "clickable-term term-col" : "clickable-term term-col hidden-term";
+                const rowClass = (state.keepDisplayed || state.revealed.rowFormula) ? "clickable-term term-row" : "clickable-term term-row hidden-term";
+                const prodClass = (state.keepDisplayed || state.revealed.prodFormula) ? "clickable-term term-prod" : "clickable-term term-prod hidden-term";
+
+                formulaExpr.innerHTML = `
+                    <span class="${colClass}" onclick="handleFormulaClick('col', event)">
+                        <div class="frac"><span>${state.selCols}</span><span>${state.cols}</span></div>
+                    </span>
+                    <span>×</span>
+                    <span class="${rowClass}" onclick="handleFormulaClick('row', event)">
+                        <div class="frac"><span>${state.selRows}</span><span>${state.rows}</span></div>
+                    </span>
+                    <span>=</span>
+                    <span class="${prodClass}" onclick="handleFormulaClick('prod', event)">
+                        <div class="frac"><span>${state.selCols * state.selRows}</span><span>${state.cols * state.rows}</span></div>
+                    </span>
+                `;
+            }
+
+            applyHighlight();
+            clearDemo();
+        }
+
+        colsMinus.addEventListener('click', () => {
+            if (state.cols > 1) {
+                state.cols--;
+                colsVal.innerText = state.cols;
+                resetRevealed();
+                updateUI();
+            }
+        });
+
+        colsPlus.addEventListener('click', () => {
+            if (state.cols < 100) {
+                state.cols++;
+                colsVal.innerText = state.cols;
+                resetRevealed();
+                updateUI();
+            }
+        });
+
+        rowsMinus.addEventListener('click', () => {
+            if (state.rows > 1) {
+                state.rows--;
+                rowsVal.innerText = state.rows;
+                resetRevealed();
+                updateUI();
+            }
+        });
+
+        rowsPlus.addEventListener('click', () => {
+            if (state.rows < 100) {
+                state.rows++;
+                rowsVal.innerText = state.rows;
+                resetRevealed();
+                updateUI();
+            }
+        });
+
+        forceFractionCheckbox.addEventListener('change', () => {
+            resetRevealed();
+            updateUI();
+        });
+
+        const keepFormulaCheckbox = document.getElementById('keep-formula-displayed');
+        keepFormulaCheckbox.addEventListener('change', (e) => {
+            state.keepDisplayed = e.target.checked;
+            if (!state.keepDisplayed) {
+                resetRevealed();
+            }
+            updateUI();
+        });
+
+        // Keypad logic
+        const virtualKeypad = document.getElementById('virtual-keypad');
+        const virtualKeypadOverlay = document.getElementById('virtual-keypad-overlay');
+        const keypadDisplay = document.getElementById('keypad-display');
+        const keypadTargetName = document.getElementById('keypad-target-name');
+
+        let keypadTarget = null;
+        let keypadValue = '';
+
+        function openKeypad(target) {
+            keypadTarget = target;
+            keypadValue = target === 'cols' ? state.cols.toString() : state.rows.toString();
+            keypadTargetName.innerText = target === 'cols' ? '设置水平列数' : '设置垂直行数';
+            keypadDisplay.innerText = keypadValue;
+            virtualKeypad.style.display = 'flex';
+            virtualKeypadOverlay.style.display = 'block';
+        }
+
+        function closeKeypad() {
+            virtualKeypad.style.display = 'none';
+            virtualKeypadOverlay.style.display = 'none';
+        }
+
+        document.getElementById('cols-val').addEventListener('click', (e) => {
+            e.preventDefault();
+            openKeypad('cols');
+        });
+
+        document.getElementById('rows-val').addEventListener('click', (e) => {
+            e.preventDefault();
+            openKeypad('rows');
+        });
+
+        document.getElementById('keypad-close').addEventListener('click', closeKeypad);
+        virtualKeypadOverlay.addEventListener('click', closeKeypad);
+
+        document.querySelectorAll('.keypad-grid button.key:not(.action)').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (keypadValue === '0') keypadValue = '';
+                if (keypadValue.length < 3) {
+                    keypadValue += btn.innerText;
+                    if (parseInt(keypadValue) > 100) keypadValue = '100';
+                    keypadDisplay.innerText = keypadValue || '0';
+                }
+            });
+        });
+
+        document.getElementById('keypad-clear').addEventListener('click', () => {
+            keypadValue = '';
+            keypadDisplay.innerText = '0';
+        });
+
+        document.getElementById('keypad-confirm').addEventListener('click', () => {
+            let val = parseInt(keypadValue || '0');
+            if (val < 1) val = 1;
+            if (val > 100) val = 100;
+
+            if (keypadTarget === 'cols') {
+                if (state.cols !== val) {
+                    state.cols = val;
+                    colsVal.innerText = state.cols;
+                    resetRevealed();
+                }
+            } else if (keypadTarget === 'rows') {
+                if (state.rows !== val) {
+                    state.rows = val;
+                    rowsVal.innerText = state.rows;
+                    resetRevealed();
+                }
+            }
+            updateUI();
+            closeKeypad();
+        });
+
+        function getMousePos(evt) {
+            const CTM = svg.getScreenCTM();
+            if (!CTM) return { x: 0, y: 0 };
+            return {
+                x: (evt.clientX - CTM.e) / CTM.a,
+                y: (evt.clientY - CTM.f) / CTM.d
+            };
+        }
+
+        let isDraggingGrid = false;
+
+        function updateSelection(evt) {
+            const pt = getMousePos(evt);
+            const localX = pt.x - 130;
+            const localY = pt.y - 130;
+
+            const dx = state.size / state.cols;
+            const dy = state.size / state.rows;
+
+            let c = Math.ceil(localX / dx);
+            let r = Math.ceil(localY / dy);
+
+            if (c < 1) c = 1;
+            if (r < 1) r = 1;
+            if (c > state.cols) c = state.cols;
+            if (r > state.rows) r = state.rows;
+
+            if (state.selCols !== c || state.selRows !== r) {
+                state.selCols = c;
+                state.selRows = r;
+                resetRevealed();
+                updateUI();
+            }
+        }
+
+        function handleDragStart(e) {
+            if (e.target === interactiveLayer || e.target === handleXY || e.target === handleXYHitbox) {
+                isDraggingGrid = true;
+                if (state.highlight !== null) {
+                    state.highlight = null;
+                    applyHighlight();
+                }
+                const evt = e.touches ? e.touches[0] : e;
+                updateSelection(evt);
+                if (e.cancelable) e.preventDefault();
+            }
+        }
+
+        function handleDragMove(e) {
+            if (isDraggingGrid) {
+                const evt = e.touches ? e.touches[0] : e;
+                updateSelection(evt);
+                if (e.cancelable) e.preventDefault();
+            }
+        }
+
+        function handleDragEnd(e) {
+            isDraggingGrid = false;
+        }
+
+        svg.addEventListener('mousedown', handleDragStart, { passive: false });
+        window.addEventListener('mousemove', handleDragMove, { passive: false });
+        window.addEventListener('mouseup', handleDragEnd);
+
+        svg.addEventListener('touchstart', handleDragStart, { passive: false });
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+        });
+    </script>
+</body>
+
+</html>

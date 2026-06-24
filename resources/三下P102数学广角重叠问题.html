@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>数学广角：重叠问题</title>
+    <style>
+        /* =========================================
+           A. 架构与视觉定义 
+        ========================================= */
+        :root {
+            --bg-eye-care: #F8F9FA;      
+            --text-main: #1F2937;        
+            --brand-primary: #3B82F6;    /* 航空组：蓝 */
+            --status-success: #10B981;   /* 机器人组：绿 */
+            
+            --circle-a-bg: rgba(59, 130, 246, 0.12);
+            --circle-a-border: #3B82F6;
+            --circle-b-bg: rgba(16, 185, 129, 0.12);
+            --circle-b-border: #10B981;
+        }
+
+        /* 极致的防干扰配置 */
+        * { 
+            box-sizing: border-box; 
+            margin: 0; padding: 0; 
+            user-select: none; 
+            -webkit-user-drag: none;
+        }
+        
+        body {
+            background-color: var(--bg-eye-care);
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            color: var(--text-main);
+            overflow: hidden; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none; 
+            overscroll-behavior: none;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header-instruction {
+            text-align: center;
+            font-size: 34px;
+            font-weight: bold;
+            color: var(--text-main);
+            padding-top: 40px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .sub-text {
+            font-size: 20px;
+            color: #6B7280;
+            margin-top: 15px;
+            font-weight: normal;
+        }
+
+        .stage {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================================
+           B. 韦恩图沙盒容器 (椭圆化)
+        ========================================= */
+        .venn-container {
+            position: relative;
+            width: 1200px;
+            height: 600px;
+            margin-top: -60px;
+        }
+        
+        .set-circle {
+            position: absolute;
+            width: 500px; 
+            height: 360px; 
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            top: 80px;
+            cursor: grab;
+            transition: box-shadow 0.2s ease;
+        }
+        .set-circle:active { cursor: grabbing; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        .set-circle.circle-a {
+            left: 50px;
+            background: var(--circle-a-bg);
+            border: 4px solid var(--circle-a-border);
+            z-index: 1;
+        }
+        .set-circle.circle-b {
+            left: 650px;
+            background: var(--circle-b-bg);
+            border: 4px solid var(--circle-b-border);
+            z-index: 2;
+        }
+        
+        .circle-title {
+            position: absolute;
+            top: -20px; 
+            font-size: 26px;
+            font-weight: bold;
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: #FFF;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            pointer-events: none; 
+        }
+        .circle-a .circle-title { color: var(--brand-primary); }
+        .circle-b .circle-title { color: var(--status-success); }
+
+        /* =========================================
+           C. 姓名牌样式
+        ========================================= */
+        .name-badge {
+            position: absolute;
+            padding: 10px 22px;
+            background: #FFFFFF !important;
+            color: var(--text-main);
+            border-radius: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            cursor: grab;
+            pointer-events: auto; 
+            white-space: nowrap;
+            top: -100px; left: -100px; 
+            opacity: 0;
+            z-index: 10; 
+            touch-action: none; 
+        }
+        
+        .name-badge[data-group="a"] { border: 2px solid rgba(59, 130, 246, 0.5); }
+        .name-badge[data-group="b"] { border: 2px solid rgba(16, 185, 129, 0.5); }
+
+        .name-badge.is-dragging {
+            z-index: 100 !important;
+            cursor: grabbing;
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2) !important;
+        }
+
+        .snapped-badge {
+            background: #FFFFFF !important;
+            color: var(--text-main) !important;
+            border-top: 3px solid var(--brand-primary) !important;
+            border-left: 3px solid var(--brand-primary) !important;
+            border-bottom: 3px solid var(--status-success) !important;
+            border-right: 3px solid var(--status-success) !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+            transform: scale(1.1);
+            z-index: 50; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="header-instruction">
+            <span id="mainTitle">怎样才能清楚地表示三（2）班获奖学生的情况呢？</span>
+        </div>
+
+        <div class="stage">
+            <div class="venn-container" id="vennSpace">
+                <div class="set-circle circle-a" id="circle-a">
+                    <div class="circle-title">航空模型比赛</div>
+                </div>
+
+                <div class="set-circle circle-b" id="circle-b">
+                    <div class="circle-title">机器人比赛</div>
+                </div>
+
+                <!-- A组 -->
+                <div class="name-badge" data-name="王爱华" data-group="a">王爱华</div>
+                <div class="name-badge" data-name="陈东" data-group="a">陈东</div>
+                <div class="name-badge" data-name="马超" data-group="a">马超</div>
+                <div class="name-badge" data-name="丁旭" data-group="a">丁旭</div>
+                <div class="name-badge" id="sa1" data-name="杨明" data-group="a">杨明</div>
+                <div class="name-badge" id="sa2" data-name="罗阳" data-group="a">罗阳</div>
+                
+                <!-- B组 -->
+                <div class="name-badge" data-name="于力" data-group="b">于力</div>
+                <div class="name-badge" data-name="周晓" data-group="b">周晓</div>
+                <div class="name-badge" data-name="朱小东" data-group="b">朱小东</div>
+                <div class="name-badge" data-name="陶伟" data-group="b">陶伟</div>
+                <div class="name-badge" id="sb1" data-name="杨明" data-group="b">杨明</div>
+                <div class="name-badge" id="sb2" data-name="罗阳" data-group="b">罗阳</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 椭圆的横轴和纵轴半径 (500x360)
+        const RADIUS_X = 250;
+        const RADIUS_Y = 180;
+        
+        // 增加推开的边距，保证绝对不交叉
+        const PAD_OUT_X = 70;  
+        const PAD_OUT_Y = 45;  
+        
+        const PAD_IN_X = 55;   
+        const PAD_IN_Y = 35;   
+
+        const circleA = document.getElementById('circle-a');
+        const circleB = document.getElementById('circle-b');
+
+        // =========================================
+        //  1. 发牌防重叠初始化 (含标题防遮挡)
+        // =========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(randomizeBadges, 200); 
+        });
+
+        function randomizeBadges() {
+            const cxA = circleA.offsetLeft + RADIUS_X;
+            const cyA = circleA.offsetTop + RADIUS_Y;
+            const cxB = circleB.offsetLeft + RADIUS_X;
+            const cyB = circleB.offsetTop + RADIUS_Y;
+
+            const positions = { a: [], b: [] };
+            const MIN_DIST = 85; 
+
+            document.querySelectorAll('.name-badge').forEach((badge, index) => {
+                const group = badge.dataset.group;
+                if(!group) return;
+                
+                let valid = false;
+                let attempts = 0;
+                let finalX = 0, finalY = 0;
+
+                const safeRx = RADIUS_X - PAD_IN_X;
+                const safeRy = RADIUS_Y - PAD_IN_Y;
+
+                while (!valid && attempts < 100) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let r_scale = Math.sqrt(Math.random()); 
+                    
+                    const cx = group === 'a' ? cxA : cxB;
+                    const cy = group === 'a' ? cyA : cyB;
+
+                    finalX = cx + r_scale * safeRx * Math.cos(angle);
+                    finalY = cy + r_scale * safeRy * Math.sin(angle);
+                    
+                    // 新增：避开标题区域 (上方正中间防遮挡区)
+                    if (finalY < cy - 115 && finalX > cx - 140 && finalX < cx + 140) {
+                        valid = false;
+                        attempts++;
+                        continue;
+                    }
+
+                    valid = true;
+                    for (let pos of positions[group]) {
+                        if (Math.hypot(finalX - pos.x, finalY - pos.y) < MIN_DIST) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+
+                positions[group].push({ x: finalX, y: finalY });
+                badge.style.left = (finalX - 45) + 'px'; 
+                badge.style.top = (finalY - 25) + 'px';
+                
+                setTimeout(() => { badge.style.opacity = 1; }, index * 40);
+            });
+        }
+
+        // =========================================
+        //  2. 椭圆物理引擎：平滑弹力碰撞与防遮挡
+        // =========================================
+        let isCircleDragging = false;
+        let isPhysicsRunning = false;
+        let settleTimer = 0;
+
+        function startPhysics() {
+            settleTimer = 120; 
+            if (!isPhysicsRunning) {
+                isPhysicsRunning = true;
+                physicsLoop();
+            }
+        }
+
+        function isInIntersection(bx, by, cxA, cyA, cxB, cyB) {
+            const inA = Math.pow((bx - cxA) / RADIUS_X, 2) + Math.pow((by - cyA) / RADIUS_Y, 2) <= 1;
+            const inB = Math.pow((bx - cxB) / RADIUS_X, 2) + Math.pow((by - cyB) / RADIUS_Y, 2) <= 1;
+            return inA && inB;
+        }
+
+        function pushOutEllipse(bx, by, cx, cy, padX, padY) {
+            const ex = RADIUS_X + padX;
+            const ey = RADIUS_Y + padY;
+            if (Math.pow((bx - cx) / ex, 2) + Math.pow((by - cy) / ey, 2) < 1) {
+                const angle = Math.atan2((by - cy) / ey, (bx - cx) / ex);
+                return { x: cx + ex * Math.cos(angle), y: cy + ey * Math.sin(angle) };
+            }
+            return { x: bx, y: by };
+        }
+
+        function clampInEllipse(bx, by, cx, cy, padX, padY) {
+            const ix = RADIUS_X - padX;
+            const iy = RADIUS_Y - padY;
+            if (ix <= 0 || iy <= 0) return { x: cx, y: cy };
+            if (Math.pow((bx - cx) / ix, 2) + Math.pow((by - cy) / iy, 2) > 1) {
+                const angle = Math.atan2((by - cy) / iy, (bx - cx) / ix);
+                return { x: cx + ix * Math.cos(angle), y: cy + iy * Math.sin(angle) };
+            }
+            return { x: bx, y: by };
+        }
+
+        function physicsLoop() {
+            if (settleTimer <= 0 && !isCircleDragging) {
+                isPhysicsRunning = false;
+                return;
+            }
+            if (!isCircleDragging) settleTimer--;
+
+            const cxA = circleA.offsetLeft + RADIUS_X; const cyA = circleA.offsetTop + RADIUS_Y;
+            const cxB = circleB.offsetLeft + RADIUS_X; const cyB = circleB.offsetTop + RADIUS_Y;
+            const badges = Array.from(document.querySelectorAll('.name-badge'));
+
+            badges.forEach(badge => {
+                if (badge.dataset.snapped === "true" || badge.classList.contains('is-dragging')) return; 
+
+                let bx = parseFloat(badge.style.left) + badge.offsetWidth / 2;
+                let by = parseFloat(badge.style.top) + badge.offsetHeight / 2;
+                const group = badge.dataset.group;
+
+                if (isCircleDragging) {
+                    if (group === 'a') {
+                        let pushed = pushOutEllipse(bx, by, cxB, cyB, PAD_OUT_X, PAD_OUT_Y);
+                        bx = pushed.x; by = pushed.y;
+                    } else if (group === 'b') {
+                        let pushed = pushOutEllipse(bx, by, cxA, cyA, PAD_OUT_X, PAD_OUT_Y);
+                        bx = pushed.x; by = pushed.y;
+                    }
+                }
+
+                const cx = group === 'a' ? cxA : cxB;
+                const cy = group === 'a' ? cyA : cyB;
+                let clamped = clampInEllipse(bx, by, cx, cy, PAD_IN_X, PAD_IN_Y);
+                bx = clamped.x; by = clamped.y;
+
+                // 新增：标题防遮挡物理排斥，若卡片被挤到标题上，柔和地推下来
+                if (by < cy - 115 && bx > cx - 140 && bx < cx + 140) {
+                    by += 3; 
+                }
+
+                badge.style.left = (bx - badge.offsetWidth / 2) + 'px';
+                badge.style.top = (by - badge.offsetHeight / 2) + 'px';
+            });
+
+            for (let iter = 0; iter < 3; iter++) {
+                for (let i = 0; i < badges.length; i++) {
+                    if (badges[i].dataset.snapped === "true" || badges[i].classList.contains('is-dragging')) continue;
+                    for (let j = i + 1; j < badges.length; j++) {
+                        if (badges[j].dataset.snapped === "true" || badges[j].classList.contains('is-dragging')) continue;
+                        
+                        const b1 = badges[i]; const b2 = badges[j];
+                        const x1 = parseFloat(b1.style.left) + b1.offsetWidth/2;
+                        const y1 = parseFloat(b1.style.top) + b1.offsetHeight/2;
+                        const x2 = parseFloat(b2.style.left) + b2.offsetWidth/2;
+                        const y2 = parseFloat(b2.style.top) + b2.offsetHeight/2;
+                        
+                        let dx = x1 - x2; let dy = y1 - y2;
+                        let dist = Math.hypot(dx, dy);
+                        const minDist = 95; 
+
+                        if (dist < minDist) {
+                            if (dist === 0) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; dist = 0.1; }
+                            const push = (minDist - dist) / 2 * 0.15; 
+                            const pushX = (dx / dist) * push;
+                            const pushY = (dy / dist) * push;
+                            
+                            b1.style.left = (parseFloat(b1.style.left) + pushX) + 'px';
+                            b1.style.top = (parseFloat(b1.style.top) + pushY) + 'px';
+                            b2.style.left = (parseFloat(b2.style.left) - pushX) + 'px';
+                            b2.style.top = (parseFloat(b2.style.top) - pushY) + 'px';
+                        }
+                    }
+                }
+            }
+
+            requestAnimationFrame(physicsLoop);
+        }
+
+        // =========================================
+        //  3. 磁吸与平滑断开机制
+        // =========================================
+        const duplicates = ['杨明', '罗阳'];
+        
+        function checkSnapping(draggedBadge) {
+            if(draggedBadge.dataset.snapped === "true") return;
+            const name = draggedBadge.dataset.name;
+            if (!duplicates.includes(name)) return;
+
+            const twinId = draggedBadge.id.startsWith('sa') ? draggedBadge.id.replace('sa', 'sb') : draggedBadge.id.replace('sb', 'sa');
+            const twin = document.getElementById(twinId);
+            if(!twin) return;
+
+            const bx = draggedBadge.offsetLeft + draggedBadge.offsetWidth / 2;
+            const by = draggedBadge.offsetTop + draggedBadge.offsetHeight / 2;
+            const tx = twin.offsetLeft + twin.offsetWidth / 2;
+            const ty = twin.offsetTop + twin.offsetHeight / 2;
+            
+            const cxA = circleA.offsetLeft + RADIUS_X; const cyA = circleA.offsetTop + RADIUS_Y;
+            const cxB = circleB.offsetLeft + RADIUS_X; const cyB = circleB.offsetTop + RADIUS_Y;
+
+            if (Math.hypot(bx - tx, by - ty) < 60 && isInIntersection(bx, by, cxA, cyA, cxB, cyB)) {
+                snapPair(draggedBadge, twin);
+            }
+        }
+
+        function snapPair(b1, b2) {
+            b1.dataset.snapped = "true"; b2.dataset.snapped = "true";
+            b1.classList.add('snapped-badge'); b2.classList.add('snapped-badge');
+            b2.style.left = b1.style.left;
+            b2.style.top = b1.style.top;
+        }
+
+        function unsnapPair(name) {
+            const idA = name === '杨明' ? 'sa1' : 'sa2';
+            const idB = name === '杨明' ? 'sb1' : 'sb2';
+            const b1 = document.getElementById(idA);
+            const b2 = document.getElementById(idB);
+            
+            b1.dataset.snapped = "false"; b2.dataset.snapped = "false";
+            b1.classList.remove('snapped-badge'); b2.classList.remove('snapped-badge');
+            
+            startPhysics();
+        }
+
+        // =========================================
+        //  4. 全局防跟随引擎
+        // =========================================
+        function makeDraggable(element) {
+            let isDragging = false;
+            let startX, startY;
+            let initialPos = { left: 0, top: 0 };
+            let followers = [];
+
+            element.addEventListener('pointerdown', (e) => {
+                if(e.button !== 0 && e.type.includes('mouse')) return; 
+                e.stopPropagation();
+                
+                isDragging = true;
+                startX = e.clientX; 
+                startY = e.clientY;
+                
+                element.style.transition = 'none';
+                element.classList.add('is-dragging');
+                
+                initialPos.left = parseFloat(element.style.left) || element.offsetLeft;
+                initialPos.top = parseFloat(element.style.top) || element.offsetTop;
+                
+                if (element.classList.contains('set-circle')) {
+                    isCircleDragging = true;
+                    document.querySelectorAll('.set-circle').forEach(c => c.style.zIndex = 1);
+                    element.style.zIndex = 2;
+                    
+                    followers = Array.from(document.querySelectorAll('.name-badge')).map(badge => ({
+                        el: badge,
+                        initL: parseFloat(badge.style.left) || badge.offsetLeft,
+                        initT: parseFloat(badge.style.top) || badge.offsetTop
+                    }));
+                } else {
+                    if (element.dataset.snapped === "true") {
+                        const twinId = element.id.startsWith('sa') ? element.id.replace('sa', 'sb') : element.id.replace('sb', 'sa');
+                        const twin = document.getElementById(twinId);
+                        if (twin) {
+                            followers = [{
+                                el: twin,
+                                initL: parseFloat(twin.style.left) || twin.offsetLeft,
+                                initT: parseFloat(twin.style.top) || twin.offsetTop
+                            }];
+                        }
+                    } else {
+                        followers = [];
+                    }
+                }
+
+                startPhysics(); 
+                element.setPointerCapture(e.pointerId);
+            });
+
+            element.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                e.stopPropagation();
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                element.style.left = (initialPos.left + dx) + 'px';
+                element.style.top = (initialPos.top + dy) + 'px';
+
+                const cxA = circleA.offsetLeft + RADIUS_X; const cyA = circleA.offsetTop + RADIUS_Y;
+                const cxB = circleB.offsetLeft + RADIUS_X; const cyB = circleB.offsetTop + RADIUS_Y;
+
+                if (element.classList.contains('set-circle')) {
+                    const group = element.id === 'circle-a' ? 'a' : 'b';
+                    
+                    followers.forEach(f => {
+                        const badge = f.el;
+                        if (badge.dataset.snapped === 'true') {
+                            const bx = parseFloat(badge.style.left) + badge.offsetWidth/2;
+                            const by = parseFloat(badge.style.top) + badge.offsetHeight/2;
+                            if (!isInIntersection(bx, by, cxA, cyA, cxB, cyB)) {
+                                unsnapPair(badge.dataset.name);
+                            }
+                        } 
+                        
+                        if (badge.dataset.snapped !== 'true' && badge.dataset.group === group) {
+                            badge.style.left = (f.initL + dx) + 'px';
+                            badge.style.top = (f.initT + dy) + 'px';
+                        }
+                    });
+
+                } else {
+                    followers.forEach(f => {
+                        f.el.style.left = (f.initL + dx) + 'px';
+                        f.el.style.top = (f.initT + dy) + 'px';
+                    });
+
+                    if (element.dataset.snapped === "true") {
+                        const bx = element.offsetLeft + element.offsetWidth / 2;
+                        const by = element.offsetTop + element.offsetHeight / 2;
+                        if (!isInIntersection(bx, by, cxA, cyA, cxB, cyB)) {
+                            unsnapPair(element.dataset.name);
+                        } else {
+                            const twinId = element.id.startsWith('sa') ? element.id.replace('sa', 'sb') : element.id.replace('sb', 'sa');
+                            const twin = document.getElementById(twinId);
+                            if (twin) {
+                                twin.style.left = element.style.left;
+                                twin.style.top = element.style.top;
+                            }
+                        }
+                    } else {
+                        checkSnapping(element);
+                    }
+                }
+            });
+
+            element.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                e.stopPropagation();
+                isDragging = false;
+                
+                element.classList.remove('is-dragging');
+                if (element.classList.contains('set-circle')) {
+                    isCircleDragging = false;
+                }
+                
+                element.releasePointerCapture(e.pointerId);
+                
+                // 松手时兜底一次限制
+                if (!element.classList.contains('set-circle') && element.dataset.snapped !== "true") {
+                    const cx = element.dataset.group === 'a' ? circleA.offsetLeft + RADIUS_X : circleB.offsetLeft + RADIUS_X;
+                    const cy = element.dataset.group === 'a' ? circleA.offsetTop + RADIUS_Y : circleB.offsetTop + RADIUS_Y;
+                    let bx = element.offsetLeft + element.offsetWidth / 2;
+                    let by = element.offsetTop + element.offsetHeight / 2;
+                    
+                    let clamped = clampInEllipse(bx, by, cx, cy, PAD_IN_X, PAD_IN_Y);
+                    
+                    // 新增：手动拖拽松手时兜底标题避让，绝对不允许落在标题上
+                    if (clamped.y < cy - 115 && clamped.x > cx - 140 && clamped.x < cx + 140) {
+                        clamped.y = cy - 115; 
+                    }
+
+                    element.style.left = (clamped.x - element.offsetWidth / 2) + 'px';
+                    element.style.top = (clamped.y - element.offsetHeight / 2) + 'px';
+                }
+            });
+        }
+
+        makeDraggable(circleA);
+        makeDraggable(circleB);
+        document.querySelectorAll('.name-badge').forEach(badge => makeDraggable(badge));
+
+    </script>
+</body>
+</html>

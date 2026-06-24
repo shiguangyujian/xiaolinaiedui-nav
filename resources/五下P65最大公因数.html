@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>最大公因数智能分析器</title>
+    <style>
+        /* ================= 原生 CSS 重构 ================= */
+        :root {
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --blue-500: #3b82f6;
+            --blue-600: #2563eb;
+            --blue-700: #1d4ed8;
+            --indigo-50: #eef2ff;
+            --indigo-100: #e0e7ff;
+            --indigo-200: #c7d2fe;
+            --indigo-500: #6366f1;
+            --indigo-600: #4f46e5;
+            --indigo-700: #4338ca;
+            --indigo-800: #3730a3;
+            --emerald-50: #ecfdf5;
+            --emerald-100: #d1fae5;
+            --emerald-200: #a7f3d0;
+            --emerald-500: #10b981;
+            --emerald-600: #059669;
+            --emerald-800: #065f46;
+            --amber-50: #fffbeb;
+            --amber-100: #fef3c7;
+            --amber-200: #fde68a;
+            --amber-500: #f59e0b;
+            --amber-600: #d97706;
+            --amber-800: #92400e;
+            --red-100: #fee2e2;
+            --red-200: #fecaca;
+            --red-500: #ef4444;
+            --red-600: #dc2626;
+            --red-700: #b91c1c;
+            --purple-50: #faf5ff;
+            --purple-100: #f3e8ff;
+            --purple-200: #e9d5ff;
+            --purple-300: #d8b4fe;
+            --purple-600: #9333ea;
+            --purple-700: #7e22ce;
+            --purple-800: #6b21a8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-weight: normal !important;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--slate-50);
+            color: var(--slate-800);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: pan-x pan-y;
+            user-select: none;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 1rem;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            letter-spacing: 0.025em;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* 操作按钮 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-blue {
+            background: var(--blue-600);
+            color: white;
+            padding: 5px 10px;
+        }
+
+        .btn-blue:active:not(:disabled) {
+            background: var(--blue-700);
+        }
+
+        .btn-indigo {
+            background: var(--indigo-500);
+            color: white;
+        }
+
+        .btn-emerald {
+            background: var(--emerald-500);
+            color: white;
+        }
+
+        .btn-amber {
+            background: var(--amber-500);
+            color: white;
+        }
+
+        .btn-red {
+            background: var(--red-500);
+            color: white;
+        }
+
+        .btn-slate {
+            background: var(--slate-400);
+            color: white;
+        }
+
+        .btn-icon-only {
+            background: var(--purple-100);
+            color: var(--purple-700);
+            padding: 0.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--purple-200);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: background 0.2s;
+        }
+
+        .btn-icon-only:hover {
+            background: var(--purple-200);
+        }
+
+        /* 输入区 */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+        }
+
+        .input-label {
+            color: var(--slate-500);
+        }
+
+        .num-input {
+            width: 8rem;
+            text-align: center;
+            border: 4px solid var(--slate-200);
+            border-radius: 0.75rem;
+            padding: 5px;
+            font-size: 1.875rem;
+            color: var(--slate-800);
+            transition: border-color 0.2s;
+            outline: none;
+            background: white;
+            cursor: pointer;
+        }
+
+        .num-input:focus {
+            border-color: var(--blue-500);
+            caret-color: transparent;
+        }
+
+        .and-text {
+            font-size: 1.875rem;
+            color: var(--slate-300);
+        }
+
+        .main-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            padding: 0.75rem;
+            min-height: 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            border: 2px solid var(--slate-100);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .card-header h2 {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-obs {
+            background: var(--indigo-50);
+            border-color: var(--indigo-100);
+            color: var(--indigo-800);
+        }
+
+        .header-div {
+            background: var(--emerald-50);
+            border-color: var(--emerald-100);
+            color: var(--emerald-800);
+        }
+
+        .header-list {
+            background: var(--amber-50);
+            border-color: var(--amber-100);
+            color: var(--amber-800);
+        }
+
+        .card-body {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .panel-content {
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-center {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .placeholder-text {
+            font-size: 1.5rem;
+            color: var(--slate-400);
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .card-footer {
+            background: var(--slate-50);
+            padding: 0.5rem;
+            border-top: 2px solid var(--slate-200);
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .obs-box {
+            background: var(--indigo-50);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid var(--indigo-200);
+            width: 100%;
+            text-align: center;
+        }
+
+        /* 短除法专属样式 */
+        .short-div-wrapper {
+            margin: 1rem auto 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: fit-content;
+        }
+
+        .short-div-step {
+            display: flex;
+            align-items: flex-end;
+            transition: all 0.5s;
+        }
+
+        .short-div-l {
+            border-left: 4px solid var(--emerald-500);
+            border-bottom: 4px solid var(--emerald-500);
+            border-bottom-left-radius: 8px;
+            display: flex;
+            gap: 2.5rem;
+            padding: 0.5rem 0 0.5rem 1rem;
+        }
+
+        .div-divisor {
+            width: 3rem;
+            text-align: right;
+            padding-right: 0.5rem;
+            color: var(--emerald-600);
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .div-num {
+            width: 4rem;
+            text-align: center;
+            font-size: 3rem;
+            color: var(--slate-800);
+        }
+
+        .div-num.final {
+            color: var(--amber-600);
+        }
+
+        .result-box {
+            margin-top: 2rem;
+            background: var(--emerald-50);
+            border: 2px solid var(--emerald-200);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            text-align: center;
+            align-self: center;
+            animation: bounceIn 0.5s ease-in-out;
+        }
+
+        .factor-group {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--slate-200);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1rem;
+        }
+
+        .factor-group h4 {
+            font-size: 1.5rem;
+            color: var(--slate-600);
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--amber-500);
+            padding-left: 0.75rem;
+        }
+
+        .factor-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--gap-size, 1rem);
+        }
+
+        .factor-box {
+            width: var(--box-size, 4.5rem);
+            height: var(--box-size, 4.5rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            font-size: var(--font-size, 2rem);
+            cursor: default;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .state-normal {
+            background: var(--slate-100);
+            color: var(--slate-600);
+            border: 2px solid var(--slate-300);
+        }
+
+        .state-common {
+            background: var(--amber-200);
+            color: var(--amber-800);
+            border: 2px solid var(--amber-500);
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .state-max {
+            background: var(--red-500);
+            color: white;
+            border: 2px solid var(--red-700);
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 10px 15px rgba(239, 68, 68, 0.4);
+            z-index: 10;
+        }
+
+        /* 辗转相减法弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background: white;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: var(--purple-600);
+            color: white;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0;
+            flex-shrink: 0;
+        }
+
+        .euc-quick-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+        }
+
+        .euc-quick-input input {
+            width: 10rem;
+            text-align: center;
+            border: 2px solid var(--purple-300);
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+            font-size: 1.5rem;
+            color: var(--slate-800);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .euc-quick-input input:focus {
+            border-color: white;
+            caret-color: transparent;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--purple-50);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-footer {
+            background: white;
+            padding: 0.75rem;
+            border-top: 4px solid var(--purple-100);
+            display: flex;
+            justify-content: center;
+            border-radius: 0;
+        }
+
+        /* 笔记本样式 UI (去除一切动画干扰) */
+        .notebook-container {
+            width: 100%;
+            max-width: 50rem;
+            background: #fff;
+            border-radius: 1rem;
+            border: 2px solid var(--purple-200);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .notebook-header {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--purple-100);
+            color: var(--purple-800);
+            text-align: center;
+            font-size: 1.25rem;
+            border-bottom: 2px solid var(--purple-200);
+        }
+
+        .notebook-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px;
+            gap: 1.5rem;
+            align-items: center;
+            border-bottom: 2px dashed var(--purple-100);
+            padding: 1.5rem;
+        }
+
+        .notebook-row:last-child {
+            border-bottom: none;
+        }
+
+        .notebook-col-num {
+            font-size: 2.5rem;
+            font-family: monospace;
+            color: var(--purple-800);
+            text-align: center;
+            background: var(--purple-50);
+            border-radius: 0.75rem;
+            padding: 0.75rem 0;
+            border: 2px solid var(--purple-100);
+            transition: none;
+        }
+
+        .notebook-col-num.highlight {
+            background: var(--amber-100);
+            border-color: var(--amber-300);
+            color: var(--amber-800);
+        }
+
+        .notebook-col-action {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .notebook-action-text {
+            font-size: 1.25rem;
+            color: var(--slate-500);
+            margin-bottom: 0.5rem;
+        }
+
+        .notebook-action-math {
+            font-size: 1.875rem;
+            color: var(--purple-600);
+            font-family: monospace;
+        }
+
+        .notebook-final {
+            grid-column: span 3;
+            background: var(--purple-600);
+            color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        /* 浮动虚拟数字键盘 */
+        .numpad-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 999;
+            display: none;
+        }
+
+        .numpad-container {
+            position: fixed;
+            display: none;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 320px;
+            padding: 1rem;
+            z-index: 1000;
+            border: 2px solid var(--slate-200);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .numpad-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            color: var(--slate-500);
+        }
+
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .numpad-btn {
+            background: var(--slate-100);
+            border: 2px solid var(--slate-200);
+            border-radius: 0.5rem;
+            font-size: 1.5rem;
+            padding: 0.75rem 0;
+            color: var(--slate-700);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .numpad-btn:active {
+            background: var(--slate-300);
+            transform: scale(0.95);
+        }
+
+        .numpad-btn.action {
+            background: var(--red-100);
+            color: var(--red-600);
+            border-color: var(--red-200);
+            font-size: 1.125rem;
+        }
+
+        .numpad-btn.confirm {
+            background: var(--blue-600);
+            color: white;
+            border-color: var(--blue-700);
+            grid-column: span 3;
+            font-size: 1.25rem;
+        }
+
+        .numpad-btn.confirm:active {
+            background: var(--blue-700);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 浮动虚拟数字键盘 -->
+    <div id="numpadOverlay" class="numpad-overlay"></div>
+    <div id="numpad" class="numpad-container">
+        <div class="numpad-header">
+            <span>请输入数字 (最大 10000)</span>
+            <button id="btnCloseNumpad"
+                style="background:none;border:none;font-size:1.5rem;color:var(--slate-400);cursor:pointer;">✖</button>
+        </div>
+        <div class="numpad-grid">
+            <button class="numpad-btn num-key">1</button>
+            <button class="numpad-btn num-key">2</button>
+            <button class="numpad-btn num-key">3</button>
+            <button class="numpad-btn num-key">4</button>
+            <button class="numpad-btn num-key">5</button>
+            <button class="numpad-btn num-key">6</button>
+            <button class="numpad-btn num-key">7</button>
+            <button class="numpad-btn num-key">8</button>
+            <button class="numpad-btn num-key">9</button>
+            <button class="numpad-btn action" id="btnNumClear">清空</button>
+            <button class="numpad-btn num-key">0</button>
+            <button class="numpad-btn action" id="btnNumBack">退格</button>
+            <button class="numpad-btn confirm" id="btnNumConfirm">完成输入</button>
+        </div>
+    </div>
+
+    <!-- 顶部控制栏 -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="title">
+                最大公因数智能分析器
+                <button id="btnOpenEuc" class="btn-icon-only" title="高阶：辗转相减法">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                    </svg>
+                </button>
+            </h1>
+        </div>
+
+        <div class="header-controls">
+            <div class="input-group">
+                <label class="input-label">数字 A</label>
+                <input type="number" id="inputA" class="num-input" placeholder="" inputmode="none">
+            </div>
+            <div class="and-text">与</div>
+            <div class="input-group">
+                <label class="input-label">数字 B</label>
+                <input type="number" id="inputB" class="num-input" placeholder="" inputmode="none">
+            </div>
+            <button id="btnAnalyze" class="btn btn-blue">载入数字</button>
+        </div>
+    </header>
+
+    <!-- 核心互动区 -->
+    <main class="main-grid">
+        <!-- 卡片 1: 洞察特征法 -->
+        <section class="card">
+            <div class="card-header header-obs">
+                <h2><span style="font-size: 2rem;">🥇</span> 洞察特征 (秒杀法)</h2>
+            </div>
+            <div class="card-body">
+                <div id="panel-observation" class="panel-content panel-center no-scrollbar">
+                    <p class="placeholder-text">请先载入数字</p>
+                </div>
+            </div>
+            <div id="ctrl-observation" class="card-footer hidden">
+                <button id="btnNextStepObs" class="btn btn-full btn-indigo">👀 洞察关系</button>
+            </div>
+        </section>
+
+        <!-- 卡片 2: 短除法 -->
+        <section class="card">
+            <div class="card-header header-div">
+                <h2><span style="font-size: 2rem;">🥈</span> 逐步短除 (通用法)</h2>
+            </div>
+            <div class="card-body">
+                <div id="panel-shortdiv" class="panel-content no-scrollbar">
+                    <p class="placeholder-text" id="shortdiv-placeholder">请先载入数字</p>
+                    <div id="shortdiv-wrapper" class="short-div-wrapper"></div>
+                </div>
+            </div>
+            <div id="ctrl-shortdiv" class="card-footer hidden">
+                <button id="btnNextStepDiv" class="btn btn-full btn-emerald">👉 提取下一个公因数</button>
+            </div>
+        </section>
+
+        <!-- 卡片 3: 列举法 -->
+        <section class="card">
+            <div class="card-header header-list">
+                <h2><span style="font-size: 2rem;">🥉</span> 因数对比 (溯源法)</h2>
+            </div>
+            <div class="card-body">
+                <div id="panel-listing" class="panel-content no-scrollbar" style="gap: 0.5rem;">
+                    <p class="placeholder-text">请先载入数字</p>
+                </div>
+            </div>
+            <div id="ctrl-listing" class="card-footer hidden">
+                <button id="btnNextStepList" class="btn btn-full btn-amber">👉 列出所有因数</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 弹窗：辗转相减法模式 -->
+    <div id="modalEuc" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 style="font-size: 1.875rem; display: flex; align-items: center; gap: 0.75rem;">
+                    🌌 辗转相减法
+                    <span
+                        style="font-size: 1rem; background: var(--purple-800); padding: 0.25rem 0.75rem; border-radius: 99px;">大数克星</span>
+                </h2>
+                <!-- 顶部快捷输入 -->
+                <div class="euc-quick-input">
+                    <input type="number" id="eucInputA" inputmode="none" placeholder="">
+                    <span style="font-size: 1.25rem;">与</span>
+                    <input type="number" id="eucInputB" inputmode="none" placeholder="">
+                    <button id="btnEucReload" class="btn btn-purple"
+                        style="font-size: 1.25rem; padding: 0.5rem 1rem;">快捷推演</button>
+                    <button id="btnNextStepEuc" class="btn btn-emerald"
+                        style="font-size: 1.25rem; padding: 0.5rem 1rem; min-width: 12rem;">🚀 开始推演</button>
+                </div>
+                <button id="btnCloseEuc" style="background: none; border: none; color: white; cursor: pointer;">
+                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="panel-euc" class="modal-body no-scrollbar">
+                <p class="placeholder-text" style="color: var(--purple-400);">请点击上方按钮开始推演</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 状态管理 =================
+        let currentA = 0;
+        let currentB = 0;
+
+        let obsState = 0;
+        let shortDivSteps = [];
+        let shortDivCurrentStep = 0;
+
+        let listState = -1;
+        let factorsA = [];
+        let factorsB = [];
+        let commonFactors = [];
+
+        let eucSteps = [];
+        let eucCurrentStep = 0;
+
+        // ================= DOM 获取 =================
+        const elInputA = document.getElementById('inputA');
+        const elInputB = document.getElementById('inputB');
+        const btnAnalyze = document.getElementById('btnAnalyze');
+
+        const panelObs = document.getElementById('panel-observation');
+        const ctrlObs = document.getElementById('ctrl-observation');
+        const btnNextStepObs = document.getElementById('btnNextStepObs');
+
+        const panelShortDiv = document.getElementById('shortdiv-wrapper');
+        const shortDivPlaceholder = document.getElementById('shortdiv-placeholder');
+        const ctrlShortDiv = document.getElementById('ctrl-shortdiv');
+        const btnNextStepDiv = document.getElementById('btnNextStepDiv');
+        const panelShortDivScroll = document.getElementById('panel-shortdiv').parentElement;
+
+        const panelListing = document.getElementById('panel-listing');
+        const ctrlListing = document.getElementById('ctrl-listing');
+        const btnNextStepList = document.getElementById('btnNextStepList');
+
+        const modalEuc = document.getElementById('modalEuc');
+        const btnOpenEuc = document.getElementById('btnOpenEuc');
+        const btnCloseEuc = document.getElementById('btnCloseEuc');
+        const panelEuc = document.getElementById('panel-euc');
+        const btnNextStepEuc = document.getElementById('btnNextStepEuc');
+        const eucInputA = document.getElementById('eucInputA');
+        const eucInputB = document.getElementById('eucInputB');
+        const btnEucReload = document.getElementById('btnEucReload');
+
+        // ================= 智能浮动虚拟键盘逻辑 =================
+        const numpad = document.getElementById('numpad');
+        const numpadOverlay = document.getElementById('numpadOverlay');
+        let activeInputTarget = null;
+
+        const allInputs = [elInputA, elInputB, eucInputA, eucInputB];
+
+        function openNumpad(e) {
+            activeInputTarget = e.target;
+            const rect = activeInputTarget.getBoundingClientRect();
+
+            numpadOverlay.style.display = 'block';
+            numpad.style.display = 'block';
+
+            // 动态计算悬浮位置 (正下方)
+            let topPos = rect.bottom + 10;
+            let leftPos = rect.left + (rect.width / 2) - (numpad.offsetWidth / 2);
+
+            // 防止键盘越过屏幕边缘
+            if (leftPos < 10) leftPos = 10;
+            if (leftPos + numpad.offsetWidth > window.innerWidth - 10) {
+                leftPos = window.innerWidth - numpad.offsetWidth - 10;
+            }
+            if (topPos + numpad.offsetHeight > window.innerHeight - 10) {
+                topPos = rect.top - numpad.offsetHeight - 10; // 如果下面空间不够，弹到上面
+            }
+
+            numpad.style.top = topPos + 'px';
+            numpad.style.left = leftPos + 'px';
+            activeInputTarget.focus();
+        }
+
+        function closeNumpad() {
+            numpad.style.display = 'none';
+            numpadOverlay.style.display = 'none';
+            if (activeInputTarget) activeInputTarget.blur();
+            activeInputTarget = null;
+        }
+
+        allInputs.forEach(input => {
+            input.addEventListener('click', openNumpad);
+            input.addEventListener('focus', openNumpad);
+        });
+
+        document.getElementById('btnCloseNumpad').addEventListener('click', closeNumpad);
+        numpadOverlay.addEventListener('click', closeNumpad);
+
+        document.querySelectorAll('.num-key').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (activeInputTarget) {
+                    let val = activeInputTarget.value;
+                    let key = btn.innerText;
+
+                    // 如果当前是 "0"，且按下的是数字，则替换掉这个 "0"
+                    if (val === "0") {
+                        if (key !== "0") {
+                            activeInputTarget.value = key;
+                        }
+                        // 如果按下的是 "0"，就不做任何操作，防止出现 "00"
+                        return;
+                    }
+
+                    // 限制最大支持万以内的数 (最大 5 位数)
+                    if (val.length < 5) {
+                        let newVal = val + key;
+                        if (parseInt(newVal) <= 10000) {
+                            activeInputTarget.value = newVal;
+                        }
+                    }
+                }
+            });
+        });
+
+        document.getElementById('btnNumBack').addEventListener('click', () => {
+            if (activeInputTarget && activeInputTarget.value.length > 0) {
+                activeInputTarget.value = activeInputTarget.value.slice(0, -1);
+            }
+        });
+
+        document.getElementById('btnNumClear').addEventListener('click', () => {
+            if (activeInputTarget) activeInputTarget.value = '';
+        });
+
+        document.getElementById('btnNumConfirm').addEventListener('click', () => {
+            closeNumpad();
+            if (activeInputTarget === eucInputA || activeInputTarget === eucInputB) {
+                btnEucReload.click();
+            } else if (activeInputTarget === elInputA || activeInputTarget === elInputB) {
+                if (elInputA.value && elInputB.value) btnAnalyze.click();
+            }
+        });
+
+
+        // ================= 核心算法 =================
+        function getFactors(n) {
+            let facts = [];
+            for (let i = 1; i <= n; i++) {
+                if (n % i === 0) facts.push(i);
+            }
+            return facts;
+        }
+
+        function calculateShortDivision(a, b) {
+            let steps = [];
+            let currA = a, currB = b;
+            const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+
+            while (true) {
+                let found = false;
+                for (let p of primes) {
+                    if (currA % p === 0 && currB % p === 0) {
+                        steps.push({ divisor: p, divA: currA, divB: currB, nextA: currA / p, nextB: currB / p });
+                        currA /= p;
+                        currB /= p;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) break;
+            }
+            return { steps, finalA: currA, finalB: currB };
+        }
+
+        // 高阶：辗转相减法核心逻辑 (笔记本三列结构推导)
+        function calculateEuclideanDetailed(a, b) {
+            let steps = [];
+            let currL = a, currR = b;
+
+            // 初始行
+            steps.push({ type: 'init', L: currL, R: currR, text: '初始状态，准备相减', math: '—' });
+
+            while (currL !== currR && currL > 0 && currR > 0) {
+                let leftIsGreater = currL > currR;
+                let big = leftIsGreater ? currL : currR;
+                let small = leftIsGreater ? currR : currL;
+                let diff = big - small;
+
+                let explanation = leftIsGreater
+                    ? `左侧较大，用左边减右边`
+                    : `右侧较大，用右边减左边`;
+                let math = `${big} - ${small} = ${diff}`;
+
+                let nextL = leftIsGreater ? diff : currL;
+                let nextR = leftIsGreater ? currR : diff;
+
+                steps.push({
+                    type: 'step',
+                    L: nextL, R: nextR,
+                    changed: leftIsGreater ? 'L' : 'R',
+                    text: explanation, math: math
+                });
+
+                currL = nextL;
+                currR = nextR;
+            }
+            steps.push({ type: 'final', L: currL, R: currR, text: '🎉 两数相等，推演结束', math: `最大公因数：${currL}` });
+            return steps;
+        }
+
+        // ================= 主流程载入 =================
+        btnAnalyze.addEventListener('click', () => {
+            let a = parseInt(elInputA.value);
+            let b = parseInt(elInputB.value);
+
+            if (isNaN(a) || isNaN(b) || a < 2 || b < 2 || a > 10000 || b > 10000) {
+                alert("请输入 2 到 10000 之间的有效自然数哦！");
+                return;
+            }
+
+            currentA = a;
+            currentB = b;
+
+            // 1. 洞察特征法初始化
+            obsState = 0;
+            panelObs.innerHTML = '<p class="placeholder-text">已载入，等待分析...</p>';
+            ctrlObs.classList.remove('hidden'); // 修复按钮显隐BUG
+            btnNextStepObs.innerHTML = "👀 洞察关系";
+            btnNextStepObs.disabled = false;
+            btnNextStepObs.className = "btn btn-full btn-indigo";
+
+            // 2. 短除法初始化
+            shortDivCurrentStep = 0;
+            const sdResult = calculateShortDivision(a, b);
+            shortDivSteps = sdResult.steps;
+            shortDivSteps.push({ isFinal: true, finalA: sdResult.finalA, finalB: sdResult.finalB });
+
+            shortDivPlaceholder.style.display = 'none';
+            renderShortDivStep();
+
+            ctrlShortDiv.classList.remove('hidden'); // 修复按钮显隐BUG
+            if (shortDivSteps.length === 1 && shortDivSteps[0].isFinal) {
+                btnNextStepDiv.innerHTML = "这两数互质，无需短除";
+                btnNextStepDiv.disabled = true;
+                btnNextStepDiv.className = "btn btn-full btn-slate";
+            } else {
+                btnNextStepDiv.innerHTML = "👉 提取公有质因数";
+                btnNextStepDiv.disabled = false;
+                btnNextStepDiv.className = "btn btn-full btn-emerald";
+            }
+
+            // 3. 列举法初始化
+            listState = -1;
+            factorsA = getFactors(a);
+            factorsB = getFactors(b);
+            commonFactors = factorsA.filter(v => factorsB.includes(v));
+            panelListing.innerHTML = '<p class="placeholder-text">已载入，等待分析...</p>';
+            ctrlListing.classList.remove('hidden'); // 修复按钮显隐BUG
+            btnNextStepList.innerHTML = "👉 列出所有因数";
+            btnNextStepList.disabled = false;
+            btnNextStepList.className = "btn btn-full btn-slate";
+
+            // 4. 辗转相减法后台数据初始化
+            initEucData(a, b);
+        });
+
+        // ================= 1. 洞察特征法逻辑 =================
+        btnNextStepObs.addEventListener('click', () => {
+            let maxNum = Math.max(currentA, currentB);
+            let minNum = Math.min(currentA, currentB);
+            let gcd = commonFactors.length > 0 ? Math.max(...commonFactors) : 1;
+            let html = "";
+
+            if (maxNum % minNum === 0) {
+                html = `
+                    <div style="font-size: 4.5rem; margin-bottom: 1rem;">🎯</div>
+                    <h3 style="font-size: 1.875rem; color: var(--indigo-700); margin-bottom: 1rem;">发现倍数关系！</h3>
+                    <div class="obs-box">
+                        <p style="font-size: 2.25rem; color: var(--indigo-800); margin-bottom: 1rem; border-bottom: 2px solid var(--indigo-200); padding-bottom: 1rem;">${maxNum} ÷ ${minNum} = ${maxNum / minNum}</p>
+                        <p style="font-size: 1.5rem; color: var(--slate-700);">大数 ${maxNum} 是小数 ${minNum} 的整数倍。</p>
+                        <p style="font-size: 1.875rem; color: var(--indigo-600); margin-top: 1rem;">最大公因数就是小数：<span style="color: var(--red-500);">${minNum}</span></p>
+                    </div>
+                `;
+            } else if (gcd === 1) {
+                let reason = "它们只有公因数 1";
+                if (Math.abs(currentA - currentB) === 1) reason = "相邻的自然数总是互质的";
+                html = `
+                    <div style="font-size: 4.5rem; margin-bottom: 1rem;">🛡️</div>
+                    <h3 style="font-size: 1.875rem; color: var(--indigo-700); margin-bottom: 1rem;">发现互质关系！</h3>
+                    <div class="obs-box">
+                        <p style="font-size: 1.5rem; color: var(--slate-700);">${reason}。</p>
+                        <p style="font-size: 1.875rem; color: var(--indigo-600); margin-top: 1rem;">最大公因数是：<span style="color: var(--red-500);">1</span></p>
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div style="font-size: 4.5rem; margin-bottom: 1rem;">🕵️</div>
+                    <h3 style="font-size: 1.875rem; color: var(--indigo-700); margin-bottom: 1rem;">无明显特征</h3>
+                    <div class="obs-box" style="text-align: center;">
+                        <p style="font-size: 1.5rem; color: var(--slate-700);">没有倍数或互质关系。</p>
+                        <p style="font-size: 1.5rem; color: var(--slate-700); margin-top: 0.5rem;">推荐使用右侧的 <span style="color: var(--emerald-600);">短除法</span>！</p>
+                    </div>
+                `;
+            }
+            panelObs.innerHTML = html;
+            btnNextStepObs.innerHTML = "✅ 洞察完毕";
+            btnNextStepObs.disabled = true;
+            btnNextStepObs.className = "btn btn-full btn-slate";
+        });
+
+        // ================= 2. 可视化短除法 (撤回排版修改版本) =================
+        function renderShortDivStep() {
+            panelShortDiv.innerHTML = "";
+            let factorStr = [];
+
+            if (shortDivCurrentStep === 0) {
+                panelShortDiv.innerHTML = `
+                    <div class="short-div-step" style="padding-left: 3rem;">
+                        <div class="div-num">${currentA}</div>
+                        <div class="div-num" style="margin-left: 2.5rem;">${currentB}</div>
+                    </div>
+                 `;
+            } else {
+                for (let i = 0; i < shortDivCurrentStep; i++) {
+                    const step = shortDivSteps[i];
+                    const indent = i * 24;
+
+                    if (!step.isFinal) {
+                        let stepHtml = `
+                            <div class="short-div-step" style="margin-left: ${indent}px;">
+                                <div class="div-divisor">${step.divisor}</div>
+                                <div class="short-div-l">
+                                    <div class="div-num">${step.divA}</div>
+                                    <div class="div-num">${step.divB}</div>
+                                </div>
+                            </div>
+                         `;
+                        panelShortDiv.insertAdjacentHTML('beforeend', stepHtml);
+                        factorStr.push(step.divisor);
+
+                        if (i === shortDivCurrentStep - 1 || shortDivSteps[i + 1].isFinal) {
+                            let isNextFinal = shortDivSteps[i + 1].isFinal;
+                            let cls = isNextFinal ? "div-num final" : "div-num";
+                            let nextHtml = `
+                                <div class="short-div-step" style="margin-left: ${indent + 48}px; gap: 2.5rem; padding-left: 1rem; margin-top: 0.5rem;">
+                                    <div class="${cls}">${step.nextA}</div>
+                                    <div class="${cls}">${step.nextB}</div>
+                                </div>
+                             `;
+                            panelShortDiv.insertAdjacentHTML('beforeend', nextHtml);
+                        }
+                    } else {
+                        let formula = factorStr.join(" × ");
+                        let gcd = factorStr.reduce((acc, val) => acc * val, 1);
+                        let resultText = factorStr.length > 1 ? `${formula} = ${gcd}` : `${gcd}`;
+
+                        let endHtml = `
+                            <div class="result-box">
+                                <div style="font-size: 1.5rem; color: var(--emerald-800); margin-bottom: 0.5rem;">提取的公有质因数连乘：</div>
+                                <div style="font-size: 2.25rem; color: var(--emerald-600);">最大公因数：${resultText}</div>
+                            </div>
+                         `;
+                        panelShortDiv.insertAdjacentHTML('beforeend', endHtml);
+                    }
+                }
+            }
+        }
+
+        btnNextStepDiv.addEventListener('click', () => {
+            if (shortDivCurrentStep < shortDivSteps.length) {
+                shortDivCurrentStep++;
+                renderShortDivStep();
+                setTimeout(() => { panelShortDivScroll.scrollTop = panelShortDivScroll.scrollHeight; }, 50);
+
+                if (shortDivCurrentStep === shortDivSteps.length) {
+                    btnNextStepDiv.innerHTML = "✅ 分析完成";
+                    btnNextStepDiv.disabled = true;
+                    btnNextStepDiv.className = "btn btn-full btn-slate";
+                } else if (shortDivCurrentStep === shortDivSteps.length - 1) {
+                    btnNextStepDiv.innerHTML = "🏁 得出互质商，结算";
+                    btnNextStepDiv.className = "btn btn-full btn-emerald";
+                }
+            }
+        });
+
+        // ================= 3. 列举法逻辑 (自适应字号版本) =================
+        function updateAdaptiveFactorStyles() {
+            let maxCount = Math.max(factorsA.length, factorsB.length);
+            let boxSize, fontSize, gapSize;
+            if (maxCount <= 6) { boxSize = '4.5rem'; fontSize = '2rem'; gapSize = '1rem'; }
+            else if (maxCount <= 10) { boxSize = '3.5rem'; fontSize = '1.75rem'; gapSize = '0.75rem'; }
+            else if (maxCount <= 15) { boxSize = '2.8rem'; fontSize = '1.4rem'; gapSize = '0.6rem'; }
+            else if (maxCount <= 20) { boxSize = '2.4rem'; fontSize = '1.2rem'; gapSize = '0.5rem'; }
+            else if (maxCount <= 30) { boxSize = '2rem'; fontSize = '1rem'; gapSize = '0.4rem'; }
+            else if (maxCount <= 50) { boxSize = '1.6rem'; fontSize = '0.8rem'; gapSize = '0.3rem'; }
+            else { boxSize = '1.2rem'; fontSize = '0.6rem'; gapSize = '0.2rem'; }
+
+            panelListing.style.setProperty('--box-size', boxSize);
+            panelListing.style.setProperty('--font-size', fontSize);
+            panelListing.style.setProperty('--gap-size', gapSize);
+        }
+
+        function createFactorHTML(factorArr, name, num) {
+            let html = `
+                <div class="factor-group">
+                    <h4><span style="color: var(--amber-600);">${num}</span> 的因数：</h4>
+                    <div class="factor-wrap">
+            `;
+            factorArr.forEach(f => {
+                html += `<div id="factor-${name}-${f}" class="factor-box state-normal">${f}</div>`;
+            });
+            html += `</div></div>`;
+            return html;
+        }
+
+        btnNextStepList.addEventListener('click', () => {
+            if (listState === -1) {
+                updateAdaptiveFactorStyles();
+                let html = createFactorHTML(factorsA, 'A', currentA);
+                html += createFactorHTML(factorsB, 'B', currentB);
+                html += `<div id="list-result" style="text-align: center; margin-top: 2rem; opacity: 0; transition: opacity 0.5s;"></div>`;
+                panelListing.innerHTML = html;
+
+                btnNextStepList.innerHTML = "🔍 圈出公因数";
+                btnNextStepList.className = "btn btn-full btn-amber";
+                listState = 0;
+            } else if (listState === 0) {
+                commonFactors.forEach(f => {
+                    document.getElementById(`factor-A-${f}`).className = "factor-box state-common";
+                    document.getElementById(`factor-B-${f}`).className = "factor-box state-common";
+                });
+                btnNextStepList.innerHTML = "🏆 锁定最大公因数";
+                btnNextStepList.className = "btn btn-full btn-red";
+                listState = 1;
+            } else if (listState === 1) {
+                let maxFactor = Math.max(...commonFactors);
+                commonFactors.forEach(f => {
+                    if (f !== maxFactor) {
+                        document.getElementById(`factor-A-${f}`).style.opacity = '0.4';
+                        document.getElementById(`factor-B-${f}`).style.opacity = '0.4';
+                    }
+                });
+                document.getElementById(`factor-A-${maxFactor}`).className = "factor-box state-max";
+                document.getElementById(`factor-B-${maxFactor}`).className = "factor-box state-max";
+
+                // 已经通过 state-max CSS 的 transform scale 放大，无需再覆盖 inline 宽高
+
+                const resEl = document.getElementById('list-result');
+                resEl.innerHTML = `<span style="background: var(--red-100); color: var(--red-700); padding: 0.75rem 2rem; border-radius: 99px; font-size: 2.25rem; border: 2px solid var(--red-200); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">最大公因数是 ${maxFactor}</span>`;
+                resEl.style.opacity = '1';
+
+                btnNextStepList.innerHTML = "✅ 分析完成";
+                btnNextStepList.disabled = true;
+                btnNextStepList.className = "btn btn-full btn-slate";
+                listState = 2;
+                setTimeout(() => { panelListing.parentElement.scrollTop = panelListing.parentElement.scrollHeight; }, 50);
+            }
+        });
+
+        // ================= 4. 高阶弹窗：辗转相减法 =================
+        function initEucData(a, b) {
+            eucCurrentStep = 0;
+            eucSteps = calculateEuclideanDetailed(a, b);
+            eucInputA.value = a;
+            eucInputB.value = b;
+
+            panelEuc.innerHTML = `
+                <div id="eucNotebook" class="notebook-container hidden">
+                    <div class="notebook-header">
+                        <div>追踪 A</div>
+                        <div>对比与推演算式</div>
+                        <div>追踪 B</div>
+                    </div>
+                    <div id="eucRows"></div>
+                </div>
+                <p id="eucPlaceholder" class="placeholder-text" style="color: var(--purple-400);">请点击下方按钮开始笔记本推演</p>
+            `;
+
+            btnNextStepEuc.innerHTML = "🚀 开始推演";
+            btnNextStepEuc.style.display = "inline-flex";
+            btnNextStepEuc.disabled = false;
+            btnNextStepEuc.className = "btn btn-emerald";
+        }
+
+        btnOpenEuc.addEventListener('click', () => {
+            initEucData(currentA || 0, currentB || 0);
+            modalEuc.classList.add('active');
+            // 如果已经有数字，自动点击第一步
+            if (currentA && currentB) {
+                setTimeout(() => { btnNextStepEuc.click(); }, 300);
+            }
+        });
+
+        btnCloseEuc.addEventListener('click', () => {
+            modalEuc.classList.remove('active');
+        });
+
+        btnEucReload.addEventListener('click', () => {
+            let a = parseInt(eucInputA.value);
+            let b = parseInt(eucInputB.value);
+            if (isNaN(a) || isNaN(b) || a < 2 || b < 2 || a > 10000 || b > 10000) {
+                alert("请输入2到10000的合法自然数！"); return;
+            }
+            // Update the main inputs if they are empty
+            if (!elInputA.value) elInputA.value = a;
+            if (!elInputB.value) elInputB.value = b;
+            currentA = a;
+            currentB = b;
+            initEucData(a, b);
+            // 自动开始第一步推演
+            setTimeout(() => {
+                btnNextStepEuc.click();
+            }, 100);
+        });
+
+        function renderEucStep() {
+            const container = document.getElementById('eucNotebook');
+            const rowsWrapper = document.getElementById('eucRows');
+            const placeholder = document.getElementById('eucPlaceholder');
+
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            }
+
+            if (eucCurrentStep >= eucSteps.length) return;
+            let step = eucSteps[eucCurrentStep];
+
+            let rowEl = document.createElement('div');
+            if (step.type === 'init' || step.type === 'step') {
+                let hlL = (step.changed === 'L') ? 'highlight' : '';
+                let hlR = (step.changed === 'R') ? 'highlight' : '';
+                rowEl.className = "notebook-row";
+                rowEl.innerHTML = `
+                    <div class="notebook-col-num ${hlL}">${step.L}</div>
+                    <div class="notebook-col-action">
+                        <div class="notebook-action-text">${step.text}</div>
+                        <div class="notebook-action-math">${step.math}</div>
+                    </div>
+                    <div class="notebook-col-num ${hlR}">${step.R}</div>
+                `;
+            } else if (step.type === 'final') {
+                rowEl.className = "notebook-row";
+                rowEl.style.padding = "0";
+                rowEl.innerHTML = `
+                    <div class="notebook-final">
+                        <p style="font-size: 1.25rem; margin-bottom: 0.5rem; opacity: 0.9;">${step.text}</p>
+                        <p style="font-size: 2.5rem; font-family: monospace;">${step.math}</p>
+                    </div>
+                `;
+            }
+            rowsWrapper.appendChild(rowEl);
+
+            // Ensure the new row is in view
+            setTimeout(() => {
+                rowEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+        }
+
+        btnNextStepEuc.addEventListener('click', () => {
+            if (eucCurrentStep < eucSteps.length) {
+                renderEucStep();
+                eucCurrentStep++;
+
+                if (eucCurrentStep === eucSteps.length) {
+                    btnNextStepEuc.innerHTML = "✅ 推演完毕";
+                    btnNextStepEuc.className = "btn btn-slate";
+                    setTimeout(() => { btnNextStepEuc.style.display = 'none'; }, 1500);
+                } else if (eucCurrentStep === eucSteps.length - 1) {
+                    btnNextStepEuc.innerHTML = "🏁 揭晓结果";
+                } else {
+                    btnNextStepEuc.innerHTML = "👉 减去一步";
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>

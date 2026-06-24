@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>在钉板上围一围</title>
+    <style>
+        :root {
+            --board-color: #72cee3;
+            --board-shadow: #5bb3c7;
+            --pin-color: #9bdff1;
+            --pin-shadow: #5daac0;
+            --primary-text: #4a4a4a;
+        }
+
+        body {
+            font-family: "KaiTi", "楷体", "STKaiti", serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            touch-action: none;
+            /* Prevent browser scrolling */
+        }
+
+        header {
+            width: 100%;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 2rem;
+            color: var(--primary-text);
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        #game-container {
+            position: relative;
+            flex-grow: 1;
+            width: 95%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 110px;
+        }
+
+        #board-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2 / 1;
+            background-color: var(--board-color);
+            border-radius: 20px;
+            box-shadow:
+                inset 5px 5px 15px rgba(255, 255, 255, 0.3),
+                inset -5px -5px 15px rgba(0, 0, 0, 0.1),
+                0 10px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Decorative Handles */
+        .handle {
+            position: absolute;
+            width: 20px;
+            height: 40%;
+            background-color: #92def0;
+            top: 30%;
+            border-radius: 4px;
+            box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .handle.left {
+            left: -20px;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .handle.right {
+            right: -20px;
+            border-radius: 0 10px 10px 0;
+        }
+
+        #geoboard {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            /* Critical for mobile drag performance */
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        /* SVG Elements */
+        .pin {
+            fill: var(--pin-color);
+        }
+
+        .rubber-band {
+            fill-opacity: 0.1;
+            /*stroke-linecap: round;*/
+            stroke-linejoin: round;
+            cursor: move;
+            transition: stroke-width 0.1s;
+        }
+
+        .rubber-band:hover {
+            stroke-width: 8px !important;
+        }
+
+        .band-vertex {
+            fill: rgba(255, 255, 255, 0.8);
+            stroke: #333;
+            stroke-width: 1;
+            r: 8;
+            opacity: 0;
+            /* Hidden unless interacting or mode enabled */
+            transition: opacity 0.2s;
+            pointer-events: all;
+            cursor: grab;
+        }
+
+        .rubber-band-group:hover .band-vertex {
+            opacity: 1;
+        }
+
+        .active-drag .band-vertex {
+            opacity: 1;
+        }
+
+        /* Controls */
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            padding: 15px 25px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 40px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+
+        .tool-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-btn:active {
+            transform: scale(0.9);
+        }
+
+        .color-btn {
+            border: 4px solid white;
+        }
+
+        .tool-btn.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .tool-btn.active::after {
+            content: '✓';
+            font-size: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .color-btn.blue {
+            background-color: #2b5797;
+        }
+
+        .color-btn.orange {
+            background-color: #f0ad4e;
+        }
+
+        .color-btn.red {
+            background-color: #d9534f;
+        }
+
+        .color-btn.green {
+            background-color: #5cb85c;
+        }
+
+        .action-btn {
+            background-color: #eee;
+            color: #555;
+        }
+
+        .action-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        /* Help hint */
+        #hint {
+            position: absolute;
+            bottom: 100px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        在钉板上围一圈。
+    </header>
+
+    <div id="game-container">
+        <div class="handle left"></div>
+        <div id="board-wrapper">
+            <svg id="geoboard" preserveAspectRatio="xMidYMid meet">
+                <!-- Defs for glow effects, etc if needed -->
+                <defs>
+                    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.2)" />
+                    </filter>
+                </defs>
+                <g id="grid-layer"></g>
+                <g id="bands-layer"></g>
+                <g id="interaction-layer"></g> <!-- Temporary drag visuals -->
+            </svg>
+        </div>
+        <div class="handle right"></div>
+    </div>
+
+    <div id="controls">
+        <button class="tool-btn color-btn orange active" onclick="selectColor('orange')" data-color="#f0ad4e"></button>
+        <button class="tool-btn color-btn red" onclick="selectColor('red')" data-color="#d9534f"></button>
+        <button class="tool-btn color-btn blue" onclick="selectColor('blue')" data-color="#2b5797"></button>
+        <button class="tool-btn color-btn green" onclick="selectColor('green')" data-color="#5cb85c"></button>
+        <div style="width: 20px;"></div>
+        <button class="tool-btn action-btn" onclick="clearBoard()" title="清空">🗑️</button>
+    </div>
+
+    <script>
+        const CONFIG = {
+            rows: 10,
+            cols: 18,
+            padding: 40,
+            pinRadius: 3
+        };
+
+        const STATE = {
+            bands: [],
+            nextId: 1,
+            isDragging: false,
+            dragType: null, // 'vertex', 'segment', 'create'
+            activeBandId: null,
+            activeVertexIndex: null,
+            dragStartPos: { x: 0, y: 0 },
+            dragStartPin: null, // {r, c} for creation
+            tempPoint: { x: 0, y: 0 },
+            currentColor: '#f0ad4e' // Default Orange
+        };
+
+        const svg = document.getElementById('geoboard');
+        const gridLayer = document.getElementById('grid-layer');
+        const bandsLayer = document.getElementById('bands-layer');
+
+        let gridPoints = [];
+
+        // --- Initialization ---
+
+        function init() {
+            renderGrid();
+            window.addEventListener('resize', debounce(renderGrid, 200));
+            setupInteraction();
+        }
+
+        function renderGrid() {
+            const rect = svg.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            gridLayer.innerHTML = '';
+            gridPoints = [];
+
+            const availWidth = width - (CONFIG.padding * 2);
+            const availHeight = height - (CONFIG.padding * 2);
+
+            const cellW = availWidth / (CONFIG.cols - 1);
+            const cellH = availHeight / (CONFIG.rows - 1);
+
+            // Keep aspect ratio somewhat square logic if needed, but fitting to board is better
+            const cellSize = Math.min(cellW, cellH);
+
+            const totalGridW = cellSize * (CONFIG.cols - 1);
+            const totalGridH = cellSize * (CONFIG.rows - 1);
+            const startX = (width - totalGridW) / 2;
+            const startY = (height - totalGridH) / 2;
+
+            for (let r = 0; r < CONFIG.rows; r++) {
+                for (let c = 0; c < CONFIG.cols; c++) {
+                    const cx = startX + c * cellSize;
+                    const cy = startY + r * cellSize;
+
+                    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    dot.setAttribute('cx', cx);
+                    dot.setAttribute('cy', cy);
+                    dot.setAttribute('r', CONFIG.pinRadius);
+                    dot.setAttribute('class', 'pin');
+
+                    gridLayer.appendChild(dot);
+                    gridPoints.push({ r, c, x: cx, y: cy });
+                }
+            }
+            renderBands();
+        }
+
+        // --- Logic ---
+
+        class Band {
+            constructor(id, color, points) {
+                this.id = id;
+                this.color = color;
+                this.points = points; // Array of {r, c}
+            }
+        }
+
+        function selectColor(colorName) {
+            // Update UI
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+            const btn = document.querySelector(`.color-btn.${colorName}`);
+            if (btn) btn.classList.add('active');
+
+            // Get hex
+            STATE.currentColor = btn.getAttribute('data-color');
+        }
+
+        function clearBoard() {
+            if (confirm('确定要清空钉板吗？')) {
+                STATE.bands = [];
+                renderBands();
+            }
+        }
+
+        function getScreenCoords(r, c) {
+            const pt = gridPoints.find(p => p.r === r && p.c === c);
+            return pt ? { x: pt.x, y: pt.y } : { x: 0, y: 0 };
+        }
+
+        // --- Path Generation Helper ---
+        function generateBandPath(inputPoints) {
+            if (!inputPoints || inputPoints.length < 2) return "";
+
+            // 1. Clean points
+            const points = inputPoints.filter((p, i) => {
+                if (i === 0) return true;
+                const prev = inputPoints[i - 1];
+                return p.x !== prev.x || p.y !== prev.y;
+            });
+            if (points.length > 1 && points[points.length - 1].x === points[0].x && points[points.length - 1].y === points[0].y) {
+                points.pop();
+            }
+            if (points.length < 2) return "";
+
+            // 2. Ensure CW Winding
+            let area = 0;
+            for (let i = 0; i < points.length; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % points.length];
+                area += (p2.x - p1.x) * (p2.y + p1.y);
+            }
+            // Screen coords Y-down: CW is Negative Area.
+            // If Area > 0 (CCW), reverse.
+            let pts = area > 0 ? [...points].reverse() : [...points];
+
+            const count = pts.length;
+            const RADIUS_CONVEX = 8;
+            const RADIUS_CONCAVE = 0; // "Ignore" wrapping, go to center
+
+            // 3. Determine Radius for each vertex based on Convexity
+            const radii = pts.map((curr, i) => {
+                if (count <= 2) return RADIUS_CONVEX; // Capsule always convex
+
+                const prev = pts[(i - 1 + count) % count];
+                const next = pts[(i + 1) % count];
+
+                // Cross Product of (curr-prev) and (next-curr)
+                const dx1 = curr.x - prev.x;
+                const dy1 = curr.y - prev.y;
+                const dx2 = next.x - curr.x;
+                const dy2 = next.y - curr.y;
+
+                const cp = dx1 * dy2 - dy1 * dx2;
+
+                // CW Logic:
+                // Right Turn (Convex) => cp > 0 
+                // Collinear => cp = 0
+                // Left Turn (Concave) => cp < 0
+
+                // Use slight tolerance for straight lines
+                if (cp >= -0.1) return RADIUS_CONVEX;
+                return RADIUS_CONCAVE;
+            });
+
+            let d = "";
+
+            // 4. Build Tangent Path
+            for (let i = 0; i < count; i++) {
+                const curr = pts[i];
+                const next = pts[(i + 1) % count];
+                const r1 = radii[i];
+                const r2 = radii[(i + 1) % count];
+
+                // Compute External Tangent between Circle(curr, r1) and Circle(next, r2)
+                const dx = next.x - curr.x;
+                const dy = next.y - curr.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < 0.001) continue;
+
+                // Angle of the centerline
+                const angle = Math.atan2(dy, dx);
+
+                // Offset angle for tangent
+                // We want the tangent on the Left side (for CW winding).
+                // sin(alpha) = (r1 - r2) / dist
+                // Valid if dist >= |r1-r2|. If clamped, we just assume parallel.
+                let spread = r1 - r2;
+                if (spread > dist) spread = dist;
+                if (spread < -dist) spread = -dist;
+
+                const alpha = Math.asin(spread / dist);
+
+                // Normal direction for tangent start/end
+                // Left Normal is angle - 90deg + alpha?
+                // Let's verify. 
+                // If r1=r2, alpha=0. Normal is angle - 90. (Standard Left Normal).
+                // If r1 > r2, tangent slopes in. alpha > 0. Normal rotates CW (less negative).
+                // Wait. angle - 90 is "Up/Left". 
+                // We want to rotate "inwards"? 
+                // Tangent touches circle at (angle - pi/2 + alpha).
+
+                const theta = angle - Math.PI / 2 + alpha;
+
+                const startX = curr.x + r1 * Math.cos(theta);
+                const startY = curr.y + r1 * Math.sin(theta);
+                const endX = next.x + r2 * Math.cos(theta);
+                const endY = next.y + r2 * Math.sin(theta);
+
+                if (i === 0) {
+                    d += `M ${startX} ${startY} `;
+                } else {
+                    // Connect from previous segment endpoint (Arc or Line)
+                    // If previous was Convex (r1=8), we draw Arc from prev_end to curr_start.
+                    // If previous was Concave (r1=0), 'prev_end' is 'curr' (center), 'curr_start' is 'curr' (center).
+                    // So we effectively just L.
+
+                    // We need to know previous tangent end-point? 
+                    // No, SVG path command continues from current pen.
+                    // But we need to define the Arc geometry if Convex.
+
+                    // Calculate incoming angle for the join?
+                    // Actually, A command handles it if we know the point.
+                    // We are at `previous_tangent_end`. We want to go to `startX`.
+                    // If r1 > 0, draw Arc.
+                    if (r1 > 1) {
+                        d += `A ${r1} ${r1} 0 0 1 ${startX} ${startY} `;
+                    } else {
+                        d += `L ${startX} ${startY} `;
+                    }
+                }
+
+                d += `L ${endX} ${endY} `;
+            }
+
+            // Close the loop (connect last segment end to first segment start)
+            const rStart = radii[0];
+            const startPt = pts[0];
+            // We need first tangent start point again? 
+            // It's cleaner to re-compute first segment start OR just close with Z if we trust Arc logic?
+            // Z closes with Line. We need Arc if start is Convex.
+            // So manually compute Arc to first point.
+
+            // Re-calc first tangent start
+            const curr0 = pts[0];
+            const next0 = pts[1];
+            const r1_0 = radii[0];
+            const r2_0 = radii[1];
+            const dx0 = next0.x - curr0.x;
+            const dy0 = next0.y - curr0.y;
+            const dist0 = Math.hypot(dx0, dy0);
+            const angle0 = Math.atan2(dy0, dx0);
+            let spread0 = r1_0 - r2_0;
+            if (spread0 > dist0) spread0 = dist0;
+            if (spread0 < -dist0) spread0 = -dist0;
+            const alpha0 = Math.asin(spread0 / dist0);
+            const theta0 = angle0 - Math.PI / 2 + alpha0;
+
+            const trueStartX = curr0.x + r1_0 * Math.cos(theta0);
+            const trueStartY = curr0.y + r1_0 * Math.sin(theta0);
+
+            if (rStart > 1) {
+                d += `A ${rStart} ${rStart} 0 0 1 ${trueStartX} ${trueStartY} `;
+            } else {
+                d += `L ${trueStartX} ${trueStartY} `;
+            }
+
+            d += "Z";
+            return d;
+        }
+
+        // --- DOM Helpers ---
+        function createBandDOM(band) {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute('class', 'rubber-band-group');
+            g.setAttribute('id', 'band-' + band.id);
+
+            const screenPoints = band.points.map(pt => getScreenCoords(pt.r, pt.c));
+            const d = generateBandPath(screenPoints);
+
+            // 1. Fill
+            const fillPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            fillPath.setAttribute('class', 'fill-path'); // Class for fast selection
+            fillPath.setAttribute('d', d);
+            fillPath.setAttribute('fill', band.color);
+            fillPath.setAttribute('fill-opacity', '0.2');
+            fillPath.setAttribute('stroke', 'none');
+
+            // NOTE: Whole shape moving logic was removed per previous user reverts
+            // If needed, re-add listener here.
+
+            g.appendChild(fillPath);
+
+            // 2. Visual Outline
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute('class', 'rubber-band visual-path');
+            path.setAttribute('d', d);
+            path.style.filter = "url(#shadow)";
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', band.color);
+            path.setAttribute('stroke-linejoin', 'round');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-width', '8');
+            g.appendChild(path);
+
+            // 3. Hit Path
+            const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            hitPath.setAttribute('class', 'hit-path');
+            hitPath.setAttribute('d', d);
+            hitPath.setAttribute('fill', 'none');
+            hitPath.setAttribute('stroke', 'transparent');
+            hitPath.setAttribute('stroke-width', '30');
+            hitPath.setAttribute('stroke-linejoin', 'round');
+            hitPath.setAttribute('stroke-linecap', 'round');
+            hitPath.style.cursor = 'move';
+
+            hitPath.addEventListener('mousedown', (e) => startDragSegment(e, band), { passive: false });
+            hitPath.addEventListener('touchstart', (e) => startDragSegment(e, band), { passive: false });
+
+            g.appendChild(hitPath);
+
+            // 4. Vertices
+            band.points.forEach((pt, idx) => {
+                const screenPt = getScreenCoords(pt.r, pt.c);
+                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                c.setAttribute('cx', screenPt.x);
+                c.setAttribute('cy', screenPt.y);
+                c.setAttribute('class', 'band-vertex');
+                c.setAttribute('data-index', idx); // Store index in DOM
+
+                // Dynamic listener that reads current index from DOM
+                const handler = (e) => {
+                    const currentIdx = parseInt(e.target.getAttribute('data-index'));
+                    startDragVertex(e, band, currentIdx);
+                };
+
+                c.addEventListener('mousedown', handler, { passive: false });
+                c.addEventListener('touchstart', handler, { passive: false });
+
+                g.appendChild(c);
+            });
+
+            return g;
+        }
+
+        function renderBands() {
+            bandsLayer.innerHTML = '';
+            STATE.bands.forEach(band => {
+                const g = createBandDOM(band);
+                if (band.id === STATE.activeBandId && STATE.isDragging) {
+                    g.classList.add('active-drag');
+                }
+                bandsLayer.appendChild(g);
+            });
+        }
+
+        // Efficient O(1) update during drag
+        function updateBandVisuals(band) {
+            const g = document.getElementById('band-' + band.id);
+            if (!g) return;
+
+            // Calc Points
+            let framePoints = [];
+            // Assuming STATE.dragType is checked outside or we just render current band state
+
+            // If dragging this band's vertex
+            if (STATE.isDragging && STATE.activeBandId === band.id && (STATE.dragType === 'vertex' || STATE.dragType === 'create')) {
+                for (let i = 0; i < band.points.length; i++) {
+                    if (i === STATE.activeVertexIndex) {
+                        framePoints.push(STATE.tempPoint);
+                    } else {
+                        framePoints.push(getScreenCoords(band.points[i].r, band.points[i].c));
+                    }
+                }
+            } else {
+                framePoints = band.points.map(pt => getScreenCoords(pt.r, pt.c));
+            }
+
+            const d = generateBandPath(framePoints);
+
+            // Update attributes
+            const fill = g.querySelector('.fill-path');
+            if (fill) fill.setAttribute('d', d);
+
+            const visual = g.querySelector('.visual-path');
+            if (visual) visual.setAttribute('d', d);
+
+            const hit = g.querySelector('.hit-path');
+            if (hit) hit.setAttribute('d', d);
+
+            const vertices = g.querySelectorAll('.band-vertex');
+            framePoints.forEach((pt, i) => {
+                if (vertices[i]) {
+                    vertices[i].setAttribute('cx', pt.x);
+                    vertices[i].setAttribute('cy', pt.y);
+                }
+            });
+        }
+
+        // Surgical DOM Update: Add a vertex without destroying the group
+        // Prevents filter/shadow recalculation lag
+        function handleTopologyChange(band, newIndex) {
+            const g = document.getElementById('band-' + band.id);
+            if (!g) return;
+
+            g.classList.add('active-drag');
+
+            // 1. Create new vertex circle
+            const pt = band.points[newIndex];
+            const screenPt = getScreenCoords(pt.r, pt.c);
+
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute('cx', screenPt.x);
+            c.setAttribute('cy', screenPt.y);
+            c.setAttribute('class', 'band-vertex');
+            // Initially set index, will be refreshed below
+            c.setAttribute('data-index', newIndex);
+
+            const handler = (e) => {
+                const currentIdx = parseInt(e.target.getAttribute('data-index'));
+                startDragVertex(e, band, currentIdx);
+            };
+            c.addEventListener('mousedown', handler, { passive: false });
+            c.addEventListener('touchstart', handler, { passive: false });
+
+            // 2. Insert into DOM at correct position
+            // Vertices are at the end of the group. 
+            // We need to find the correct sibling to insert before.
+            const existingVertices = g.querySelectorAll('.band-vertex');
+            // If newIndex is 3, we want to insert before the old element at index 3 (which will become 4)
+            // But existingVertices length is N-1.
+
+            if (newIndex < existingVertices.length) {
+                g.insertBefore(c, existingVertices[newIndex]);
+            } else {
+                g.appendChild(c);
+            }
+
+            // 3. Refresh ALL indices
+            // Since we inserted, subsequent siblings shifted
+            const allVertices = g.querySelectorAll('.band-vertex');
+            allVertices.forEach((v, idx) => {
+                v.setAttribute('data-index', idx);
+            });
+        }
+
+        // Deprecated full re-render for drag
+        // function renderDragState() { ... }
+
+        // --- Interaction ---
+
+        function getEventPos(e) {
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = svg.getBoundingClientRect();
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+        }
+
+        function getClosestPin(x, y) {
+            let minDist = Infinity;
+            let closest = null;
+            for (let p of gridPoints) {
+                const dist = Math.hypot(p.x - x, p.y - y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = p;
+                }
+            }
+            return closest;
+        }
+
+        // 1. Create New Band (Background Drag)
+        function startCreate(e) {
+            // Only if not stopped by other handlers
+            if (STATE.isDragging) return;
+
+            const pos = getEventPos(e);
+
+            // Snap start position to nearest pin
+            const startPin = getClosestPin(pos.x, pos.y);
+            const dist = Math.hypot(startPin.x - pos.x, startPin.y - pos.y);
+
+            // Relaxed hit testing for creation - 40px radius
+            if (dist > 40) return;
+
+            STATE.isDragging = true;
+            STATE.dragType = 'vertex'; // Treat as extending a vertex immediately
+
+            // Create a temp band with 2 identical points
+            const newBand = new Band(STATE.nextId++, STATE.currentColor, [
+                { r: startPin.r, c: startPin.c },
+                { r: startPin.r, c: startPin.c }
+            ]);
+
+            STATE.bands.push(newBand);
+            STATE.activeBandId = newBand.id;
+            STATE.activeVertexIndex = 1; // Drag the second point
+            STATE.tempPoint = pos; // Instant follow
+
+            // Add new band DOM
+            const g = createBandDOM(newBand);
+            g.classList.add('active-drag');
+            bandsLayer.appendChild(g);
+
+            updateBandVisuals(newBand);
+        }
+
+        function startDragVertex(e, band, index) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            STATE.isDragging = true;
+            STATE.dragType = 'vertex';
+            STATE.activeBandId = band.id;
+            STATE.activeVertexIndex = index;
+
+            const pos = getEventPos(e);
+            STATE.tempPoint = pos;
+
+            const g = document.getElementById('band-' + band.id);
+            if (g) g.classList.add('active-drag');
+
+            updateBandVisuals(band);
+        }
+
+        function startDragSegment(e, band) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            // Find segment closest to click
+            const pos = getEventPos(e);
+            let insertIdx = -1;
+            let minD = Infinity;
+
+            for (let i = 0; i < band.points.length; i++) {
+                const p1 = getScreenCoords(band.points[i].r, band.points[i].c);
+                const p2 = getScreenCoords(band.points[(i + 1) % band.points.length].r, band.points[(i + 1) % band.points.length].c);
+                const d = distToSegment(pos, p1, p2);
+                if (d < minD) {
+                    minD = d;
+                    insertIdx = i;
+                }
+            }
+
+            if (insertIdx === -1) return;
+
+            // Split segment: insert new vertex
+            STATE.isDragging = true;
+            STATE.dragType = 'vertex'; // Now we are just dragging this new vertex
+            STATE.activeBandId = band.id;
+            STATE.tempPoint = pos;
+
+            const p1 = band.points[insertIdx];
+            band.points.splice(insertIdx + 1, 0, { ...p1 });
+            STATE.activeVertexIndex = insertIdx + 1;
+
+            // Important: We changed topology (added vertex)
+            // Use surgical update instead of full rebuild to prevent filter thrashing
+            handleTopologyChange(band, insertIdx + 1);
+
+            updateBandVisuals(band);
+        }
+
+        function onMove(e) {
+            if (!STATE.isDragging) return;
+            e.preventDefault();
+
+            const pos = getEventPos(e);
+            STATE.tempPoint = pos;
+
+            // Use rAF for visual updates to prevent thrashing
+            requestAnimationFrame(() => {
+                if (!STATE.isDragging) return;
+                const band = STATE.bands.find(b => b.id === STATE.activeBandId);
+                if (band) updateBandVisuals(band);
+            });
+        }
+
+        function onEnd(e) {
+            if (!STATE.isDragging) return;
+
+            const band = STATE.bands.find(b => b.id === STATE.activeBandId);
+
+            if (band) {
+                // Find closest pin to final position
+                const closestPin = getClosestPin(STATE.tempPoint.x, STATE.tempPoint.y);
+                band.points[STATE.activeVertexIndex] = { r: closestPin.r, c: closestPin.c };
+                cleanupBand(band);
+                if (band.points.length < 2) {
+                    STATE.bands = STATE.bands.filter(b => b.id !== band.id);
+                }
+            }
+
+            STATE.isDragging = false;
+            STATE.dragType = null;
+            STATE.activeBandId = null;
+            renderBands();
+        }
+
+        function cleanupBand(band) {
+            const newPoints = [];
+            for (let i = 0; i < band.points.length; i++) {
+                const curr = band.points[i];
+                const prev = newPoints.length > 0 ? newPoints[newPoints.length - 1] : null;
+                if (prev && prev.r === curr.r && prev.c === curr.c) continue;
+                newPoints.push(curr);
+            }
+            if (newPoints.length > 1) {
+                const first = newPoints[0];
+                const last = newPoints[newPoints.length - 1];
+                if (first.r === last.r && first.c === last.c) newPoints.pop();
+            }
+            band.points = newPoints;
+        }
+
+        function distToSegment(p, v, w) {
+            const l2 = (distSq(v, w));
+            if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+        }
+        function distSq(v, w) { return (v.x - w.x) ** 2 + (v.y - w.y) ** 2; }
+
+        function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        function setupInteraction() {
+            // Add SVG background listener for Creation
+            svg.addEventListener('mousedown', startCreate);
+            svg.addEventListener('touchstart', (e) => {
+                // Should we prevent default? 
+                // Sometimes touchstart background is used for scrolling, but we prevent body scroll.
+                if (e.target === svg || e.target === gridLayer || e.target.classList.contains('pin')) {
+                    startCreate(e);
+                }
+            }, { passive: false });
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onEnd);
+        }
+
+        init();
+
+        // Prevent double tap to zoom on iOS
+        let lastTouchEnd = 0;
+        document.addEventListener("touchend", function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // Prevent pinch zoom
+        document.addEventListener("gesturestart", function (e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+
+</html>

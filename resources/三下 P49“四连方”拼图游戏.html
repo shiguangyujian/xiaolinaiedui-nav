@@ -1,0 +1,697 @@
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>“四连方”拼图游戏</title>
+    <style>
+        :root {
+            --primary: #2D593E;
+            /* 采用复古绿配色方案，符合教材稳重感 */
+            --bg: #EBEDD4;
+            --grid-line: rgba(0, 0, 0, 0.1);
+        }
+
+        /* 替代 Tailwind CSS 的自定义样式 */
+        .flex {
+            display: flex;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .gap-3 {
+            gap: 0.75rem;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .ml-4 {
+            margin-left: 1rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            line-height: 2rem;
+            font-weight: 700;
+            color: #14532d;
+            /* text-green-900 */
+        }
+
+        .reset-btn {
+            background-color: #ef4444;
+            /* bg-red-500 */
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: #dc2626;
+            /* hover:bg-red-600 */
+        }
+
+        #p1-tools {
+            position: absolute;
+            bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 2px solid #166534;
+            /* border-green-800 */
+        }
+
+        .divider {
+            height: 2rem;
+            width: 1px;
+            background-color: #d1d5db;
+            /* bg-gray-300 */
+            margin: 0 0.5rem;
+        }
+
+        .tip-text {
+            font-size: 0.875rem;
+            color: #4b5563;
+            /* text-gray-600 */
+            display: flex;
+            align-items: center;
+        }
+
+        .color-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-btn.scale-110 {
+            transform: scale(1.1);
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            /* 严格遵守一屏全显，无滚动条 */
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 导航与标题 */
+        header {
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 50;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 999px;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 画布区域 */
+        .main-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .canvas-board {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border: none;
+            border-radius: 0;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: var(--grid-size, 60px) var(--grid-size, 60px);
+            pointer-events: none;
+        }
+
+        /* 正方形样式 - 严格参考教材截图 */
+        .block-unit {
+            position: absolute;
+            width: var(--block-size, 60px);
+            height: var(--block-size, 60px);
+            box-sizing: border-box;
+            border: 1.5px solid rgba(0, 0, 0, 0.3);
+            /* 深色细边框 */
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+            /* 内部微弱高光 */
+        }
+
+        /* 四连方容器 */
+        .polyomino-group {
+            position: absolute;
+            cursor: grab;
+            z-index: 20;
+            transform-origin: calc(var(--block-size, 60px) / 2) calc(var(--block-size, 60px) / 2);
+            touch-action: none;
+            transition: transform 0.2s linear;
+        }
+
+        .polyomino-group:active {
+            cursor: grabbing;
+        }
+
+        /* 目标区域 */
+        .target-zone {
+            position: absolute;
+            border: 3px dashed #A52A2A;
+            background: rgba(165, 42, 42, 0.05);
+            background-image:
+                linear-gradient(rgba(165, 42, 42, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(165, 42, 42, 0.1) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #A52A2A;
+            font-weight: bold;
+            font-size: 1.2rem;
+            opacity: 0.6;
+        }
+
+        /* 反馈面板 */
+        .feedback-panel {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+        }
+
+        /* 提示弹窗 */
+        #win-toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: white;
+            border: 4px solid var(--primary);
+            padding: 2rem 4rem;
+            border-radius: 2rem;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <span class="header-title">🧩 四连方拼图探索</span>
+            <div class="flex gap-2 ml-4">
+                <button id="nav1" class="nav-btn active" onclick="switchPage(1)">自由拼图</button>
+                <button id="nav2" class="nav-btn" onclick="switchPage(2)">旋转探索</button>
+                <button id="nav3" class="nav-btn" onclick="switchPage(3)">目标挑战</button>
+            </div>
+        </div>
+        <button class="reset-btn" onclick="resetCurrentPage()">重置当前页</button>
+    </header>
+    <main class="main-container">
+        <div id="feedback" class="feedback-panel hidden">
+            <div id="status-text">模式：自由拼图</div>
+            <div id="counter-text">已放置：0 个</div>
+        </div>
+        <div class="canvas-board" id="board">
+            <div class="grid-overlay"></div>
+            <!-- 动态内容插入区 -->
+        </div>
+        <!-- 底部颜色选择器 (仅第一页显示) -->
+        <div id="p1-tools">
+            <div class="flex gap-3" id="color-list"></div>
+            <div class="divider"></div>
+            <span class="tip-text">点击画布放置方块，每种颜色限4个</span>
+        </div>
+    </main>
+    <div id="win-toast">🎉 完成！</div>
+    <script>
+        const GRID = 60;
+        const P1_GRID = 80; // 自由拼图模式方块更大
+        let currentGrid = GRID;
+        const colors = ['#0078D7', '#E81123', '#FFB900', '#107C10', '#F7630C', '#B4009E']; // 鲜艳的教材色
+        let currentPage = 1;
+        let currentColor = colors[0];
+        let p1Blocks = [];
+        const shapes = [
+            { id: 'I', coords: [[0, 0], [1, 0], [2, 0], [3, 0]], color: '#0078D7' },
+            { id: 'O', coords: [[0, 0], [1, 0], [0, 1], [1, 1]], color: '#E81123' },
+            { id: 'L', coords: [[0, 0], [0, 1], [1, 1], [2, 1]], color: '#FFB900' },
+            { id: 'S', coords: [[0, 0], [1, 0], [1, 1], [2, 1]], color: '#107C10' },
+            { id: 'T', coords: [[1, 0], [0, 1], [1, 1], [2, 1]], color: '#F7630C' }
+        ];
+        const board = document.getElementById('board');
+        const feedback = document.getElementById('status-text');
+        const counter = document.getElementById('counter-text');
+        // 初始化颜色选择器
+        const colorList = document.getElementById('color-list');
+        function getDarkerColor(hex) {
+            let r = parseInt(hex.slice(1, 3), 16);
+            let g = parseInt(hex.slice(3, 5), 16);
+            let b = parseInt(hex.slice(5, 7), 16);
+            r = Math.max(0, r - 40);
+            g = Math.max(0, g - 40);
+            b = Math.max(0, b - 40);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        function getLighterColor(hex) {
+            let r = parseInt(hex.slice(1, 3), 16);
+            let g = parseInt(hex.slice(3, 5), 16);
+            let b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, 0.3)`;
+        }
+        colors.forEach(c => {
+            const btn = document.createElement('div');
+            const darker = getDarkerColor(c);
+            const lighter = getLighterColor(c);
+            btn.className = `color-btn`;
+            btn.style.borderColor = darker;
+            btn.style.backgroundColor = (c === currentColor) ? c : lighter;
+            btn.onclick = () => {
+                currentColor = c;
+                Array.from(colorList.children).forEach((child, idx) => {
+                    const childColor = colors[idx];
+                    child.style.backgroundColor = (childColor === currentColor) ? childColor : getLighterColor(childColor);
+                    child.classList.toggle('scale-110', childColor === currentColor);
+                });
+            };
+            colorList.appendChild(btn);
+        });
+        function switchPage(page) {
+            currentPage = page;
+            currentGrid = (page === 1) ? P1_GRID : GRID;
+            document.documentElement.style.setProperty('--grid-size', currentGrid + 'px');
+            document.documentElement.style.setProperty('--block-size', currentGrid + 'px');
+            // 仅在第一页显示网格
+            const gridOverlay = document.querySelector('.grid-overlay');
+            if (gridOverlay) {
+                gridOverlay.style.display = page === 1 ? 'block' : 'none';
+            }
+            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i + 1 === page);
+            });
+            document.getElementById('p1-tools').style.display = page === 1 ? 'flex' : 'none';
+            resetCurrentPage();
+        }
+        function resetCurrentPage() {
+            // 清除所有动态元素
+            const elements = board.querySelectorAll('.block-unit, .polyomino-group, .target-zone');
+            elements.forEach(el => el.remove());
+            p1Blocks = [];
+            updateFeedback();
+            if (currentPage === 2) {
+                feedback.innerText = "模式：旋转探索";
+                // 以第三个为中心，左右各隔开一个方格摆放
+                // 统一间距：每个图形中心点间隔 3个GRID (180px)
+                const centerX = Math.floor(board.clientWidth / 2 / GRID) * GRID;
+                const centerY = Math.floor(board.clientHeight / 3 / GRID) * GRID; // 整体往上移动
+                shapes.forEach((s, i) => {
+                    let x = centerX + (i - 2) * 180;
+                    if (i === 0) x -= 2 * GRID; // 第一个再向左 2 个正方形距离
+                    if (i === 4) x += 1 * GRID; // 第五个向右 1 个正方形距离
+                    createPolyomino(s, x, centerY, false);
+                });
+            } else if (currentPage === 3) {
+                feedback.innerText = "模式：目标挑战";
+                // 创建目标区域 5x4 (宽5高4)
+                const targetW = 5 * GRID;
+                const targetH = 4 * GRID;
+                const targetX = Math.floor((board.clientWidth - targetW) / 2 / GRID) * GRID;
+                const targetY = Math.floor((board.clientHeight - targetH) / 1.5 / GRID) * GRID - GRID; // 往上移动 1 个正方形距离
+                const target = document.createElement('div');
+                target.className = 'target-zone';
+                target.style.width = targetW + 'px';
+                target.style.height = targetH + 'px';
+                target.style.left = targetX + 'px';
+                target.style.top = targetY + 'px';
+                board.appendChild(target);
+                // 挑战模式摆放：顶部一排
+                const centerX = Math.floor(board.clientWidth / 2 / GRID) * GRID;
+                shapes.forEach((s, i) => {
+                    let x = centerX + (i - 2) * 180;
+                    if (i === 0) x -= 2 * GRID; // 第一个再向左 2 个正方形距离
+                    if (i === 4) x += 1 * GRID; // 第五个向右 1 个正方形距离
+                    createPolyomino(s, x, 60, true);
+                });
+            } else {
+                feedback.innerText = "模式：自由拼图";
+            }
+        }
+        // --- 自由拼图逻辑 ---
+        board.addEventListener('mousedown', (e) => {
+            if (currentPage !== 1 || e.target !== board) return;
+            const rect = board.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / currentGrid) * currentGrid;
+            const y = Math.floor((e.clientY - rect.top) / currentGrid) * currentGrid;
+            const sameColor = p1Blocks.filter(b => b.color === currentColor);
+            if (sameColor.length >= 4) return;
+            addP1Block(x, y, currentColor);
+        });
+        function addP1Block(x, y, color) {
+            const el = document.createElement('div');
+            el.className = 'block-unit';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.backgroundColor = color;
+            board.appendChild(el);
+            p1Blocks.push({ el, x, y, color });
+            updateFeedback();
+            bindDrag(el, true);
+        }
+        // --- 四连方逻辑 (Page 2 & 3) ---
+        function createPolyomino(shape, x, y, isChallenge) {
+            const group = document.createElement('div');
+            group.className = 'polyomino-group';
+            group.style.left = x + 'px';
+            group.style.top = y + 'px';
+            group.dataset.rotation = 0;
+            // 计算图形包围盒以确定中心点
+            const minX = Math.min(...shape.coords.map(c => c[0]));
+            const maxX = Math.max(...shape.coords.map(c => c[0]));
+            const minY = Math.min(...shape.coords.map(c => c[1]));
+            const maxY = Math.max(...shape.coords.map(c => c[1]));
+            // 设置旋转中心为图形几何中心
+            const centerX = (minX + maxX + 1) * currentGrid / 2;
+            const centerY = (minY + maxY + 1) * currentGrid / 2;
+            group.style.transformOrigin = `${centerX}px ${centerY}px`;
+            shape.coords.forEach(c => {
+                const b = document.createElement('div');
+                b.className = 'block-unit';
+                b.style.left = (c[0] * currentGrid) + 'px';
+                b.style.top = (c[1] * currentGrid) + 'px';
+                b.style.backgroundColor = shape.color;
+                group.appendChild(b);
+            });
+            board.appendChild(group);
+            bindDrag(group, false, isChallenge);
+            // 修复旋转逻辑：区分点击与拖拽
+            let startTime, startX, startY;
+            group.addEventListener('pointerdown', (e) => {
+                startTime = Date.now();
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+            group.addEventListener('pointerup', (e) => {
+                const duration = Date.now() - startTime;
+                const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+                if (duration < 200 && dist < 5) {
+                    rotateGroup(group, isChallenge);
+                }
+            });
+        }
+        function rotateGroup(group, isChallenge) {
+            let currentRot = parseInt(group.dataset.rotation) || 0;
+            const nextRot = currentRot + 90; // 始终增加 90 度，确保顺时针
+            // 旋转重叠检测
+            const otherGroups = Array.from(board.querySelectorAll('.polyomino-group')).filter(g => g !== group);
+            const myBlocks = Array.from(group.querySelectorAll('.block-unit'));
+            const gx = parseFloat(group.style.left);
+            const gy = parseFloat(group.style.top);
+            const originX = parseFloat(group.style.transformOrigin.split(' ')[0]);
+            const originY = parseFloat(group.style.transformOrigin.split(' ')[1]);
+            const getCoords = (rot) => {
+                const rad = (rot * Math.PI) / 180;
+                return myBlocks.map(b => {
+                    const bx = parseFloat(b.style.left);
+                    const by = parseFloat(b.style.top);
+                    const rx = (bx - originX) * Math.cos(rad) - (by - originY) * Math.sin(rad) + originX;
+                    const ry = (bx - originX) * Math.sin(rad) + (by - originY) * Math.cos(rad) + originY;
+                    return { x: gx + rx, y: gy + ry };
+                });
+            };
+            const newCoords = getCoords(nextRot);
+            let hasCollision = false;
+            // 根据用户需求，去除旋转探索(Page 2)和目标挑战(Page 3)的旋转重叠检测
+            const checkCollision = false;
+            if (checkCollision) {
+                // 逻辑保留但不再进入
+            }
+            if (hasCollision) return; // 如果旋转会导致重叠，则不执行旋转
+            group.dataset.rotation = nextRot;
+            group.style.transform = `rotate(${nextRot}deg)`;
+
+            setTimeout(() => {
+                if (isChallenge) checkWin();
+            }, 200);
+        }
+        // --- 通用拖拽与吸附 ---
+        function bindDrag(el, isSingle, isChallenge) {
+            let offset = { x: 0, y: 0 };
+            let initialX, initialY;
+            el.addEventListener('pointerdown', onStart);
+            function onStart(e) {
+                e.stopPropagation();
+                // 记录初始物理坐标
+                initialX = parseFloat(el.style.left);
+                initialY = parseFloat(el.style.top);
+                const rect = el.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+                // 记录鼠标相对于元素视觉左上角的偏移
+                offset.x = e.clientX - rect.left;
+                offset.y = e.clientY - rect.top;
+                el.style.zIndex = 100;
+                document.addEventListener('pointermove', onMove);
+                document.addEventListener('pointerup', onEnd);
+            }
+            function onMove(e) {
+                const boardRect = board.getBoundingClientRect();
+                // 计算新的视觉左上角位置
+                let visualX = e.clientX - boardRect.left - offset.x;
+                let visualY = e.clientY - boardRect.top - offset.y;
+                // 核心修复：旋转后的元素视觉位置与 left/top 存在偏移
+                // 视觉位置 = left + (rect.left - boardRect.left - left)
+                // 我们需要反推 left = visualX - (rect.left - boardRect.left - left)
+                const rect = el.getBoundingClientRect();
+                const currentLeft = parseFloat(el.style.left);
+                const currentTop = parseFloat(el.style.top);
+                const visualOffsetX = rect.left - boardRect.left - currentLeft;
+                const visualOffsetY = rect.top - boardRect.top - currentTop;
+                el.style.left = (visualX - visualOffsetX) + 'px';
+                el.style.top = (visualY - visualOffsetY) + 'px';
+            }
+            function onEnd() {
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onEnd);
+                el.style.zIndex = 20;
+                const curX = parseFloat(el.style.left);
+                const curY = parseFloat(el.style.top);
+                // 默认吸附位置为当前位置
+                let snapX = curX;
+                let snapY = curY;
+                // 只有在非自由拼图模式下才进行边对边吸附和重叠检测
+                if (!isSingle) {
+                    const otherGroups = Array.from(board.querySelectorAll('.polyomino-group')).filter(g => g !== el);
+                    const myBlocks = Array.from(el.querySelectorAll('.block-unit'));
+                    const myRotation = parseInt(el.dataset.rotation) || 0;
+                    const rad = (myRotation * Math.PI) / 180;
+                    const originX = parseFloat(el.style.transformOrigin.split(' ')[0]);
+                    const originY = parseFloat(el.style.transformOrigin.split(' ')[1]);
+                    // 获取当前图形所有方块在画布上的视觉坐标
+                    const getMyVisualCoords = (sx, sy) => {
+                        return myBlocks.map(b => {
+                            const bx = parseFloat(b.style.left);
+                            const by = parseFloat(b.style.top);
+                            const rx = (bx - originX) * Math.cos(rad) - (by - originY) * Math.sin(rad) + originX;
+                            const ry = (bx - originX) * Math.sin(rad) + (by - originY) * Math.cos(rad) + originY;
+                            return { x: sx + rx, y: sy + ry };
+                        });
+                    };
+                    // 1. 寻找最近的吸附点（边对边吸附 + 目标区域网格吸附）
+                    let bestSnap = { dx: 0, dy: 0, dist: Infinity };
+                    const SNAP_THRESHOLD = 25; // 略微调高吸附灵敏度
+                    const myCurrentCoords = getMyVisualCoords(curX, curY);
+                    // A. 目标区域网格吸附 (仅在挑战模式)
+                    const targetZone = board.querySelector('.target-zone');
+                    if (isChallenge && targetZone) {
+                        const tx = parseFloat(targetZone.style.left);
+                        const ty = parseFloat(targetZone.style.top);
+                        myCurrentCoords.forEach(mc => {
+                            // 计算该方块相对于目标区域左上角的网格偏移
+                            const relX = mc.x - tx;
+                            const relY = mc.y - ty;
+                            const snapRelX = Math.round(relX / currentGrid) * currentGrid;
+                            const snapRelY = Math.round(relY / currentGrid) * currentGrid;
+                            const dx = (tx + snapRelX) - mc.x;
+                            const dy = (ty + snapRelY) - mc.y;
+                            const d = Math.hypot(dx, dy);
+                            if (d < bestSnap.dist && d < SNAP_THRESHOLD) {
+                                bestSnap = { dx, dy, dist: d };
+                            }
+                        });
+                    }
+                    // B. 图形间边对边吸附
+                    otherGroups.forEach(other => {
+                        const ox = parseFloat(other.style.left);
+                        const oy = parseFloat(other.style.top);
+                        const oBlocks = Array.from(other.querySelectorAll('.block-unit'));
+                        const oRotation = parseInt(other.dataset.rotation) || 0;
+                        const oRad = (oRotation * Math.PI) / 180;
+                        const oOriginX = parseFloat(other.style.transformOrigin.split(' ')[0]);
+                        const oOriginY = parseFloat(other.style.transformOrigin.split(' ')[1]);
+                        const otherCoords = oBlocks.map(b => {
+                            const bx = parseFloat(b.style.left);
+                            const by = parseFloat(b.style.top);
+                            const rx = (bx - oOriginX) * Math.cos(oRad) - (by - oOriginY) * Math.sin(oRad) + oOriginX;
+                            const ry = (bx - oOriginX) * Math.sin(oRad) + (by - oOriginY) * Math.cos(oRad) + oOriginY;
+                            return { x: ox + rx, y: oy + ry };
+                        });
+                        // 检查我方每个方块与对方每个方块的 8 个吸附位（上下左右偏移一个 GRID）
+                        myCurrentCoords.forEach(mc => {
+                            otherCoords.forEach(oc => {
+                                const offsets = [
+                                    { dx: oc.x - mc.x, dy: oc.y - mc.y }, // 重合（用于重叠检测）
+                                    { dx: oc.x + currentGrid - mc.x, dy: oc.y - mc.y }, // 右
+                                    { dx: oc.x - currentGrid - mc.x, dy: oc.y - mc.y }, // 左
+                                    { dx: oc.x - mc.x, dy: oc.y + currentGrid - mc.y }, // 下
+                                    { dx: oc.x - mc.x, dy: oc.y - currentGrid - mc.y }  // 上
+                                ];
+                                offsets.forEach(off => {
+                                    const d = Math.hypot(off.dx, off.dy);
+                                    if (d < bestSnap.dist && d < SNAP_THRESHOLD) {
+                                        bestSnap = { dx: off.dx, dy: off.dy, dist: d };
+                                    }
+                                });
+                            });
+                        });
+                    });
+                    if (bestSnap.dist < SNAP_THRESHOLD) {
+                        snapX = curX + bestSnap.dx;
+                        snapY = curY + bestSnap.dy;
+                    }
+                    // 2. 重叠检测 (根据用户需求，旋转探索和目标挑战不再执行重叠检测)
+                    const finalCoords = getMyVisualCoords(snapX, snapY);
+                    let hasCollision = false;
+                    if (currentPage === 1) {
+                        // 自由拼图模式逻辑...
+                    }
+                    if (hasCollision) {
+                        snapX = initialX;
+                        snapY = initialY;
+                    }
+                } else {
+                    // 自由拼图模式依然使用网格吸附
+                    snapX = Math.round(curX / currentGrid) * currentGrid;
+                    snapY = Math.round(curY / currentGrid) * currentGrid;
+                }
+                el.style.left = snapX + 'px';
+                el.style.top = snapY + 'px';
+                if (isChallenge) checkWin();
+            }
+        }
+        function checkWin() {
+            const targetZone = board.querySelector('.target-zone');
+            if (!targetZone) return;
+            const targetX = parseInt(targetZone.style.left);
+            const targetY = parseInt(targetZone.style.top);
+            const targetW = 5 * GRID, targetH = 4 * GRID;
+            const groups = board.querySelectorAll('.polyomino-group');
+            let winCount = 0;
+            groups.forEach(g => {
+                const gx = parseInt(g.style.left);
+                const gy = parseInt(g.style.top);
+                const rect = g.getBoundingClientRect();
+                // 简化判定：如果组的左上角在目标区域内，且组的尺寸符合
+                if (gx >= targetX && gx < targetX + targetW && gy >= targetY && gy < targetY + targetH) {
+                    winCount++;
+                }
+            });
+            if (winCount === 5) {
+                const toast = document.getElementById('win-toast');
+                toast.style.transition = 'none';
+                toast.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                toast.style.opacity = '0';
+                toast.style.display = 'block';
+
+                // 强制重绘
+                void toast.offsetHeight;
+
+                toast.style.transition = 'transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.8s ease-out';
+                toast.style.transform = 'translate(-50%, -50%) scale(1)';
+                toast.style.opacity = '1';
+
+                setTimeout(() => {
+                    toast.style.transition = 'transform 0.5s ease, opacity 0.5s ease';
+                    toast.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                    toast.style.opacity = '0';
+
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                    }, 500);
+                }, 3000);
+            }
+        }
+        function updateFeedback() {
+            if (currentPage === 1) {
+                counter.innerText = `已放置：${p1Blocks.length} 个小方块`;
+            } else {
+                counter.innerText = `目标：拼接 5×4 长方形`;
+            }
+        }
+        // 初始加载
+        switchPage(1);
+    </script>
+</body>
+
+</html>
