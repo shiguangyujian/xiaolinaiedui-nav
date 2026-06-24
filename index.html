@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教学工具导航 | 让教学简单一点点</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ========== 手绘风格全局 ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#faf3e0;--paper-dark:#f0e6cc;--ink:#3d322b;--ink-light:#6b5e54;
+  --red:#d94535;--red-light:#f2a099;--blue:#2c6f8a;--blue-light:#a8d8ea;
+  --green:#4a8c5c;--green-light:#b8d9c0;--orange:#e8913a;--orange-light:#f7c89a;
+  --yellow:#f5d25e;--yellow-light:#fceabb;--purple:#7b5ea7;--purple-light:#c9b8e6;
+  --font-hand:'Ma Shan Zheng',cursive;--font-play:'ZCOOL KuaiLe',cursive;--font-en:'Caveat',cursive;
+}
+body{
+  background:var(--paper);
+  background-image:url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-attachment:fixed;color:var(--ink);font-family:var(--font-play),'Microsoft YaHei',sans-serif;
+  font-size:16px;line-height:1.6;min-height:100vh;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(transparent,transparent 31px,rgba(180,170,150,0.12) 31px,rgba(180,170,150,0.12) 32px);
+  pointer-events:none;z-index:0;
+}
+
+/* ========== 容器 ========== */
+.container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:20px 24px 60px}
+
+/* ========== 头部 ========== */
+.header{text-align:center;padding:50px 20px 20px}
+.site-title{font-family:var(--font-hand);font-size:clamp(36px,6vw,56px);color:var(--ink);display:inline-block;position:relative;padding:0 16px 6px;letter-spacing:4px}
+.site-title::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:120%;height:10px;background:url("data:image/svg+xml,%3Csvg width='300' height='10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,5 Q12,0 24,5 Q36,10 48,5 Q60,0 72,5 Q84,10 96,5 Q108,0 120,5 Q132,10 144,5 Q156,0 168,5 Q180,10 192,5 Q204,0 216,5 Q228,10 240,5 Q252,0 264,5 Q276,10 288,5 Q300,0 300,5' fill='none' stroke='%23d94535' stroke-width='2.2'/%3E%3C/svg%3E") center/contain no-repeat}
+.subtitle{font-family:var(--font-en);font-size:20px;color:var(--ink-light);margin-top:8px;letter-spacing:1px}
+
+/* ========== 搜索框 ========== */
+.search-wrap{max-width:480px;margin:16px auto 0;position:relative}
+.search-input{width:100%;padding:13px 48px 13px 18px;font-family:var(--font-play);font-size:16px;border:2.2px solid var(--ink);border-radius:28px 26px 30px 25px;background:#fffef9;color:var(--ink);outline:none;transition:border-color .2s}
+.search-input:focus{border-color:var(--red)}
+.search-icon{position:absolute;right:15px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;opacity:.5}
+
+/* ========== 区块标题 ========== */
+.section{margin-top:40px}
+.section-title{font-family:var(--font-hand);font-size:36px;color:var(--ink);border-bottom:2.5px dashed var(--ink);padding-bottom:6px;margin-bottom:16px;display:inline-block}
+
+/* ========== 二级分类标签 ========== */
+.subcat-wrap{margin-bottom:14px}
+.subcat-label{font-size:14px;color:var(--ink-light);margin-right:8px}
+.subcat-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.subcat-btn{font-family:var(--font-play);font-size:14px;padding:4px 14px;border:1.8px solid var(--ink);border-radius:16px 18px 15px 17px;background:#fffef9;color:var(--ink);cursor:pointer;transition:all .15s;white-space:nowrap;transform:rotate(-0.3deg)}
+.subcat-btn:nth-child(2n){transform:rotate(0.5deg)}
+.subcat-btn:nth-child(3n){transform:rotate(-0.2deg)}
+.subcat-btn:hover{background:var(--yellow-light);transform:rotate(0) scale(1.03)}
+.subcat-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);transform:rotate(0)}
+.subcat-count{font-family:var(--font-en);font-size:12px;opacity:.6;margin-left:2px}
+
+/* ========== 卡片列表（课前准备样式） ========== */
+.tool-list{display:flex;flex-wrap:wrap;gap:14px}
+.tool-list .card{flex:1 1 300px;max-width:100%}
+
+/* ========== 卡片网格（课中互动样式） ========== */
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:16px}
+
+/* ========== 手绘卡片 ========== */
+.card{background:#fffef9;border:2px solid var(--ink);padding:14px 16px;position:relative;cursor:pointer;transition:transform .2s,box-shadow .2s;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:4px}
+.card:nth-child(3n+0){border-radius:8px 14px 10px 12px;transform:rotate(-0.2deg)}
+.card:nth-child(3n+1){border-radius:12px 9px 13px 8px;transform:rotate(0.3deg)}
+.card:nth-child(3n+2){border-radius:10px 12px 8px 14px;transform:rotate(-0.1deg)}
+.card:nth-child(5n){transform:rotate(0.4deg)}
+.card:nth-child(7n){transform:rotate(-0.3deg)}
+.card::before{content:'';position:absolute;right:-2px;bottom:-2px;width:100%;height:100%;border:2px solid var(--ink);border-radius:inherit;z-index:-1;opacity:.1;transition:all .2s}
+.card:hover{transform:rotate(0) translateY(-3px)!important;box-shadow:3px 3px 0 rgba(180,170,150,.3)}
+.card:hover::before{opacity:.18;right:-4px;bottom:-4px}
+.card--self{border-color:var(--green)}
+.card--self::before{border-color:var(--green)}
+.card--self:hover{box-shadow:3px 3px 0 rgba(74,140,92,.2)}
+
+/* 卡片角标 */
+.card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:2px}
+.card-badge{
+  font-family:var(--font-play);font-size:10px;padding:0 8px;
+  border-radius:10px 12px 9px 11px;border:1.5px solid var(--ink);
+  white-space:nowrap;line-height:1.8;display:inline-block
+}
+.card-badge--subject{background:var(--yellow-light);border-color:var(--orange)}
+.card-badge--grade{background:var(--blue-light);border-color:var(--blue);font-family:var(--font-en)}
+.card-badge--self{background:var(--green-light);border-color:var(--green);font-size:10px}
+
+.card-body{flex:1}
+.card-title{font-family:var(--font-hand);font-size:20px;color:var(--ink);line-height:1.3;font-weight:400}
+.card-desc{font-family:var(--font-play);font-size:12px;color:var(--ink-light);line-height:1.4;margin-top:3px}
+
+/* ========== 空状态 ========== */
+.empty-state{grid-column:1/-1;text-align:center;padding:50px 20px;font-family:var(--font-hand);font-size:26px;color:var(--ink-light)}
+
+/* ========== 底部 ========== */
+.footer{text-align:center;padding:50px 0 30px;font-family:var(--font-en);font-size:18px;color:var(--ink-light)}
+.footer a{color:var(--blue);text-decoration:none;border-bottom:1.5px dashed var(--blue)}
+.footer a:hover{color:var(--red);border-color:var(--red)}
+.heart{color:var(--red)}
+
+/* ========== 回到顶部 ========== */
+.back-top{position:fixed;bottom:30px;right:30px;z-index:100;width:42px;height:42px;border:2px solid var(--ink);border-radius:50%;background:#fffef9;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(20px);transition:all .2s;color:var(--ink)}
+.back-top.visible{opacity:1;transform:translateY(0)}
+.back-top:hover{background:var(--yellow-light);transform:translateY(-2px)}
+
+/* ========== 响应式 ========== */
+@media(max-width:768px){
+  .container{padding:12px 12px 40px}
+  .header{padding:30px 10px 20px}
+  .site-title{font-size:30px}
+  .section-title{font-size:28px}
+  .tool-grid{grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:10px}
+  .card{padding:10px 12px}
+  .card-title{font-size:18px}
+  .subcat-btn{font-size:12px;padding:3px 10px}
+}
+@media(max-width:480px){
+  .tool-grid{grid-template-columns:1fr 1fr}
+  .tool-list .card{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ====== 头部 ====== -->
+  <header class="header">
+    <h1 class="site-title">教学工具导航</h1>
+    <p class="subtitle">让教学简单一点点</p>
+  </header>
+
+  <!-- ====== 搜索框 ====== -->
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="searchInput" placeholder="搜索工具名称或描述... 按 / 快速聚焦" oninput="handleSearch()">
+    <span class="search-icon">🔍</span>
+  </div>
+
+  <!-- ====== 内容区（JS动态渲染）====== -->
+  <div id="app"></div>
+
+  <!-- ====== 底部 ====== -->
+  <footer class="footer">
+    <p>Made with <span class="heart">&#10084;</span> for educators · <a href="admin.html">管理入口</a></p>
+    <p style="font-size:14px;margin-top:4px">持续更新中，欢迎收藏</p>
+  </footer>
+</div>
+
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<script>
+/* ========== 全局状态 ========== */
+let siteData = null;
+let filters = {}; // { sectionId: { subcatId: 'all' } }
+let searchQuery = '';
+
+/* ========== 加载数据 ========== */
+async function loadData() {
+  try {
+    const resp = await fetch('data/tools.json');
+    siteData = await resp.json();
+    document.title = siteData.site.title + ' | ' + siteData.site.subtitle;
+    initFilters();
+    renderAll();
+  } catch(e) {
+    document.getElementById('app').innerHTML = '<div class="empty-state">加载数据失败，请检查 data/tools.json 文件</div>';
+  }
+}
+
+function initFilters() {
+  siteData.sections.forEach(section => {
+    filters[section.id] = {};
+    section.subcategories.forEach(sub => {
+      filters[section.id][sub.id] = 'all';
+    });
+  });
+}
+
+/* ========== 渲染全部 ========== */
+function renderAll() {
+  if (!siteData) return;
+  const app = document.getElementById('app');
+  let html = '';
+
+  siteData.sections.forEach(section => {
+    // 筛选工具
+    let tools = section.tools;
+
+    // 搜索过滤
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      tools = tools.filter(t => {
+        const text = (t.title + t.desc + (t.category||'') + (t.grade||'') + (t.tags||[]).join(' ')).toLowerCase();
+        return text.includes(q);
+      });
+    } else {
+      // 二级分类过滤
+      section.subcategories.forEach(sub => {
+        const val = filters[section.id][sub.id];
+        if (val !== 'all') {
+          const field = sub.id === 'subject' ? 'category' : 'grade';
+          tools = tools.filter(t => (t[field]||'') === val);
+        }
+      });
+    }
+
+    // 渲染区块
+    html += `<div class="section">`;
+    html += `<h2 class="section-title">${section.title}</h2>`;
+
+    // 二级分类标签（无搜索时显示）
+    if (!searchQuery && section.subcategories.length > 0) {
+      section.subcategories.forEach(sub => {
+        const activeVal = filters[section.id][sub.id];
+        html += `<div class="subcat-wrap">`;
+        html += `<span class="subcat-label">${sub.title}:</span>`;
+        html += `<div class="subcat-tabs" data-section="${section.id}" data-subcat="${sub.id}">`;
+        sub.options.forEach(opt => {
+          const active = opt.value === activeVal ? ' active' : '';
+          const countHtml = opt.count ? `<span class="subcat-count">(${opt.count})</span>` : '';
+          html += `<button class="subcat-btn${active}" data-value="${opt.value}" onclick="setFilter('${section.id}','${sub.id}','${opt.value}')">${opt.label}${countHtml}</button>`;
+        });
+        html += `</div></div>`;
+      });
+    }
+
+    // 工具列表 / 网格
+    const layoutClass = section.layout === 'list' ? 'tool-list' : 'tool-grid';
+    html += `<div class="${layoutClass}" id="grid-${section.id}">`;
+
+    if (tools.length === 0) {
+      html += `<div class="empty-state">📭 没有匹配的工具</div>`;
+    }
+
+    tools.forEach(tool => {
+      const isSelf = tool.type === 'self' || !tool.url || tool.url === '#';
+      const url = isSelf ? `resources/${tool.title}.html` : tool.url;
+      const target = isSelf ? '_self' : '_blank';
+      const cardClass = isSelf ? 'card card--self' : 'card';
+
+      html += `<a href="${url}" target="${target}" class="${cardClass}" data-keywords="${tool.title} ${tool.desc||''} ${tool.category||''} ${tool.grade||''} ${(tool.tags||[]).join(' ')}">`;
+
+      // 角标
+      html += `<div class="card-badges">`;
+      if (tool.category) {
+        html += `<span class="card-badge card-badge--subject">${tool.category}</span>`;
+      }
+      if (tool.grade) {
+        html += `<span class="card-badge card-badge--grade">${tool.grade}</span>`;
+      }
+      if (isSelf) {
+        html += `<span class="card-badge card-badge--self">本地资源</span>`;
+      }
+      html += `</div>`;
+
+      html += `<div class="card-body">`;
+      html += `<div class="card-title">${tool.title}</div>`;
+      if (tool.desc) {
+        html += `<div class="card-desc">${tool.desc}</div>`;
+      }
+      html += `</div>`;
+
+      html += `</a>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  app.innerHTML = html;
+}
+
+/* ========== 筛选逻辑 ========== */
+function setFilter(sectionId, subcatId, value) {
+  filters[sectionId][subcatId] = value;
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  renderAll();
+}
+
+function handleSearch() {
+  searchQuery = document.getElementById('searchInput').value.trim();
+  if (searchQuery) {
+    // 搜索时重置所有筛选
+    initFilters();
+  }
+  renderAll();
+}
+
+/* ========== 键盘快捷操作 ========== */
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='/' && document.activeElement!==document.getElementById('searchInput')){
+    e.preventDefault();document.getElementById('searchInput').focus();
+  }
+  if(e.key==='Escape'){
+    document.getElementById('searchInput').value='';
+    searchQuery='';initFilters();
+    renderAll();document.getElementById('searchInput').blur();
+  }
+});
+
+/* ========== 回到顶部 ========== */
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('backTop');
+  btn.classList.toggle('visible', window.scrollY>400);
+});
+
+/* ========== 启动 ========== */
+loadData();
+</script>
+</body>
+</html>

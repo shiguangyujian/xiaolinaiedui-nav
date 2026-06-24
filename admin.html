@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理 - 添加资源 | 教学工具导航</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper:#faf3e0;--ink:#3d322b;--ink-light:#6b5e54;--red:#d94535;
+  --green:#4a8c5c;--yellow:#f5d25e;--yellow-light:#fceabb;--blue:#2c6f8a;
+  --font-hand:'Ma Shan Zheng',cursive;--font-play:'ZCOOL KuaiLe',cursive;--font-en:'Caveat',cursive;
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-play),'Microsoft YaHei',sans-serif;min-height:100vh;padding:20px}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(transparent,transparent 31px,rgba(180,170,150,.1) 31px,rgba(180,170,150,.1) 32px);pointer-events:none;z-index:0}
+.wrapper{position:relative;z-index:1;max-width:700px;margin:0 auto}
+h1{font-family:var(--font-hand);font-size:36px;text-align:center;margin-bottom:4px}
+h1 a{color:var(--ink);text-decoration:none;border-bottom:2.5px dashed var(--ink);padding-bottom:4px}
+.sub{text-align:center;color:var(--ink-light);font-size:16px;margin-bottom:30px}
+
+.step-block{background:#fffef9;border:2px solid var(--ink);border-radius:12px 14px 10px 13px;padding:24px;margin-bottom:20px}
+.step-title{font-family:var(--font-hand);font-size:24px;color:var(--red);margin-bottom:12px}
+.step-desc{font-size:14px;color:var(--ink-light);margin-bottom:16px;line-height:1.7}
+
+label{display:block;font-family:var(--font-play);font-size:14px;margin-bottom:4px;color:var(--ink)}
+input,textarea,select{width:100%;padding:10px 14px;font-family:var(--font-play);font-size:15px;border:2px solid var(--ink);border-radius:8px 10px 7px 9px;background:#fffef9;color:var(--ink);outline:none;margin-bottom:12px;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--red)}
+textarea{resize:vertical;min-height:60px}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font-family:var(--font-play);font-size:16px;padding:10px 22px;border:2px solid var(--ink);border-radius:20px 22px 18px 21px;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--ink);color:var(--paper)}
+.btn-primary:hover{background:var(--red);border-color:var(--red);transform:scale(1.03)}
+.btn-outline{background:#fffef9;color:var(--ink)}
+.btn-outline:hover{background:var(--yellow-light);transform:scale(1.03)}
+
+.result-box{background:#fffef9;border:2px dashed var(--green);border-radius:10px;padding:16px;margin-top:14px;font-family:monospace;font-size:13px;white-space:pre-wrap;overflow-x:auto;max-height:300px;overflow-y:auto;display:none}
+.result-box.show{display:block}
+
+.copy-msg{color:var(--green);font-size:13px;margin-top:6px;display:none}
+.copy-msg.show{display:block}
+
+.tip{background:var(--yellow-light);border:2px solid var(--yellow);border-radius:10px;padding:14px 18px;margin-top:14px;font-size:13px;line-height:1.7}
+.tip strong{color:var(--red)}
+
+.back-link{text-align:center;margin-top:30px;font-size:15px}
+.back-link a{color:var(--blue);text-decoration:none;border-bottom:1.5px dashed var(--blue)}
+.back-link a:hover{color:var(--red);border-color:var(--red)}
+
+.file-selector{cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px dashed var(--ink);border-radius:10px;margin-bottom:12px;background:#fffef9;transition:all .2s}
+.file-selector:hover{background:var(--yellow-light)}
+.file-selector span{font-size:14px;color:var(--ink-light)}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<h1><a href="index.html">教学工具导航</a></h1>
+<p class="sub">— 管理后台：添加新资源 —</p>
+
+<!-- 第1步：准备资源文件 -->
+<div class="step-block">
+  <div class="step-title">第 1 步：放入资源文件</div>
+  <div class="step-desc">
+    如果你有一个做好的互动课件（HTML 文件）或其他资源，请将它<strong>复制到</strong> <code style="background:var(--yellow-light);padding:2px 6px;border-radius:4px">edui-nav/resources/</code> 文件夹中。
+  </div>
+  <div class="tip">
+    <strong>文件命名建议：</strong>使用纯英文或拼音，不要有空格和特殊字符。<br>
+    例如：<code>fenshuqiang.html</code>、<code>yuan_derenshi.html</code><br>
+    <br>
+    如果只是添加一个<strong>外部链接</strong>（比如别人的网站），跳过这步。
+  </div>
+</div>
+
+<!-- 第2步：选择所属区块 -->
+<div class="step-block">
+  <div class="step-title">第 2 步：选择区块</div>
+  <label>所属区块</label>
+  <select id="sectionSelect">
+    <option value="prep">课前准备</option>
+    <option value="class">课中互动</option>
+  </select>
+
+  <div id="subFields">
+    <label>学科分类（课中互动专用，可不选）</label>
+    <select id="categorySelect">
+      <option value="">不设置</option>
+      <option value="数与代数">数与代数</option>
+      <option value="图形与几何">图形与几何</option>
+      <option value="统计与概率">统计与概率</option>
+      <option value="综合与实践">综合与实践</option>
+      <option value="候课">候课</option>
+      <option value="习题">习题</option>
+      <option value="其它">其它</option>
+    </select>
+
+    <label>适用年级（课中互动专用，可不选）</label>
+    <select id="gradeSelect">
+      <option value="">不设置</option>
+      <option value="一上">一上</option><option value="一下">一下</option>
+      <option value="二上">二上</option><option value="二下">二下</option>
+      <option value="三上">三上</option><option value="三下">三下</option>
+      <option value="四上">四上</option><option value="四下">四下</option>
+      <option value="五上">五上</option><option value="五下">五下</option>
+      <option value="六上">六上</option><option value="六下">六下</option>
+    </select>
+  </div>
+</div>
+
+<!-- 第3步：填写信息 -->
+<div class="step-block">
+  <div class="step-title">第 3 步：填写工具信息</div>
+
+  <label>工具名称 *</label>
+  <input type="text" id="toolName" placeholder="例如：自制几何画板">
+
+  <label>简短描述</label>
+  <input type="text" id="toolDesc" placeholder="一句话描述这个工具是做什么的">
+
+  <label>链接地址</label>
+  <input type="text" id="toolUrl" placeholder="https://...  或  resources/xxx.html（本地资源）">
+
+  <label>标签（用逗号分隔，如：几何, 面积, 互动）</label>
+  <input type="text" id="toolTags" placeholder="几何, 画板">
+
+  <div class="tip">
+    <strong>链接格式说明：</strong><br>
+    · 外部链接：<code>https://www.xxx.com</code><br>
+    · 本地资源：<code>resources/你的文件名.html</code>（需先完成第1步）<br>
+    · 如果还没准备好链接，填 <code>#</code> 占位
+  </div>
+</div>
+
+<!-- 第4步：生成代码 -->
+<div class="step-block">
+  <div class="step-title">第 4 步：生成并复制</div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generateCode()">生成 JSON 代码</button>
+    <button class="btn btn-outline" onclick="clearForm()">清空表单</button>
+  </div>
+
+  <div class="result-box" id="resultBox"></div>
+  <div class="copy-msg" id="copyMsg">已复制到剪贴板！</div>
+
+  <div class="tip" style="margin-top:14px">
+    <strong>如何使用生成的代码：</strong><br>
+    1. 点击"生成 JSON 代码"按钮<br>
+    2. 点击"一键复制"按钮<br>
+    3. 打开 <code>edui-nav/data/tools.json</code> 文件<br>
+    4. 找到对应区块的 <code>"tools": [</code> 部分<br>
+    5. 在 <code>]</code> 前粘贴新代码（注意逗号分隔）<br>
+    6. 保存文件，刷新首页即可看到新工具<br>
+    <br>
+    <strong>如果你是用 VS Code 编辑：</strong>在 <code>data/tools.json</code> 中找到 <code>"tools": [</code>，在该数组的最后一个工具后面加逗号，然后粘贴即可。
+  </div>
+</div>
+
+<div class="back-link">
+  <a href="index.html">← 返回首页</a>
+</div>
+
+</div>
+
+<script>
+// 切换区块时显示/隐藏学科年级选项
+document.getElementById('sectionSelect').addEventListener('change', function() {
+  document.getElementById('subFields').style.display = this.value === 'class' ? '' : 'none';
+});
+
+function generateCode() {
+  const name = document.getElementById('toolName').value.trim();
+  const desc = document.getElementById('toolDesc').value.trim();
+  const url = document.getElementById('toolUrl').value.trim() || '#';
+  const tags = document.getElementById('toolTags').value.trim();
+  const section = document.getElementById('sectionSelect').value;
+  const category = document.getElementById('categorySelect').value;
+  const grade = document.getElementById('gradeSelect').value;
+
+  if (!name) {
+    alert('请至少填写工具名称');
+    return;
+  }
+
+  const isSelf = url.startsWith('resources/') || url === '#';
+  const type = isSelf ? 'self' : 'external';
+  const tagsArr = tags ? tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : [];
+
+  const tool = { title: name, desc: desc || '', url: url };
+  if (type) tool.type = type;
+  if (tagsArr.length) tool.tags = tagsArr;
+
+  // 课中互动区块需要学科和年级
+  if (section === 'class') {
+    if (category) tool.category = category;
+    if (grade) tool.grade = grade;
+  }
+
+  // 生成单个工具的 JSON
+  const json = JSON.stringify(tool, null, 2);
+  
+  // 生成可以直接粘贴到 tools 数组中的代码（去掉最外层的 {}）
+  const box = document.getElementById('resultBox');
+  box.innerHTML = '<button class="btn btn-outline" style="margin-bottom:10px" onclick="copyResult()">📋 一键复制</button>\n\n' + json;
+  box.classList.add('show');
+  document.getElementById('copyMsg').classList.remove('show');
+}
+
+function copyResult() {
+  const box = document.getElementById('resultBox');
+  // 提取 JSON 部分（去掉按钮文字）
+  const lines = box.textContent.split('\n');
+  const jsonStart = lines.findIndex(l => l.trim().startsWith('{'));
+  const json = lines.slice(jsonStart).join('\n');
+  
+  navigator.clipboard.writeText(json).then(() => {
+    document.getElementById('copyMsg').classList.add('show');
+    setTimeout(() => document.getElementById('copyMsg').classList.remove('show'), 2500);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = json;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('copyMsg').classList.add('show');
+    setTimeout(() => document.getElementById('copyMsg').classList.remove('show'), 2500);
+  });
+}
+
+function clearForm() {
+  document.getElementById('toolName').value = '';
+  document.getElementById('toolDesc').value = '';
+  document.getElementById('toolUrl').value = '';
+  document.getElementById('toolTags').value = '';
+  document.getElementById('categorySelect').value = '';
+  document.getElementById('gradeSelect').value = '';
+  document.getElementById('resultBox').classList.remove('show');
+}
+</script>
+</body>
+</html>
