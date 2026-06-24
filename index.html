@@ -36,6 +36,19 @@ body::before{
 .site-title::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:120%;height:10px;background:url("data:image/svg+xml,%3Csvg width='300' height='10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,5 Q12,0 24,5 Q36,10 48,5 Q60,0 72,5 Q84,10 96,5 Q108,0 120,5 Q132,10 144,5 Q156,0 168,5 Q180,10 192,5 Q204,0 216,5 Q228,10 240,5 Q252,0 264,5 Q276,10 288,5 Q300,0 300,5' fill='none' stroke='%23d94535' stroke-width='2.2'/%3E%3C/svg%3E") center/contain no-repeat}
 .subtitle{font-family:var(--font-en);font-size:20px;color:var(--ink-light);margin-top:8px;letter-spacing:1px}
 
+/* ========== 横排导航栏 ========== */
+.nav-bar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:2px dashed var(--ink-light);padding:10px 0;margin-bottom:8px;box-shadow:0 3px 12px rgba(180,170,150,.15)}
+.nav-inner{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 4px 8px;scrollbar-width:none;-ms-overflow-style:none;flex-wrap:nowrap}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav-item{font-family:var(--font-play);font-size:14px;padding:5px 16px;border:2px solid var(--ink);border-radius:20px 18px 22px 19px;background:#fffef9;color:var(--ink);cursor:pointer;white-space:nowrap;transition:all .18s;display:flex;align-items:center;gap:5px;text-decoration:none;line-height:1.4;flex-shrink:0;transform:rotate(-0.4deg)}
+.nav-item:nth-child(2n){transform:rotate(0.35deg)}
+.nav-item:nth-child(3n){transform:rotate(-0.2deg)}
+.nav-item:hover{background:var(--yellow-light);transform:rotate(0) scale(1.04);box-shadow:2px 2px 0 rgba(180,170,150,.25)}
+.nav-item.active{background:var(--ink);color:var(--paper);border-color:var(--ink);transform:rotate(0);box-shadow:none}
+.nav-count{font-family:var(--font-en);font-size:11px;background:rgba(255,255,255,.25);padding:1px 7px;border-radius:10px 9px 11px 10px;font-weight:600}
+.nav-item.active .nav-count{background:rgba(250,243,224,.2)}
+.nav-icon{font-size:15px}
+
 /* ========== 搜索框 ========== */
 .search-wrap{max-width:480px;margin:16px auto 0;position:relative}
 .search-input{width:100%;padding:13px 48px 13px 18px;font-family:var(--font-play);font-size:16px;border:2.2px solid var(--ink);border-radius:28px 26px 30px 25px;background:#fffef9;color:var(--ink);outline:none;transition:border-color .2s}
@@ -136,6 +149,8 @@ body::before{
   .footer-card{padding:10px 14px;flex-direction:column;text-align:center}
   .footer-qr-img{width:68px;height:68px}
   .footer-qr-text{text-align:center}
+  .nav-item{font-size:13px;padding:4px 12px;border-radius:16px 15px 18px 17px}
+  .nav-count{display:none}
 }
 @media(max-width:480px){
   .tool-grid{grid-template-columns:1fr 1fr}
@@ -151,6 +166,13 @@ body::before{
     <h1 class="site-title">拾光育见小林·AI多模态教学工具导航站</h1>
     <p class="subtitle">拾光育见小林AI让教学简单一点点</p>
   </header>
+
+  <!-- ====== 横排导航栏 ====== -->
+  <nav class="nav-bar" id="navBar">
+    <div class="nav-inner" id="navInner">
+      <!-- JS 动态渲染 -->
+    </div>
+  </nav>
 
   <!-- ====== 搜索框 ====== -->
   <div class="search-wrap">
@@ -192,6 +214,23 @@ body::before{
 let siteData = null;
 let filters = {}; // { sectionId: { subcatId: 'all' } }
 let searchQuery = '';
+let activeSectionId = 'all'; // 导航栏当前选中的分类
+
+// 分类图标映射（手绘风格 emoji）
+const SECTION_ICONS = {
+  'prep': '📚',
+  'class': '🎯',
+  'homework': '✏️',
+  'ai': '🤖',
+  'math': '🔢',
+  'chinese': '📖',
+  'science': '🔬',
+  'design': '🎨',
+  'office': '💼',
+  'media': '🎬',
+  'fun': '🎮',
+  'resource': '📁'
+};
 
 /* ========== 加载数据 ========== */
 async function loadData() {
@@ -971,6 +1010,7 @@ async function loadData() {
     siteData = SITE_DATA;
     document.title = siteData.site.title + ' | ' + siteData.site.subtitle;
     initFilters();
+    renderNav();
     renderAll();
   } catch(e) {
     document.getElementById('app').innerHTML = '<div class="empty-state">加载数据失败，请检查 data/tools.json 文件</div>';
@@ -986,6 +1026,73 @@ function initFilters() {
   });
 }
 
+/* ========== 渲染导航栏 ========== */
+function renderNav() {
+  const navInner = document.getElementById('navInner');
+  if (!navInner || !siteData) return;
+
+  // 计算总工具数
+  let totalTools = 0;
+  siteData.sections.forEach(s => { totalTools += s.tools.length; });
+
+  let html = '';
+
+  // 「全部」按钮
+  html += `<button class="nav-item${activeSectionId === 'all' ? ' active' : ''}" data-nav="all" onclick="setActiveNav('all')">
+    <span class="nav-icon">✨</span>
+    <span>全部</span>
+    <span class="nav-count">${totalTools}</span>
+  </button>`;
+
+  // 各分类按钮
+  siteData.sections.forEach(section => {
+    const icon = SECTION_ICONS[section.id] || '📂';
+    const isActive = activeSectionId === section.id;
+    html += `<button class="nav-item${isActive ? ' active' : ''}" data-nav="${section.id}" onclick="setActiveNav('${section.id}')">
+      <span class="nav-icon">${icon}</span>
+      <span>${section.title}</span>
+      <span class="nav-count">${section.tools.length}</span>
+    </button>`;
+  });
+
+  navInner.innerHTML = html;
+
+  // 滚动到激活项（居中显示）
+  setTimeout(() => {
+    const activeBtn = navInner.querySelector('.active');
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, 50);
+}
+
+function setActiveNav(sectionId) {
+  activeSectionId = sectionId;
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+
+  // 更新导航栏高亮
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.nav === sectionId);
+  });
+
+  renderAll();
+
+  // 如果选择了具体分类，平滑滚动到内容区顶部
+  if (sectionId !== 'all') {
+    const targetEl = document.getElementById(`section-${sectionId}`);
+    if (targetEl) {
+      const navBar = document.getElementById('navBar');
+      const offset = navBar ? navBar.offsetHeight + 10 : 80;
+      window.scrollTo({ top: targetEl.offsetTop - offset, behavior: 'smooth' });
+    }
+  } else {
+    // 全部时滚动到最顶部
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
 /* ========== 渲染全部 ========== */
 function renderAll() {
   if (!siteData) return;
@@ -993,6 +1100,11 @@ function renderAll() {
   let html = '';
 
   siteData.sections.forEach(section => {
+    // 导航筛选：如果选中了特定分类，隐藏其他分类
+    if (activeSectionId !== 'all' && activeSectionId !== section.id) {
+      return;
+    }
+
     // 筛选工具
     let tools = section.tools;
 
@@ -1015,7 +1127,7 @@ function renderAll() {
     }
 
     // 渲染区块
-    html += `<div class="section">`;
+    html += `<div class="section" id="section-${section.id}">`;
     html += `<h2 class="section-title">${section.title}</h2>`;
 
     // 二级分类标签（无搜索时显示）
@@ -1086,14 +1198,30 @@ function setFilter(sectionId, subcatId, value) {
   filters[sectionId][subcatId] = value;
   searchQuery = '';
   document.getElementById('searchInput').value = '';
+
+  // 切换二级分类时，自动切换到对应导航分类
+  if (activeSectionId === 'all' || activeSectionId !== sectionId) {
+    activeSectionId = sectionId;
+    // 更新导航高亮
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.nav === sectionId);
+    });
+  }
+
   renderAll();
 }
 
 function handleSearch() {
   searchQuery = document.getElementById('searchInput').value.trim();
   if (searchQuery) {
-    // 搜索时重置所有筛选
+    // 搜索时重置所有筛选和导航
     initFilters();
+    activeSectionId = 'all';
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.nav === 'all');
+    });
   }
   renderAll();
 }
@@ -1110,11 +1238,40 @@ document.addEventListener('keydown',(e)=>{
   }
 });
 
-/* ========== 回到顶部 ========== */
+/* ========== 回到顶部 + 滚动监听 ========== */
 window.addEventListener('scroll',()=>{
   const btn=document.getElementById('backTop');
   btn.classList.toggle('visible', window.scrollY>400);
-});
+
+  // 滚动时自动更新导航栏高亮（仅当用户没有手动选择分类时）
+  if (activeSectionId === 'all' && siteData) {
+    const sections = document.querySelectorAll('.section[id^="section-"]');
+    const navBar = document.getElementById('navBar');
+    const navHeight = navBar ? navBar.offsetHeight : 60;
+    let currentId = null;
+
+    sections.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= navHeight + 50 && rect.bottom > navHeight + 100) {
+        currentId = el.id.replace('section-', '');
+      }
+    });
+
+    if (currentId && activeSectionId === 'all') {
+      // 只在搜索为空时切换
+      if (!searchQuery) {
+        const navItems = document.querySelectorAll('.nav-item');
+        let changed = false;
+        navItems.forEach(btn => {
+          const shouldBeActive = btn.dataset.nav === currentId;
+          if (shouldBeActive !== btn.classList.contains('active')) {
+            changed = true;
+          }
+        });
+      }
+    }
+  }
+}, {passive: true});
 
 /* ========== 启动 ========== */
 loadData();
