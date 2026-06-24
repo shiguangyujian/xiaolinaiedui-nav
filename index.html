@@ -160,8 +160,779 @@ let searchQuery = '';
 /* ========== 加载数据 ========== */
 async function loadData() {
   try {
-    const resp = await fetch('data/tools.json');
-    siteData = await resp.json();
+    const SITE_DATA = {
+  "site": {
+    "title": "教学工具导航",
+    "subtitle": "让教学简单一点点",
+    "author": "小林老师"
+  },
+  "sections": [
+    {
+      "id": "prep",
+      "title": "课前准备",
+      "layout": "list",
+      "subcategories": [],
+      "tools": [
+        {
+          "title": "Get笔记",
+          "desc": "日常记笔记、找笔记、转存零碎信息",
+          "url": "https://getbiji.com",
+          "type": "external",
+          "tags": [
+            "笔记"
+          ]
+        },
+        {
+          "title": "AI教育实验室",
+          "desc": "Get笔记知识库",
+          "url": "https://getbiji.com",
+          "type": "external",
+          "tags": [
+            "知识库"
+          ]
+        },
+        {
+          "title": "ima 腾讯智能工作台",
+          "desc": "个人专属知识库，AI 驱动",
+          "url": "https://ima.qq.com",
+          "type": "external",
+          "tags": [
+            "AI 知识库"
+          ]
+        },
+        {
+          "title": "小学数学教材知识库",
+          "desc": "支持人教、北师大、苏教版教材对比",
+          "url": "https://basic.smartedu.cn",
+          "type": "external",
+          "tags": [
+            "教材"
+          ]
+        },
+        {
+          "title": "小学数学教学设计",
+          "desc": "教学设计知识库小程序",
+          "url": "https://ima.qq.com",
+          "type": "external",
+          "tags": [
+            "教学设计"
+          ]
+        },
+        {
+          "title": "数学小升初习题知识库",
+          "desc": "小学数学小升初知识库",
+          "url": "https://ima.qq.com",
+          "type": "external",
+          "tags": [
+            "习题"
+          ]
+        },
+        {
+          "title": "希沃AI备课",
+          "desc": "当前最靠谱的AI备课，支持对话智能体",
+          "url": "https://study.seewo.com",
+          "type": "external",
+          "tags": [
+            "AI 备课"
+          ]
+        },
+        {
+          "title": "人教1上数学备课助手",
+          "desc": "基于教师用书的豆包智能体",
+          "url": "https://www.doubao.com",
+          "type": "external",
+          "tags": [
+            "智能体"
+          ]
+        },
+        {
+          "title": "国家智慧教育平台",
+          "desc": "全年龄全年段全学科教学资源",
+          "url": "https://www.eduyun.cn",
+          "type": "external",
+          "tags": [
+            "官方平台"
+          ]
+        },
+        {
+          "title": "教育学学科大模型",
+          "desc": "华东师范大学，超130GB教育教学语料",
+          "url": "https://www.ecnu.edu.cn",
+          "type": "external",
+          "tags": [
+            "AI 模型"
+          ]
+        },
+        {
+          "title": "人工智能学科大模型",
+          "desc": "浙江大学，学习计划定制、习题生成等",
+          "url": "https://www.zju.edu.cn",
+          "type": "external",
+          "tags": [
+            "AI 模型"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "class",
+      "title": "课中互动",
+      "layout": "grid",
+      "subcategories": [
+        {
+          "id": "subject",
+          "title": "学科分类",
+          "options": [
+            {
+              "value": "all",
+              "label": "全部",
+              "count": 48
+            },
+            {
+              "value": "数与代数",
+              "label": "数与代数",
+              "count": 20
+            },
+            {
+              "value": "图形与几何",
+              "label": "图形与几何",
+              "count": 24
+            },
+            {
+              "value": "统计与概率",
+              "label": "统计与概率",
+              "count": 1
+            },
+            {
+              "value": "综合与实践",
+              "label": "综合与实践",
+              "count": 3
+            },
+            {
+              "value": "候课",
+              "label": "候课",
+              "count": 0
+            },
+            {
+              "value": "习题",
+              "label": "习题",
+              "count": 0
+            },
+            {
+              "value": "其它",
+              "label": "其它",
+              "count": 0
+            }
+          ]
+        },
+        {
+          "id": "grade",
+          "title": "年级筛选",
+          "options": [
+            {
+              "value": "all",
+              "label": "全部年级",
+              "count": 48
+            },
+            {
+              "value": "一上",
+              "label": "一上",
+              "count": 1
+            },
+            {
+              "value": "一下",
+              "label": "一下",
+              "count": 5
+            },
+            {
+              "value": "二上",
+              "label": "二上",
+              "count": 0
+            },
+            {
+              "value": "二下",
+              "label": "二下",
+              "count": 4
+            },
+            {
+              "value": "三上",
+              "label": "三上",
+              "count": 5
+            },
+            {
+              "value": "三下",
+              "label": "三下",
+              "count": 12
+            },
+            {
+              "value": "四上",
+              "label": "四上",
+              "count": 0
+            },
+            {
+              "value": "四下",
+              "label": "四下",
+              "count": 0
+            },
+            {
+              "value": "五上",
+              "label": "五上",
+              "count": 10
+            },
+            {
+              "value": "五下",
+              "label": "五下",
+              "count": 6
+            },
+            {
+              "value": "六上",
+              "label": "六上",
+              "count": 1
+            },
+            {
+              "value": "六下",
+              "label": "六下",
+              "count": 0
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "title": "乘法消消乐",
+          "desc": "三消形式来玩的乘法口诀",
+          "url": "resources/二上乘法消消乐.html",
+          "category": "数与代数",
+          "grade": "",
+          "type": "self",
+          "tags": [
+            "乘法"
+          ]
+        },
+        {
+          "title": "两点间的距离",
+          "desc": "直观演示两点间线段最短",
+          "url": "resources/三上 P62两点间的距离.html",
+          "category": "图形与几何",
+          "grade": "三上",
+          "type": "self",
+          "tags": [
+            "线段"
+          ]
+        },
+        {
+          "title": "喝果汁问题",
+          "desc": "神奇眼镜，水和果汁分离不相融",
+          "url": "resources/五下P99喝果汁问题20260530.html",
+          "category": "数与代数",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "分数"
+          ]
+        },
+        {
+          "title": "面积一定周长最短",
+          "desc": "直观理解面积一定圆的周长最短",
+          "url": "resources/三下P45周长最短 20260531.html",
+          "category": "图形与几何",
+          "grade": "",
+          "type": "self",
+          "tags": [
+            "周长"
+          ]
+        },
+        {
+          "title": "校园3D小导游",
+          "desc": "学习位置与方向",
+          "url": "resources/三下校园小导游3D/index.html",
+          "category": "综合与实践",
+          "grade": "三上",
+          "type": "self",
+          "tags": [
+            "方向"
+          ]
+        },
+        {
+          "title": "圆的认识",
+          "desc": "圆，一中同长也",
+          "url": "resources/一中同长也.html",
+          "category": "图形与几何",
+          "grade": "六上",
+          "type": "self",
+          "tags": [
+            "圆"
+          ]
+        },
+        {
+          "title": "曹冲称象",
+          "desc": "互动加水位线、搬石头",
+          "url": "resources/三上曹冲称象/index.html",
+          "category": "数与代数",
+          "grade": "三上",
+          "type": "self",
+          "tags": [
+            "故事"
+          ]
+        },
+        {
+          "title": "分橘子",
+          "desc": "平均分的直观演示",
+          "url": "resources/二上分橘子/index.html",
+          "category": "数与代数",
+          "grade": "",
+          "type": "self",
+          "tags": [
+            "除法"
+          ]
+        },
+        {
+          "title": "多边形面积",
+          "desc": "多边形面积公式推导",
+          "url": "resources/五上多边形的面积（任意改变）.html",
+          "category": "图形与几何",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "图形相遇面积问题",
+          "desc": "互动演示图形相遇",
+          "url": "resources/五上正方形三角形相遇问题.html",
+          "category": "图形与几何",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "小路面积",
+          "desc": "动态演示小路面积相等",
+          "url": "resources/五上小路面积.html",
+          "category": "图形与几何",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "分与合",
+          "desc": "互动演示1～10的分与合",
+          "url": "resources/一上分与合.html",
+          "category": "数与代数",
+          "grade": "一上",
+          "type": "self",
+          "tags": [
+            "分合"
+          ]
+        },
+        {
+          "title": "十格阵",
+          "desc": "一年级20以内加减法",
+          "url": "resources/一上十格阵.html",
+          "category": "数与代数",
+          "grade": "一下",
+          "type": "self",
+          "tags": [
+            "加减法"
+          ]
+        },
+        {
+          "title": "九宫格填数",
+          "desc": "二下数学思考题",
+          "url": "resources/二下P68九宫格数学探险.html",
+          "category": "数与代数",
+          "grade": "二下",
+          "type": "self",
+          "tags": [
+            "加减法"
+          ]
+        },
+        {
+          "title": "有余数除法",
+          "desc": "圈选小棒自动围正方形或三角形",
+          "url": "resources/二下有余数除法.html",
+          "category": "数与代数",
+          "grade": "二下",
+          "type": "self",
+          "tags": [
+            "除法"
+          ]
+        },
+        {
+          "title": "玩转百数表",
+          "desc": "以百家姓来玩转百数表",
+          "url": "resources/一下玩转百数表/index.html",
+          "category": "数与代数",
+          "grade": "一下",
+          "type": "self",
+          "tags": [
+            "百数"
+          ]
+        },
+        {
+          "title": "数一数小正方体有几个",
+          "desc": "互动圈选小正方体",
+          "url": "resources/一下P24数一数正方体.html",
+          "category": "图形与几何",
+          "grade": "一下",
+          "type": "self",
+          "tags": [
+            "立体"
+          ]
+        },
+        {
+          "title": "决战24点",
+          "desc": "在线24点出题器",
+          "url": "resources/24点出题器.html",
+          "category": "数与代数",
+          "grade": "",
+          "type": "self",
+          "tags": [
+            "游戏"
+          ]
+        },
+        {
+          "title": "虚拟钉子板",
+          "desc": "拉橡皮筋围多边形",
+          "url": "resources/一下P2虚拟钉子板.html",
+          "category": "图形与几何",
+          "grade": "一下",
+          "type": "self",
+          "tags": [
+            "多边形"
+          ]
+        },
+        {
+          "title": "补墙问题",
+          "desc": "互动补墙理解面积概念",
+          "url": "resources/一下习题P6补墙问题.html",
+          "category": "图形与几何",
+          "grade": "一下",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "观察物体",
+          "desc": "三上观察物体互动课件",
+          "url": "resources/三上1观察物体.html",
+          "category": "图形与几何",
+          "grade": "三上",
+          "type": "self",
+          "tags": [
+            "观察"
+          ]
+        },
+        {
+          "title": "四分之一的秘密",
+          "desc": "探索四分之一的多种表示",
+          "url": "resources/三上P75四分之一的秘密.html",
+          "category": "数与代数",
+          "grade": "三上",
+          "type": "self",
+          "tags": [
+            "分数"
+          ]
+        },
+        {
+          "title": "四连方拼图游戏",
+          "desc": "四连方拼图互动游戏",
+          "url": "resources/三下 P49四连方拼图游戏.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "拼图"
+          ]
+        },
+        {
+          "title": "四连方拼大长方形",
+          "desc": "四连方拼大长方形挑战",
+          "url": "resources/三下 P49四连方拼大长方形挑战（可复制镜像）.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "拼图"
+          ]
+        },
+        {
+          "title": "数学广角重叠问题",
+          "desc": "互动演示重叠问题",
+          "url": "resources/三下P102数学广角重叠问题.html",
+          "category": "综合与实践",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "数学广角"
+          ]
+        },
+        {
+          "title": "轴对称演示",
+          "desc": "互动演示轴对称图形",
+          "url": "resources/三下P3轴对称演示.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "对称"
+          ]
+        },
+        {
+          "title": "周长最短",
+          "desc": "面积一定周长变化",
+          "url": "resources/三下P45周长最短.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "周长"
+          ]
+        },
+        {
+          "title": "认识面积",
+          "desc": "互动认识面积概念",
+          "url": "resources/三下P53认识面积.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "正方形花坛面积",
+          "desc": "互动计算正方形花坛面积",
+          "url": "resources/三下P64正方形花坛面积.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "四个正方形拼图",
+          "desc": "习题：拼图后面积和周长",
+          "url": "resources/三下习题P55四个正方形拼成的面积、周长各是多少.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "面积",
+            "周长"
+          ]
+        },
+        {
+          "title": "任意边折角",
+          "desc": "北师大版：任意边折角演示",
+          "url": "resources/三下北师大任意边折角.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "角"
+          ]
+        },
+        {
+          "title": "定长线段围面",
+          "desc": "北师大版：定长线段围面",
+          "url": "resources/三下北师大定长线段围面.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "周长"
+          ]
+        },
+        {
+          "title": "垃圾总量自动推算",
+          "desc": "苏教版：垃圾总量自动推算",
+          "url": "resources/三下苏教垃圾总量自动推算笔记本.html",
+          "category": "综合与实践",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "综合实践"
+          ]
+        },
+        {
+          "title": "铺地毯",
+          "desc": "互动铺地毯面积问题",
+          "url": "resources/三下铺地毯.html",
+          "category": "图形与几何",
+          "grade": "三下",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "中国算盘",
+          "desc": "互动中国算盘认识数",
+          "url": "resources/二下P48中国算盘.html",
+          "category": "数与代数",
+          "grade": "二下",
+          "type": "self",
+          "tags": [
+            "算盘"
+          ]
+        },
+        {
+          "title": "计数单位一十百千",
+          "desc": "互动认识计数单位",
+          "url": "resources/二下计数单位一十百千.html",
+          "category": "数与代数",
+          "grade": "二下",
+          "type": "self",
+          "tags": [
+            "数位"
+          ]
+        },
+        {
+          "title": "数对五子棋",
+          "desc": "用数对下五子棋游戏",
+          "url": "resources/五上2数对五子棋.html",
+          "category": "数与代数",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "数对",
+            "游戏"
+          ]
+        },
+        {
+          "title": "用数对确定位置",
+          "desc": "互动学习用数对确定位置",
+          "url": "resources/五上2用数对确定位置.html",
+          "category": "数与代数",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "数对"
+          ]
+        },
+        {
+          "title": "植树问题",
+          "desc": "互动演示植树问题",
+          "url": "resources/五上7植树问题.html",
+          "category": "数与代数",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "植树"
+          ]
+        },
+        {
+          "title": "小数与分数乘法",
+          "desc": "小数与分数乘法的意义",
+          "url": "resources/五上六上小数与分数乘法的意义.html",
+          "category": "数与代数",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "乘法"
+          ]
+        },
+        {
+          "title": "多边形面积多次分割",
+          "desc": "多边形面积多次分割演示",
+          "url": "resources/五上多边形面积（多次分割）.html",
+          "category": "图形与几何",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "水桶问题",
+          "desc": "互动演示水桶容积问题",
+          "url": "resources/五上水桶问题.html",
+          "category": "图形与几何",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "容积"
+          ]
+        },
+        {
+          "title": "铺地砖问题",
+          "desc": "互动演示铺地砖问题",
+          "url": "resources/五下P62铺地砖问题.html",
+          "category": "图形与几何",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "面积"
+          ]
+        },
+        {
+          "title": "最大公因数",
+          "desc": "互动学习最大公因数",
+          "url": "resources/五下P65最大公因数.html",
+          "category": "数与代数",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "公因数"
+          ]
+        },
+        {
+          "title": "乘积奇偶数判断",
+          "desc": "互动判断乘积奇偶",
+          "url": "resources/五下乘积奇偶数判断.html",
+          "category": "数与代数",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "奇偶"
+          ]
+        },
+        {
+          "title": "可能性演示",
+          "desc": "互动投硬币演示可能性",
+          "url": "resources/五上4可能性/index.html",
+          "category": "统计与概率",
+          "grade": "五上",
+          "type": "self",
+          "tags": [
+            "概率"
+          ]
+        },
+        {
+          "title": "3的倍数",
+          "desc": "互动探索3的倍数特征",
+          "url": "resources/五下3的倍数/index.html",
+          "category": "数与代数",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "倍数"
+          ]
+        },
+        {
+          "title": "体积间的进率",
+          "desc": "3D演示体积间进率",
+          "url": "resources/五下体积间的进率/index.html",
+          "category": "图形与几何",
+          "grade": "五下",
+          "type": "self",
+          "tags": [
+            "体积"
+          ]
+        }
+      ]
+    }
+  ]
+};
+    siteData = SITE_DATA;
     document.title = siteData.site.title + ' | ' + siteData.site.subtitle;
     initFilters();
     renderAll();
@@ -237,8 +1008,10 @@ function renderAll() {
 
     tools.forEach(tool => {
       const isSelf = tool.type === 'self' || !tool.url || tool.url === '#';
-      const url = isSelf ? `resources/${tool.title}.html` : tool.url;
-      const target = isSelf ? '_self' : '_blank';
+      const hasCustomUrl = tool.url && tool.url !== '#' && tool.url.length > 0;
+      let url = hasCustomUrl ? tool.url : (isSelf ? `resources/${tool.title}.html` : '#');
+      if (url && !url.startsWith('http') && !url.startsWith('/')) url = '/' + url;
+      const target = isSelf ? '_blank' : '_blank';
       const cardClass = isSelf ? 'card card--self' : 'card';
 
       html += `<a href="${url}" target="${target}" class="${cardClass}" data-keywords="${tool.title} ${tool.desc||''} ${tool.category||''} ${tool.grade||''} ${(tool.tags||[]).join(' ')}">`;
