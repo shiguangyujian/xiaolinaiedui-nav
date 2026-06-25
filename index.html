@@ -158,6 +158,15 @@ body::before{
   .tool-list .card{flex:1 1 100%}
 }
 </style>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?9d159a45ffc918926990254e3cf243cd";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
 </head>
 <body>
 
@@ -1349,7 +1358,7 @@ function renderAll() {
       const target = isSelf ? '_blank' : '_blank';
       const cardClass = isSelf ? 'card card--self' : 'card';
 
-      html += `<a href="${url}" target="${target}" class="${cardClass}" data-keywords="${tool.title} ${tool.desc||''} ${tool.category||''} ${tool.grade||''} ${(tool.tags||[]).join(' ')}">`;
+      html += `<a href="${url}" target="${target}" class="${cardClass}" data-tool-title="${tool.title}" data-section-title="${section.title}" data-keywords="${tool.title} ${tool.desc||''} ${tool.category||''} ${tool.grade||''} ${(tool.tags||[]).join(' ')}">`;
 
       // 角标
       html += `<div class="card-badges">`;
@@ -1459,6 +1468,16 @@ window.addEventListener('scroll',()=>{
     }
   }
 }, {passive: true});
+
+/* ========== 百度统计点击追踪 ========== */
+document.addEventListener('click', function(e) {
+  const card = e.target.closest('.card[data-tool-title]');
+  if (!card) return;
+  var toolTitle = card.getAttribute('data-tool-title');
+  var sectionTitle = card.getAttribute('data-section-title') || '';
+  // 发送事件到百度统计：类别=工具点击, 操作=板块名, 标签=工具名
+  _hmt.push(['_trackEvent', sectionTitle, '点击', toolTitle]);
+});
 
 /* ========== 启动 ========== */
 loadData();
