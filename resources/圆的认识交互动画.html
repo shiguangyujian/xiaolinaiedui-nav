@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>圆的认识 · 数学交互动画</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(145deg, #f7f3e8 0%, #f0e7d8 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      margin: 0;
+    }
+
+    /* 主容器：宽屏卡片风格，无aspect-ratio锁定 */
+    .teaching-card {
+      max-width: 1300px;
+      width: 100%;
+      background: rgba(255, 250, 245, 0.85);
+      backdrop-filter: blur(18px);
+      background: #fffef9;
+      border-radius: 3.5rem;
+      box-shadow: 0 30px 50px rgba(0, 0, 0, 0.08), 0 15px 30px rgba(120, 80, 50, 0.15);
+      padding: 2.2rem 2.5rem;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 2rem;
+      border: 1px solid rgba(200, 170, 120, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    /* 左侧绘图互动区 */
+    .canvas-panel {
+      flex: 1 1 500px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .canvas-wrapper {
+      background: #fefaf2;
+      border-radius: 2.5rem;
+      padding: 0.8rem;
+      box-shadow: inset 0 0 15px rgba(180, 140, 100, 0.2), 0 12px 24px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #fffbf5;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 500px;
+      background: #ffffff;
+      border-radius: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      touch-action: none;  /* 避免触摸时页面拖动 */
+    }
+
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      background: #f5ede1;
+      padding: 1rem 1.8rem;
+      border-radius: 3rem;
+      margin-top: 0.2rem;
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: white;
+      padding: 0.4rem 1.2rem;
+      border-radius: 2.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .slider-group label {
+      font-weight: 600;
+      color: #5e4632;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    input[type="range"] {
+      width: 100px;
+      accent-color: #c77d4b;
+      height: 6px;
+    }
+
+    .value-badge {
+      background: #d9b382;
+      color: white;
+      font-weight: bold;
+      padding: 0.25rem 0.8rem;
+      border-radius: 2rem;
+      font-size: 0.9rem;
+      min-width: 3.5rem;
+      text-align: center;
+    }
+
+    button {
+      background: white;
+      border: none;
+      padding: 0.5rem 1.4rem;
+      border-radius: 2.5rem;
+      font-weight: 600;
+      color: #4b3a2b;
+      background: #f3e1cc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.2s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      border: 1px solid #dbbd92;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      background: #e7cfb0;
+      border-color: #b58b5a;
+      box-shadow: 0 6px 12px rgba(160, 110, 50, 0.2);
+    }
+
+    /* 右侧知识面板 */
+    .info-panel {
+      flex: 1 1 350px;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .concept-box {
+      background: #faf3e9;
+      border-radius: 2rem;
+      padding: 1.5rem 1.8rem;
+      box-shadow: 0 8px 20px rgba(140, 100, 60, 0.08);
+    }
+
+    .concept-box h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #4f3a28;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px dashed #dbbd92;
+      padding-bottom: 0.5rem;
+    }
+
+    .formula-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: white;
+      padding: 0.8rem 1.2rem;
+      border-radius: 1.5rem;
+      margin: 0.8rem 0;
+      font-weight: 600;
+      color: #3e2e1f;
+    }
+
+    .highlight {
+      background: #fce9d2;
+      padding: 0.2rem 0.7rem;
+      border-radius: 1rem;
+      color: #a1582b;
+    }
+
+    .misconception {
+      background: #fff4e5;
+      border-left: 6px solid #d98c5f;
+      padding: 0.8rem 1.2rem;
+      border-radius: 1rem;
+      font-size: 0.95rem;
+      margin-top: 0.8rem;
+    }
+
+    .example-card {
+      background: #ffffff;
+      border-radius: 1.5rem;
+      padding: 1.2rem;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.04);
+    }
+
+    .interactive-question {
+      background: #e7d7bd;
+      border-radius: 1.8rem;
+      padding: 1.2rem 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-top: 0.8rem;
+    }
+
+    /* 移动端适配：窄屏纵向单列 */
+    @media (max-width: 800px) {
+      body {
+        padding: 1rem;
+      }
+      .teaching-card {
+        flex-direction: column;
+        padding: 1.5rem;
+        gap: 1.5rem;
+      }
+      .control-bar {
+        gap: 0.8rem;
+      }
+      input[type="range"] {
+        width: 70px;
+      }
+    }
+  </style>
+<meta name="AIGC" content='{"AIGC":{"Label":"1","ContentProducer":"001191340000711771143J00000","ProduceID":"f436e0197b1c4eb694196777fc275cd1","ReservedCode1":"7d908b5602a1df38bf0dc8c62ce7b961a9e9582013279ec8b7b5108453ff876c","ContentPropagator":"001191340000711771143J00000","PropagateID":"f436e0197b1c4eb694196777fc275cd1","ReservedCode2":""}}'>
+</head>
+<body>
+<div class="teaching-card">
+  <!-- 左侧画布区域 -->
+  <div class="canvas-panel">
+    <div class="canvas-wrapper">
+      <canvas id="circleCanvas" width="550" height="400" aria-label="圆的认识互动绘图区"></canvas>
+    </div>
+    <div class="control-bar">
+      <div class="slider-group">
+        <label>📏 半径 <span style="font-weight:bold; color:#b45f2a;">r</span></label>
+        <input type="range" id="radiusSlider" min="30" max="140" value="90" step="1">
+        <span class="value-badge" id="radiusValue">90</span>
+      </div>
+      <button id="showDiameterBtn"><span>🔵</span> 显示直径</button>
+      <button id="resetViewBtn"><span>🔄</span> 重置</button>
+    </div>
+    <div style="font-size:0.9rem; color:#6b5a48; margin-top:0.2rem; text-align:center; background:#f9f2e7; border-radius:2rem; padding:0.3rem;">
+      💡 拖动滑块改变半径 · 点击画布可移动圆心
+    </div>
+  </div>
+
+  <!-- 右侧知识面板 -->
+  <div class="info-panel">
+    <div class="concept-box">
+      <h2>⚪ 圆的认识</h2>
+      <p style="margin-bottom:0.5rem;"><span class="highlight">圆心 O</span> 决定位置 · <span class="highlight">半径 r</span> 决定大小</p>
+      <div class="formula-row">
+        <span>📐 d = 2r</span>
+        <span>📐 r = d ÷ 2</span>
+      </div>
+      <div class="formula-row">
+        <span>🔵 周长 C = 2πr</span>
+        <span>🟠 面积 S = πr²</span>
+      </div>
+      <div class="misconception">
+        ⚠️ <strong>易错提醒：</strong>直径是半径的2倍<strong>只在同圆或等圆中成立</strong>；对称轴是直径所在的直线，不是线段。
+      </div>
+    </div>
+
+    <div class="example-card">
+      <div style="font-weight:700; color:#4b3621;">📦 长方形中画最大圆</div>
+      <p style="font-size:0.95rem; margin:0.4rem 0;">长10cm · 宽5cm → 最大圆的直径 = 宽 = 5cm，<strong>半径 = 2.5cm</strong></p>
+      <div class="interactive-question">
+        <span style="font-weight:bold;">❓ 车轮为什么是圆形？</span>
+        <div class="btn-group">
+          <button id="answerWheelBtn" style="background:#dbbd92;">🔍 显示原因</button>
+          <span id="wheelReason" style="margin-left:0.5rem; font-style:italic; color:#3b2e1f;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.5rem; align-items:center; justify-content:flex-end; font-size:0.85rem; color:#7b6b58;">
+      <span>π ≈ 3.14</span>
+      <span style="background:#e7cfb0; padding:0.2rem 0.8rem; border-radius:1rem;">轴对称 · 无数条对称轴</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ----- 获取元素 -----
+    const canvas = document.getElementById('circleCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const radiusSlider = document.getElementById('radiusSlider');
+    const radiusValueSpan = document.getElementById('radiusValue');
+    const showDiameterBtn = document.getElementById('showDiameterBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    const answerWheelBtn = document.getElementById('answerWheelBtn');
+    const wheelReasonSpan = document.getElementById('wheelReason');
+
+    // ----- 状态变量 -----
+    // 圆心坐标 (画布中心为默认)
+    let centerX = canvas.width / 2;
+    let centerY = canvas.height / 2;
+    let radius = 90;          // 默认半径
+    let showDiameter = true;  // 默认显示直径
+
+    // 圆周率近似值
+    const PI = Math.PI;
+
+    // ----- 辅助函数：更新半径显示 -----
+    function updateRadiusDisplay() {
+      radiusValueSpan.textContent = radius;
+    }
+
+    // ----- 绘制圆及相关元素 -----
+    function drawCircle() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 绘制浅色网格背景 (辅助理解位置)
+      ctx.save();
+      ctx.strokeStyle = '#f0e3d0';
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.strokeStyle = '#f0e3d0';
+        ctx.stroke();
+      }
+      for (let j = 0; j < canvas.height; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(canvas.width, j);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 绘制圆 (填充轻微底色)
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * PI);
+      ctx.fillStyle = 'rgba(220, 185, 140, 0.12)';
+      ctx.fill();
+      ctx.strokeStyle = '#b5763c';
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+
+      // 绘制圆心 O
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5, 0, 2 * PI);
+      ctx.fillStyle = '#c44f2c';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#2e1e0f';
+      ctx.font = 'bold 15px "Segoe UI", "Roboto"';
+      ctx.fillText('O', centerX + 10, centerY - 8);
+
+      // 绘制半径 (动态显示一条半径)
+      const angleRad = -0.8; // 固定角度让半径可见
+      const radiusEndX = centerX + radius * Math.cos(angleRad);
+      const radiusEndY = centerY + radius * Math.sin(angleRad);
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(radiusEndX, radiusEndY);
+      ctx.strokeStyle = '#2f6b4a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // 半径标注 r
+      ctx.fillStyle = '#1e4a2f';
+      ctx.font = 'bold 14px "Segoe UI"';
+      const midX = (centerX + radiusEndX) / 2;
+      const midY = (centerY + radiusEndY) / 2;
+      ctx.fillText('r', midX + 6, midY - 6);
+
+      // 绘制直径 (如果开启)
+      if (showDiameter) {
+        const diamStartX = centerX - radius;
+        const diamStartY = centerY;
+        const diamEndX = centerX + radius;
+        const diamEndY = centerY;
+
+        ctx.beginPath();
+        ctx.moveTo(diamStartX, diamStartY);
+        ctx.lineTo(diamEndX, diamEndY);
+        ctx.strokeStyle = '#b45f2a';
+        ctx.lineWidth = 2.8;
+        ctx.setLineDash([6, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]); // 重置
+
+        // 标注直径 d
+        ctx.fillStyle = '#b45f2a';
+        ctx.font = 'bold 14px "Segoe UI"';
+        ctx.fillText('d', centerX + 8, centerY - 12);
+        // 两端点标记
+        ctx.beginPath();
+        ctx.arc(diamStartX, diamStartY, 3.5, 0, 2*PI);
+        ctx.fillStyle = '#b45f2a';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(diamEndX, diamEndY, 3.5, 0, 2*PI);
+        ctx.fill();
+      }
+
+      // 显示当前半径/直径数值在角落
+      ctx.fillStyle = '#3b2c1e';
+      ctx.font = '500 13px "Segoe UI"';
+      ctx.fillText(`半径 r = ${radius} px`, 20, 30);
+      ctx.fillText(`直径 d = ${2 * radius} px`, 20, 52);
+      ctx.fillText(`周长 ≈ ${(2 * PI * radius).toFixed(1)} px`, 20, 74);
+    }
+
+    // ----- 同步UI并重绘 -----
+    function syncAndDraw() {
+      updateRadiusDisplay();
+      drawCircle();
+    }
+
+    // ----- 事件监听 -----
+    radiusSlider.addEventListener('input', (e) => {
+      radius = parseInt(e.target.value, 10);
+      syncAndDraw();
+    });
+
+    showDiameterBtn.addEventListener('click', () => {
+      showDiameter = !showDiameter;
+      showDiameterBtn.innerHTML = showDiameter ? '<span>🔵</span> 隐藏直径' : '<span>🔘</span> 显示直径';
+      drawCircle();
+    });
+
+    resetViewBtn.addEventListener('click', () => {
+      // 重置圆心到画布中心，半径默认90
+      centerX = canvas.width / 2;
+      centerY = canvas.height / 2;
+      radius = 90;
+      radiusSlider.value = 90;
+      showDiameter = true;
+      showDiameterBtn.innerHTML = '<span>🔵</span> 显示直径';
+      syncAndDraw();
+    });
+
+    // 点击画布移动圆心 (交互理解圆心决定位置)
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;   // canvas 物理像素比例
+      const scaleY = canvas.height / rect.height;
+
+      // 计算相对于画布坐标系的点击位置
+      const mouseCanvasX = (e.clientX - rect.left) * scaleX;
+      const mouseCanvasY = (e.clientY - rect.top) * scaleY;
+
+      // 边界限制，避免圆心太靠边导致圆画出界
+      const margin = 25;
+      centerX = Math.min(Math.max(mouseCanvasX, margin), canvas.width - margin);
+      centerY = Math.min(Math.max(mouseCanvasY, margin), canvas.height - margin);
+      drawCircle();
+    });
+
+    // 车轮原因交互
+    answerWheelBtn.addEventListener('click', () => {
+      wheelReasonSpan.textContent = '圆心到地面距离始终等于半径，行驶平稳！';
+      wheelReasonSpan.style.color = '#2d5a27';
+    });
+
+    // 触摸设备支持画布移动圆心
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      if (!touch) return;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const touchX = (touch.clientX - rect.left) * scaleX;
+      const touchY = (touch.clientY - rect.top) * scaleY;
+      const margin = 25;
+      centerX = Math.min(Math.max(touchX, margin), canvas.width - margin);
+      centerY = Math.min(Math.max(touchY, margin), canvas.height - margin);
+      drawCircle();
+    }, { passive: false });
+
+    // 初始化绘制
+    syncAndDraw();
+
+    // 窗口大小变化时保持画布清晰度 (但canvas宽高固定，无需重设尺寸；仅重绘以防万一)
+    window.addEventListener('resize', () => {
+      drawCircle();
+    });
+
+    // 额外：显示初始车轮原因提示为空
+    wheelReasonSpan.textContent = '';
+  })();
+</script>
+<div style="position:fixed;bottom:4px;left:0;width:100%;text-align:center;font-size:11px;color:#999;pointer-events:none;z-index:9999;font-family:system-ui,sans-serif;">AI 生成内容，仅供参考</div>
+</body>
+</html>
